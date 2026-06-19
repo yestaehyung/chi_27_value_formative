@@ -91,7 +91,7 @@ export default function SurveyPage() {
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
           <div className="text-xs">
             {excluded ? (
-              <span className="font-semibold text-rose-600">참여 기준/동의에 '아니오'가 있어 연구 참여 대상이 아닙니다.</span>
+              <span className="font-semibold text-rose-600">참여 기준/동의에 &apos;아니오&apos;가 있어 연구 참여 대상이 아닙니다.</span>
             ) : missing.length > 0 ? (
               <span className="text-slate-500">필수(참여기준·동의) {missing.length}개 남음</span>
             ) : (
