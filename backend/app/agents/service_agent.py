@@ -125,6 +125,7 @@ async def _classify_intents(provider, content: str) -> list[str]:
 async def handle_user_turn(db: DbSession, session: models.Session, content: str,
                            role: str = "user") -> AgentTurnResult:
     provider = get_provider()
+    t0 = time.perf_counter()
 
     # 1-2. save user turn + intent classification.
     # 동기 층(M8) 감지는 commit engine으로 이동 — 라이브·시뮬·PSCon이 같은 경로로 12축.
