@@ -21,12 +21,18 @@ from app.preference_commit.commit_engine import run_preference_commit
 
 router = APIRouter(prefix="/api/pscon", tags=["pscon"])
 
-DEFAULT_PATH = (
-    Path(__file__).resolve().parents[4] / "PSCon" / "dataset" / "conversation_en_fully_rated.json"
-)
+# Safe default: handle environments where repo siblings aren't available (Railway)
+_FILE_DIR = Path(__file__).resolve().parents[2]  # backend/
+_DEFAULT_PSCON = _FILE_DIR.parent / "PSCon" / "dataset" / "conversation_en_fully_rated.json"
+if _DEFAULT_PSCON.exists():
+    DEFAULT_PATH = _DEFAULT_PSCON
+else:
+    DEFAULT_PATH = Path("/dev/null")  # Sentinel for "not available"
+
 PSCON_PATH = Path(os.environ.get("VC_PSCON_PATH", str(DEFAULT_PATH)))
+_RESULTS_DEFAULT = _FILE_DIR / "data" / "pscon_analysis.json"
 RESULTS_PATH = Path(
-    os.environ.get("VC_PSCON_ANALYSIS", str(Path(__file__).resolve().parents[2] / "data" / "pscon_analysis.json"))
+    os.environ.get("VC_PSCON_ANALYSIS", str(_RESULTS_DEFAULT))
 )
 
 
