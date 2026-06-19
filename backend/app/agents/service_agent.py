@@ -1,4 +1,10 @@
-"""Service agent orchestration (spec §13, §28.1, §28.2)."""
+"""Service agent orchestration (spec §13, §28.1, §28.2).
+
+Performance: each LLM-bound stage is timed; logs show "service_agent.stage_latency_sec"
+to diagnose turn-level latency bottlenecks.
+"""
+import logging
+import time
 from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session as DbSession
@@ -122,7 +128,9 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
 
     # 1-2. save user turn + intent classification.
     # 동기 층(M8) 감지는 commit engine으로 이동 — 라이브·시뮬·PSCon이 같은 경로로 12축.
+    t_intent = time.perf_counter()
     intents = await _classify_intents(provider, content)
+    logging.info("service_agent.intent_classification_latency_sec=%.3f", time.perf_counter() - t_intent)
     user_turn = models.Turn(
         id=new_id("turn"),
         session_id=session.id,
@@ -137,9 +145,11 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     db.commit()
 
     # 3. preference commit on the new utterance
+    t_commit = time.perf_counter()
     commit = await run_preference_commit(
         db, provider, session, turn_ids=[user_turn.id], feedback_ids=[], source="user_utterance",
     )
+    logging.info("service_agent.preference_commit_latency_sec=%.3f", time.perf_counter() - t_commit)
 
     # 4-6. action selection
     # detect_category가 모르는 카테고리(니트·원피스 등)는 시나리오 targetCategory로 폴백한다.
@@ -247,6 +257,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         .order_by(models.Turn.turn_index)
         .all()
     )
+    t_reply = time.perf_counter()
     text = await rg.generate_reply(
         provider,
         action=decision.action,
@@ -257,6 +268,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         conflict_explanation=conflict_explanation,
         must_ask_question=value_question,
     )
+    logging.info("service_agent.generate_reply_latency_sec=%.3f", time.perf_counter() - t_reply)
 
     agent_turn = models.Turn(
         id=new_id("turn"),
@@ -283,10 +295,13 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         try:
             from app.spec_builder import update_participant_spec
 
+            t_spec = time.perf_counter()
             update_participant_spec(db, session.participant_id)
+            logging.info("service_agent.update_participant_spec_latency_sec=%.3f", time.perf_counter() - t_spec)
         except Exception:  # noqa: BLE001
             pass
 
+    logging.info("service_agent.total_turn_latency_sec=%.3f", time.perf_counter() - t0)
     return AgentTurnResult(
         user_turn=user_turn,
         agent_turn=agent_turn,

@@ -8,9 +8,13 @@ Concurrency design: all LLM calls run first against read-only context
 (SQLite write locks are NOT held while waiting on the network), then every
 DB mutation happens in one short write transaction at the end. This lets a
 browser session interact in real time while simulations run on the same DB.
+
+Performance: each stage is timed; logs show "commit_engine.stage_latency_sec"
+to diagnose LLM latency bottlenecks.
 """
 import asyncio
 import logging
+import time
 from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session as DbSession
@@ -54,6 +58,7 @@ async def run_preference_commit(
     feedback_ids: list[str],
     source: str,
 ) -> PreferenceCommitResult:
+    t0 = time.perf_counter()
     pre_existing = get_active_topics(db, session.id)
     current_state = {"activeTopicLabels": [t.label for t in pre_existing]}
 
@@ -68,6 +73,7 @@ async def run_preference_commit(
     # Stage 1 — topic extraction (+ motivation 감지를 같은 왕복에 병렬로)
     from app.agents.motivation import fetch_motivation_signals
 
+    t1 = time.perf_counter()
     motivation_signals: list[dict] | None = None
     if user_contents:
         extracted, motivation_signals = await asyncio.gather(
@@ -80,6 +86,9 @@ async def run_preference_commit(
             extract_topics(db, provider, session, turn_ids, feedback_ids, current_state),
             [], "topic_extraction",
         )
+    t2 = time.perf_counter()
+    logger.info("commit_engine.stage1_latency_sec=%.3f (topic_extraction+motivation)", t2 - t1)
+
     pending_new = plan_new_topics(pre_existing, extracted)
 
     anchors_by_label: dict = {}
@@ -93,6 +102,7 @@ async def run_preference_commit(
             for t in pre_existing
         ]
         # Stages 2-4 + 6 fetched concurrently — one network round-trip instead of four
+        t3 = time.perf_counter()
         anchors_by_label, concepts_by_label, raw_relations, raw_conflicts = await asyncio.gather(
             _safe(fetch_anchor_mappings(provider, pending_new), {}, "anchor_mapping"),
             _safe(fetch_concepts(provider, pending_new), {}, "conceptualization"),
@@ -100,8 +110,13 @@ async def run_preference_commit(
             _safe(fetch_conflicts(provider, existing_ctx, [p["label"] for p in pending_new]),
                   [], "conflict_detection"),
         )
+        t4 = time.perf_counter()
+        logger.info("commit_engine.stage2_4_6_latency_sec=%.3f (anchors+concepts+relations+conflicts)", t4 - t3)
+    else:
+        logger.info("commit_engine.stage2_4_6_skipped=no_pending_new")
 
     # ────────────────── Write phase (one short transaction) ──────────────────
+    t_write = time.perf_counter()
     # 동기 층 누적 (M8/M4) — snapshot이 meta를 읽으므로 build_snapshot 전에 갱신
     if user_contents:
         from app.agents.motivation import apply_motivation_signals, detect_motivation, merge_motivation
@@ -128,6 +143,11 @@ async def run_preference_commit(
     )
     snapshot = build_snapshot(db, session)                                  # Stage 7-8
     db.commit()
+    t_write_end = time.perf_counter()
+    logger.info("commit_engine.write_latency_sec=%.4f", t_write_end - t_write)
+
+    t_total = time.perf_counter()
+    logger.info("commit_engine.total_latency_sec=%.3f", t_total - t0)
 
     return PreferenceCommitResult(
         touched_topics=touched,
