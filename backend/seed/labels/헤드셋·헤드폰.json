@@ -1,0 +1,633 @@
+[
+  {
+    "id": "nv_4638764868155349956",
+    "tags": [
+      "게이밍",
+      "무선",
+      "유선"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍"
+      ],
+      "wireless": true,
+      "wired": true,
+      "rgb": true
+    },
+    "shortDesc": "3모드 유무선과 RGB를 지원하는 초경량 콕스 COX SCARLET W 게이밍 헤드셋이다."
+  },
+  {
+    "id": "nv_4166078883967165975",
+    "tags": [
+      "게이밍"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍"
+      ],
+      "rgb": true,
+      "channel": "가상 7.1"
+    },
+    "shortDesc": "가상 7.1 ENC와 RGB를 갖춘 초경량 앱코 N500 게이밍 헤드셋이다."
+  },
+  {
+    "id": "nv_2961799311841166876",
+    "tags": [
+      "노이즈캔슬링",
+      "무선"
+    ],
+    "attributes": {
+      "anc": true,
+      "wireless": true,
+      "bluetooth": true
+    },
+    "shortDesc": "노이즈캔슬링(ANC)을 지원하는 브리츠 블루투스 무선 헤드폰이다."
+  },
+  {
+    "id": "nv_4669595574271489563",
+    "tags": [
+      "게이밍"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍"
+      ],
+      "vibration": true
+    },
+    "shortDesc": "진동 기능을 갖춘 배그·LOL용 브리츠 KG95X 게이밍 헤드셋이다."
+  },
+  {
+    "id": "nv_8395135767432760800",
+    "tags": [
+      "게이밍",
+      "유선"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍"
+      ],
+      "rgb": true,
+      "channel": "가상 7.1",
+      "connection": "USB"
+    },
+    "shortDesc": "가상 7.1채널과 RGB를 지원하는 브리츠 K3 프로 USB 게이밍 헤드셋이다."
+  },
+  {
+    "id": "nv_5152989991742909690",
+    "tags": [
+      "게이밍",
+      "유선"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍",
+        "방송"
+      ],
+      "wired": true
+    },
+    "shortDesc": "방송·게임용으로 나온 레이저 크라켄 키티 V2 Pro 쿼츠 유선 헤드셋이다."
+  },
+  {
+    "id": "nv_7856724747975326336",
+    "tags": [
+      "노이즈캔슬링"
+    ],
+    "attributes": {
+      "anc": true
+    },
+    "shortDesc": "노이즈캔슬링(ANC)을 지원하는 마샬 MONITOR3 헤드폰이다."
+  },
+  {
+    "id": "nv_7686888448351605667",
+    "tags": [
+      "게이밍"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍",
+        "어학"
+      ],
+      "rgb": true,
+      "mic": true
+    },
+    "shortDesc": "고감도 마이크와 RGB LED를 갖춘 어학·인강용 PC 게이밍 헤드셋이다."
+  },
+  {
+    "id": "nv_4685578724257807562",
+    "tags": [
+      "노이즈캔슬링",
+      "무선"
+    ],
+    "attributes": {
+      "anc": true,
+      "wireless": true,
+      "bluetooth": true
+    },
+    "shortDesc": "노이즈캔슬링을 지원하는 소니 WH-1000XM6 미드나잇 블루 블루투스 헤드폰이다."
+  },
+  {
+    "id": "nv_6838130287643361366",
+    "tags": [],
+    "attributes": {
+      "accessory": "이어패드"
+    },
+    "shortDesc": "Arctis 3·5·7 Pro 헤드셋에 호환되는 교체용 이어패드 액세서리이다."
+  },
+  {
+    "id": "nv_2947948184673814937",
+    "tags": [
+      "무선"
+    ],
+    "attributes": {
+      "wireless": true,
+      "bluetooth": true,
+      "mic": true
+    },
+    "shortDesc": "AI 마이크를 내장한 필립스 TAH2209 초경량 블루투스 무선 헤드폰이다."
+  },
+  {
+    "id": "nv_2935928605752213794",
+    "tags": [
+      "유선"
+    ],
+    "attributes": {
+      "wired": true
+    },
+    "shortDesc": "1+1 구성으로 판매되는 CMK-1102MV 유선 헤드폰이다."
+  },
+  {
+    "id": "nv_8196690347840328759",
+    "tags": [
+      "게이밍",
+      "노이즈캔슬링",
+      "무선",
+      "유선"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍"
+      ],
+      "anc": true,
+      "wireless": true,
+      "wired": true,
+      "channel": "가상 7.1"
+    },
+    "shortDesc": "가상 7.1채널과 노이즈캔슬링을 지원하는 제카 유무선 게이밍 헤드셋이다."
+  },
+  {
+    "id": "nv_8066220759595863789",
+    "tags": [
+      "노이즈캔슬링",
+      "무선",
+      "유선"
+    ],
+    "attributes": {
+      "anc": true,
+      "wireless": true,
+      "wired": true,
+      "bluetooth": true
+    },
+    "shortDesc": "노이즈캔슬링을 지원하는 소니 WH-1000XM6 샌드 핑크 유무선 블루투스 헤드셋이다."
+  },
+  {
+    "id": "nv_5653314538886621199",
+    "tags": [
+      "게이밍",
+      "무선"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍"
+      ],
+      "wireless": true,
+      "channel": "DTS 7.1"
+    },
+    "shortDesc": "DTS 7.1과 라이트스피드 무선을 지원하는 로지텍 G733 게이밍 헤드셋이다."
+  },
+  {
+    "id": "nv_7969158772732028475",
+    "tags": [
+      "게이밍",
+      "무선"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍"
+      ],
+      "wireless": true
+    },
+    "shortDesc": "레이저 크라켄 V4 Pro 블랙 무선 게이밍 헤드셋이다."
+  },
+  {
+    "id": "nv_1929474917816969246",
+    "tags": [
+      "게이밍"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍"
+      ]
+    },
+    "shortDesc": "레이저 바라쿠다 X Chroma 팬텀 화이트 에디션 게이밍 헤드셋이다."
+  },
+  {
+    "id": "nv_7446750167756323006",
+    "tags": [],
+    "attributes": {
+      "accessory": "귀마개"
+    },
+    "shortDesc": "수면·층간소음용 소음방지 이어플러그 귀마개로, 헤드셋·헤드폰이 아니다."
+  },
+  {
+    "id": "nv_4749160191951162331",
+    "tags": [
+      "유선",
+      "스튜디오",
+      "프리미엄"
+    ],
+    "attributes": {
+      "wired": true,
+      "driver": "평판형",
+      "priceTier": "프리미엄"
+    },
+    "shortDesc": "평판형 드라이버를 탑재한 오디지 AUDEZE LCD-4z 프리미엄 헤드폰이다."
+  },
+  {
+    "id": "nv_2028799220776104152",
+    "tags": [
+      "무선"
+    ],
+    "attributes": {
+      "wireless": true,
+      "bluetooth": true
+    },
+    "shortDesc": "디알고 P1C 블루투스 무선 헤드폰이다."
+  },
+  {
+    "id": "nv_1368316920206961385",
+    "tags": [
+      "유선",
+      "스튜디오"
+    ],
+    "attributes": {
+      "wired": true,
+      "use": [
+        "모니터링",
+        "홈레코딩"
+      ],
+      "form": "밀폐형"
+    },
+    "shortDesc": "홈레코딩용 밀폐형 레퍼런스 AKG K52 유선 모니터링 헤드폰이다."
+  },
+  {
+    "id": "nv_4537883775520900063",
+    "tags": [
+      "노이즈캔슬링",
+      "무선"
+    ],
+    "attributes": {
+      "anc": true,
+      "wireless": true,
+      "bluetooth": true
+    },
+    "shortDesc": "노이즈캔슬링을 지원하는 보스 QC 울트라 블루투스 무선 헤드셋이다."
+  },
+  {
+    "id": "nv_3074409360983278165",
+    "tags": [],
+    "attributes": {
+      "accessory": "이어셋"
+    },
+    "shortDesc": "모임스톤 IP450S 등 전화기 전용 양방향 귀걸이 이어셋으로, 일반 헤드셋·헤드폰이 아니다."
+  },
+  {
+    "id": "nv_9090612038716494475",
+    "tags": [
+      "무선",
+      "프리미엄"
+    ],
+    "attributes": {
+      "wireless": true,
+      "bluetooth": true,
+      "priceTier": "프리미엄"
+    },
+    "shortDesc": "바워스앤윌킨스 B&W PX8 베이지 블루투스 프리미엄 헤드폰이다."
+  },
+  {
+    "id": "nv_8771870864431557041",
+    "tags": [
+      "노이즈캔슬링",
+      "무선"
+    ],
+    "attributes": {
+      "anc": true,
+      "wireless": true,
+      "bluetooth": true
+    },
+    "shortDesc": "노이즈캔슬링을 지원하는 소니 WH-1000XM5 블랙 블루투스 헤드폰이다."
+  },
+  {
+    "id": "nv_5847029389884880233",
+    "tags": [
+      "무선"
+    ],
+    "attributes": {
+      "wireless": true,
+      "bluetooth": true,
+      "use": [
+        "어린이"
+      ]
+    },
+    "shortDesc": "버디폰 스쿨 플러스 어린이용 블루투스 무선 헤드셋이다."
+  },
+  {
+    "id": "nv_1899283365280267443",
+    "tags": [],
+    "attributes": {
+      "use": [
+        "어린이"
+      ]
+    },
+    "shortDesc": "티미오 어린이용 헤드폰이다."
+  },
+  {
+    "id": "nv_8837548695411838357",
+    "tags": [
+      "유선",
+      "스튜디오"
+    ],
+    "attributes": {
+      "wired": true,
+      "use": [
+        "모니터링"
+      ],
+      "form": "밀폐형"
+    },
+    "shortDesc": "밀폐형으로 나온 AKG K553 MKII 스튜디오 모니터링 헤드폰이다."
+  },
+  {
+    "id": "nv_5969122677319419207",
+    "tags": [
+      "게이밍"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍"
+      ],
+      "rgb": true,
+      "channel": "가상 7.1"
+    },
+    "shortDesc": "가상 7.1과 RGB LED를 지원하는 컴소닉 PILLAR CH-R7 게이밍 헤드셋이다."
+  },
+  {
+    "id": "nv_6980325265309945080",
+    "tags": [
+      "게이밍"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍",
+        "어학"
+      ]
+    },
+    "shortDesc": "온라인학습과 게임, 어학용으로 나온 PC 헤드셋이다."
+  },
+  {
+    "id": "nv_3888554576932243593",
+    "tags": [],
+    "attributes": {
+      "accessory": "걸이"
+    },
+    "shortDesc": "무타공 헤드폰·헤드셋 거치용 다용도 걸이 액세서리로, 헤드셋·헤드폰이 아니다."
+  },
+  {
+    "id": "nv_6841734613569626939",
+    "tags": [],
+    "attributes": {
+      "accessory": "보관함"
+    },
+    "shortDesc": "산업현장용 아크릴 귀마개·헤드셋 보관함으로, 헤드셋·헤드폰이 아니다."
+  },
+  {
+    "id": "nv_6467557647998668590",
+    "tags": [
+      "유선"
+    ],
+    "attributes": {
+      "wired": true,
+      "use": [
+        "PC"
+      ]
+    },
+    "shortDesc": "로지텍 H390 블랙 PC 유선 헤드셋이다."
+  },
+  {
+    "id": "nv_3359339552650282727",
+    "tags": [
+      "게이밍"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍",
+        "스트리밍"
+      ],
+      "mic": true
+    },
+    "shortDesc": "솔로캐스트 마이크가 포함된 하이퍼엑스 스트리머 스타터 팩 게이밍 헤드셋이다."
+  },
+  {
+    "id": "nv_5231618760806400424",
+    "tags": [],
+    "attributes": {
+      "type": "기타 앰프"
+    },
+    "shortDesc": "포지티브 그리드 스파크 네오 스마트 무선 기타 앰프로, 헤드셋·헤드폰이 아니다."
+  },
+  {
+    "id": "nv_6077823643110627256",
+    "tags": [],
+    "attributes": {
+      "type": "헤드폰 앰프"
+    },
+    "shortDesc": "XDUOO TA-26S 헤드폰 앰프로, 헤드셋·헤드폰 본체가 아니다."
+  },
+  {
+    "id": "nv_634067726297223171",
+    "tags": [
+      "무선"
+    ],
+    "attributes": {
+      "wireless": true,
+      "bluetooth": true,
+      "mic": true
+    },
+    "shortDesc": "AI 마이크와 소음제거를 갖춘 필립스 TAH2209 접이식 초경량 블루투스 무선 헤드셋이다."
+  },
+  {
+    "id": "nv_1182795686084052783",
+    "tags": [
+      "유선",
+      "스튜디오"
+    ],
+    "attributes": {
+      "wired": true,
+      "use": [
+        "모니터링"
+      ],
+      "form": "밀폐형"
+    },
+    "shortDesc": "밀폐형으로 나온 AKG K271 MK2 스튜디오 모니터링 헤드폰이다."
+  },
+  {
+    "id": "nv_1663841050713102539",
+    "tags": [
+      "노이즈캔슬링",
+      "무선",
+      "유선",
+      "통화특화"
+    ],
+    "attributes": {
+      "anc": true,
+      "wireless": true,
+      "wired": true,
+      "bluetooth": true,
+      "use": [
+        "통화"
+      ]
+    },
+    "shortDesc": "노이즈캔슬링과 선명한 통화음질을 갖춘 맥스틸 GM-P200B 블루투스 유무선 헤드폰이다."
+  },
+  {
+    "id": "nv_2448619470175150724",
+    "tags": [
+      "유선",
+      "스튜디오"
+    ],
+    "attributes": {
+      "wired": true,
+      "use": [
+        "모니터링"
+      ],
+      "form": "밀폐형"
+    },
+    "shortDesc": "밀폐형으로 나온 슈어 SRH1540 유선 모니터링 헤드폰이다."
+  },
+  {
+    "id": "nv_3581347769766955655",
+    "tags": [],
+    "attributes": {
+      "type": "DAC/헤드폰 앰프"
+    },
+    "shortDesc": "iFi hip-DAC3 포터블 DAC 겸 헤드폰 앰프로, 헤드셋·헤드폰 본체가 아니다."
+  },
+  {
+    "id": "nv_5308557265981224025",
+    "tags": [
+      "유선",
+      "통화특화"
+    ],
+    "attributes": {
+      "wired": true,
+      "connection": "USB",
+      "use": [
+        "통화"
+      ],
+      "form": "모노"
+    },
+    "shortDesc": "통화용으로 나온 EPOS Impact SC30USB 경량 모노 USB 헤드셋이다."
+  },
+  {
+    "id": "nv_177789151473313610",
+    "tags": [],
+    "attributes": {
+      "type": "DAC/헤드폰 앰프"
+    },
+    "shortDesc": "XDUOO POKE II Hi-Res 포터블 DAC 겸 헤드폰 앰프로, 헤드셋·헤드폰 본체가 아니다."
+  },
+  {
+    "id": "nv_2976545618617279280",
+    "tags": [
+      "무선"
+    ],
+    "attributes": {
+      "wireless": true,
+      "bluetooth": true,
+      "rgb": true
+    },
+    "shortDesc": "RGB를 갖춘 포켓몬 블루투스 무선 헤드셋이다."
+  },
+  {
+    "id": "nv_8953021600375444820",
+    "tags": [
+      "통화특화",
+      "유선"
+    ],
+    "attributes": {
+      "wired": true,
+      "use": [
+        "통화"
+      ]
+    },
+    "shortDesc": "Polycom VVX150 전화기 전용 poly EncorePro HW720 통화 헤드셋이다."
+  },
+  {
+    "id": "nv_5298464775625302407",
+    "tags": [],
+    "attributes": {
+      "type": "DAC/헤드폰 앰프"
+    },
+    "shortDesc": "샹린 SHANLING EH2 데스크탑 DAC 겸 헤드폰 앰프로, 헤드셋·헤드폰 본체가 아니다."
+  },
+  {
+    "id": "nv_57226146940676594",
+    "tags": [
+      "노이즈캔슬링",
+      "무선"
+    ],
+    "attributes": {
+      "anc": true,
+      "wireless": true,
+      "bluetooth": true
+    },
+    "shortDesc": "노이즈캔슬링을 지원하는 젠하이저 HD450BT 블루투스 무선 헤드폰이다."
+  },
+  {
+    "id": "nv_6742737258110824123",
+    "tags": [
+      "노이즈캔슬링",
+      "유선"
+    ],
+    "attributes": {
+      "anc": true,
+      "wired": true,
+      "form": "오버이어"
+    },
+    "shortDesc": "노이즈캔슬링을 지원하는 KOSS 큐즈프로 오버이어 유선 헤드폰이다."
+  },
+  {
+    "id": "nv_8191626231189034196",
+    "tags": [
+      "유선"
+    ],
+    "attributes": {
+      "wired": true,
+      "use": [
+        "모니터링"
+      ]
+    },
+    "shortDesc": "디지털 피아노·전자드럼 전용으로 나온 조요 JMH-04 모니터 헤드폰이다."
+  },
+  {
+    "id": "nv_2974529669441667975",
+    "tags": [
+      "무선",
+      "프리미엄"
+    ],
+    "attributes": {
+      "wireless": true,
+      "bluetooth": true,
+      "priceTier": "프리미엄"
+    },
+    "shortDesc": "접이식 인체공학 설계의 휴대용 경량 블루투스 무선 헤드셋이다."
+  }
+]

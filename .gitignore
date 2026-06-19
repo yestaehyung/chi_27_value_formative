@@ -1,0 +1,39 @@
+# ── Secrets / env ─────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Local SQLite (prod DB lives on the Railway volume) ──
+*.db
+*.db-wal
+*.db-shm
+
+# ── Python ────────────────────────────────────
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# ── Node / Next.js ────────────────────────────
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# ── Runtime-generated research output (belongs on the volume) ──
+backend/exports/
+
+# ── Snapshot/backup files (the live file is canonical; *.db already ignored) ──
+*.bak*
+*~
+
+# ── Regenerable research artifacts (not needed for the participant-study deploy) ──
+backend/data/
+
+# ── Research proposal doc (not deployable code, 6.4MB) ──
+*.pdf
+
+# ── Logs / OS ─────────────────────────────────
+*.log
+.DS_Store

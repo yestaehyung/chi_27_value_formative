@@ -1,0 +1,124 @@
+[
+  {
+    "id": "ua_gift_smartwatch_social_risk_averse",
+    "name": "선물용 스마트워치 구매자",
+    "personaNarrative": "운동을 좋아하는 친구에게 스마트워치를 선물하려고 한다. 본인은 스마트워치 브랜드를 잘 모르고, 너무 저렴해 보이거나 AS가 불안한 상품은 피하고 싶다.",
+    "shoppingStyle": "socially_sensitive",
+    "valueOrientation": { "functional": 0.7, "conditional": 0.9, "epistemic": 0.6, "social": 0.9, "affective": 0.8, "hedonic": 0.4 },
+    "traits": {
+      "productFamiliarity": "low",
+      "priceSensitivity": "medium",
+      "riskAversion": "high",
+      "brandSensitivity": "medium",
+      "noveltySeeking": "medium",
+      "decisionConfidence": "low"
+    },
+    "communicationStyle": { "verbosity": "medium", "directness": "indirect", "givesReasons": "often", "changesMind": true }
+  },
+  {
+    "id": "ua_budget_pragmatist",
+    "name": "예산 중심 실용 구매자",
+    "personaNarrative": "필요한 기능만 충족하면 무조건 저렴한 게 좋다고 생각한다. 마음을 잘 바꾸지 않는다.",
+    "shoppingStyle": "budget_constrained",
+    "valueOrientation": { "functional": 0.9, "conditional": 0.4, "epistemic": 0.4, "social": 0.2, "affective": 0.3, "hedonic": 0.2 },
+    "traits": {
+      "productFamiliarity": "medium",
+      "priceSensitivity": "high",
+      "riskAversion": "medium",
+      "brandSensitivity": "low",
+      "noveltySeeking": "low",
+      "decisionConfidence": "high"
+    },
+    "communicationStyle": { "verbosity": "short", "directness": "direct", "givesReasons": "sometimes", "changesMind": false }
+  },
+  {
+    "id": "ua_avoidant",
+    "name": "이유를 말하지 않는 구매자 (Avoidant)",
+    "personaNarrative": "선호는 분명하지만 이유를 잘 설명하지 않는다. 행동(좋아요/싫어요)으로만 신호를 남긴다. 행동 기반 추론 테스트용.",
+    "shoppingStyle": "risk_averse",
+    "valueOrientation": { "functional": 0.6, "conditional": 0.8, "epistemic": 0.3, "social": 0.8, "affective": 0.7, "hedonic": 0.3 },
+    "traits": {
+      "productFamiliarity": "medium", "priceSensitivity": "medium", "riskAversion": "high",
+      "brandSensitivity": "medium", "noveltySeeking": "low", "decisionConfidence": "medium"
+    },
+    "communicationStyle": { "verbosity": "short", "directness": "indirect", "givesReasons": "rarely", "changesMind": false },
+    "script": { "secondUtterance": "음… 그냥 보여주시는 것 중에 골라볼게요." }
+  },
+  {
+    "id": "ua_self_contradicting",
+    "name": "말이 바뀌는 구매자 (Self-contradicting)",
+    "personaNarrative": "처음에는 저렴한 게 좋다고 말하지만, 막상 초저가 상품을 보면 선물로 부적절하다고 거절한다. Conflict detection 스트레스 테스트용.",
+    "shoppingStyle": "socially_sensitive",
+    "valueOrientation": { "functional": 0.6, "conditional": 0.85, "epistemic": 0.5, "social": 0.9, "affective": 0.7, "hedonic": 0.4 },
+    "traits": {
+      "productFamiliarity": "low", "priceSensitivity": "high", "riskAversion": "medium",
+      "brandSensitivity": "medium", "noveltySeeking": "medium", "decisionConfidence": "low"
+    },
+    "communicationStyle": { "verbosity": "medium", "directness": "indirect", "givesReasons": "often", "changesMind": true },
+    "script": { "secondUtterance": "가능하면 저렴한 게 좋아요. 비싼 건 부담스러워서요." }
+  },
+  {
+    "id": "ua_novice_anxious",
+    "name": "불안한 초보 구매자 (Novice-anxious)",
+    "personaNarrative": "상품 지식이 거의 없고 실패가 두렵다. AS, 환불, 리뷰를 반복해서 묻는다. Clarification 전략 테스트용.",
+    "shoppingStyle": "novice",
+    "valueOrientation": { "functional": 0.5, "conditional": 0.6, "epistemic": 0.85, "social": 0.5, "affective": 0.9, "hedonic": 0.2 },
+    "traits": {
+      "productFamiliarity": "low", "priceSensitivity": "medium", "riskAversion": "high",
+      "brandSensitivity": "low", "noveltySeeking": "low", "decisionConfidence": "low"
+    },
+    "communicationStyle": { "verbosity": "long", "directness": "indirect", "givesReasons": "often", "changesMind": true },
+    "script": {
+      "secondUtterance": "제가 잘 몰라서 그런데, 고장 나면 어떡하죠? AS 잘 되는 걸로 부탁드려요.",
+      "inquiry": "리뷰가 적으면 불안해서요. 환불이나 교환은 잘 되는 건가요?"
+    }
+  },
+  {
+    "id": "ua_hedonic_drifting",
+    "name": "구경하다 기준이 바뀌는 구매자 (Hedonic-drifting)",
+    "personaNarrative": "처음에는 예쁜 것을 구경하고 싶어 하지만, 대화가 진행되며 실용 기준(내구성, 신뢰)으로 수렴한다. Value trajectory 테스트용.",
+    "shoppingStyle": "hedonic_browser",
+    "valueOrientation": { "functional": 0.5, "conditional": 0.4, "epistemic": 0.6, "social": 0.4, "affective": 0.5, "hedonic": 0.9 },
+    "traits": {
+      "productFamiliarity": "medium", "priceSensitivity": "low", "riskAversion": "medium",
+      "brandSensitivity": "low", "noveltySeeking": "high", "decisionConfidence": "medium"
+    },
+    "communicationStyle": { "verbosity": "medium", "directness": "indirect", "givesReasons": "sometimes", "changesMind": true },
+    "script": {
+      "firstUtterance": "그냥 예쁜 스마트워치 구경하고 싶어요. 특이한 거 있으면 보여주세요.",
+      "secondUtterance": "근데 생각해보니 오래 쓸 수 있는 게 중요할 것 같아요. 디자인보다 내구성이요.",
+      "inquiry": "이 중에 한달 사용 리뷰가 제일 좋은 건 어느 거예요?"
+    }
+  },
+  {
+    "id": "ua_over_specific",
+    "name": "조건이 지나치게 많은 구매자 (Over-specific)",
+    "personaNarrative": "GPS, 방수, 배터리 10일, 5만원 이하처럼 동시에 만족하기 어려운 조건을 나열한다. Product-space mismatch 테스트용.",
+    "shoppingStyle": "goal_directed",
+    "valueOrientation": { "functional": 0.95, "conditional": 0.7, "epistemic": 0.5, "social": 0.2, "affective": 0.5, "hedonic": 0.1 },
+    "traits": {
+      "productFamiliarity": "high", "priceSensitivity": "high", "riskAversion": "medium",
+      "brandSensitivity": "low", "noveltySeeking": "low", "decisionConfidence": "high"
+    },
+    "communicationStyle": { "verbosity": "long", "directness": "direct", "givesReasons": "often", "changesMind": false },
+    "script": {
+      "secondUtterance": "조건이 좀 있어요. GPS 필수, 방수 필수, 배터리는 10일 이상, 가격은 5만원 이하면 좋겠어요."
+    }
+  },
+  {
+    "id": "ua_distinctive_gift_giver",
+    "name": "특별한 선물 추구 구매자",
+    "personaNarrative": "선물은 흔하지 않고 특별해 보여야 한다고 생각한다. 인기 1위 상품은 오히려 피한다.",
+    "shoppingStyle": "hedonic_browser",
+    "valueOrientation": { "functional": 0.4, "conditional": 0.7, "epistemic": 0.5, "social": 0.8, "affective": 0.5, "hedonic": 0.9 },
+    "traits": {
+      "productFamiliarity": "medium",
+      "priceSensitivity": "low",
+      "riskAversion": "low",
+      "brandSensitivity": "medium",
+      "noveltySeeking": "high",
+      "decisionConfidence": "medium"
+    },
+    "communicationStyle": { "verbosity": "long", "directness": "indirect", "givesReasons": "often", "changesMind": true }
+  }
+]

@@ -1,0 +1,666 @@
+{
+ "summary": {
+  "conversations": 18,
+  "withAtLeastOneTopic": 18,
+  "totalTopics": 35,
+  "topicsPerConv": 1.94,
+  "evidenceTraceRate": 1.0,
+  "criterionLikeRate": 1.0,
+  "anchorDistribution": {
+   "Functional": 20,
+   "Epistemic": 6,
+   "Conditional": 6,
+   "Affective": 6,
+   "Social": 4,
+   "Hedonic": 4
+  },
+  "explicitnessDistribution": {
+   "explicit": 35
+  }
+ },
+ "results": [
+  {
+   "convId": 20322,
+   "stratum": "gift",
+   "userTurns": 6,
+   "firstUtterance": "Hello!",
+   "topics": [
+    {
+     "label": "브랜드를 잘 몰라 실패 확률이 낮은 선택을 원함",
+     "explicitness": "explicit",
+     "confidence": 0.75,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Epistemic",
+       "score": 0.8
+      }
+     ]
+    },
+    {
+     "label": "여성에게 어울리는 디자인을 원함",
+     "explicitness": "explicit",
+     "confidence": 0.8,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Conditional",
+       "score": 0.9
+      },
+      {
+       "anchor": "Social",
+       "score": 0.7
+      }
+     ]
+    },
+    {
+     "label": "운동 기능이 있어야 함",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.85
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 60759,
+   "stratum": "gift",
+   "userTurns": 1,
+   "firstUtterance": "I want to buy some gifts for my girlfriend, do you have any recommendations?",
+   "topics": [
+    {
+     "label": "여자친구에게 맞는 선물",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Conditional",
+       "score": 0.8
+      },
+      {
+       "anchor": "Social",
+       "score": 0.7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 62582,
+   "stratum": "gift",
+   "userTurns": 6,
+   "firstUtterance": "The New Year is coming soon. I want to buy some New Year gifts.",
+   "topics": [
+    {
+     "label": "어린 동생에게 맞는 선물",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Conditional",
+       "score": 0.8
+      },
+      {
+       "anchor": "Functional",
+       "score": 0.7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 19762,
+   "stratum": "budget",
+   "userTurns": 10,
+   "firstUtterance": "Hello, i would like to purchase a new fridge",
+   "topics": [
+    {
+     "label": "화이트 색상의 냉장고를 원함",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.9
+      }
+     ]
+    },
+    {
+     "label": "냉장고의 크기가 중요함",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.85
+      }
+     ]
+    },
+    {
+     "label": "냉장고에 냉동실이 없어야 함",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.9
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 22766,
+   "stratum": "budget",
+   "userTurns": 7,
+   "firstUtterance": "I want to buy a apple laptop. which kind of should I buy, with M1 chip or others?",
+   "topics": [
+    {
+     "label": "최소 16GB RAM이 필요함",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 1.0
+      }
+     ]
+    },
+    {
+     "label": "예산은 $2000로 설정됨",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.9
+      }
+     ]
+    },
+    {
+     "label": "맥북 프로 모델을 원함",
+     "explicitness": "explicit",
+     "confidence": 0.8,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 26111,
+   "stratum": "budget",
+   "userTurns": 4,
+   "firstUtterance": "hello, i need to buy a printer ",
+   "topics": [
+    {
+     "label": "가정용 프린터로 색상 인쇄 가능해야 함",
+     "explicitness": "explicit",
+     "confidence": 0.8,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 1
+      }
+     ]
+    },
+    {
+     "label": "가격이 낮을수록 좋음",
+     "explicitness": "explicit",
+     "confidence": 0.75,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.9
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 20771,
+   "stratum": "brand",
+   "userTurns": 9,
+   "firstUtterance": "I am looking for a new laptop",
+   "topics": [
+    {
+     "label": "디자인이 마음에 드는 제품을 원함",
+     "explicitness": "explicit",
+     "confidence": 0.8,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Hedonic",
+       "score": 0.8
+      }
+     ]
+    },
+    {
+     "label": "성능이 우수한 제품을 원함",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.9
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 26515,
+   "stratum": "brand",
+   "userTurns": 4,
+   "firstUtterance": "Hi, I'm looking to buy a new TV. Can you recommend something?",
+   "topics": [
+    {
+     "label": "55인치 이상의 큰 화면 선호",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.9
+      }
+     ]
+    },
+    {
+     "label": "잘 알려진 브랜드 선호",
+     "explicitness": "explicit",
+     "confidence": 0.8,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.85
+      },
+      {
+       "anchor": "Affective",
+       "score": 0.7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 2776,
+   "stratum": "brand",
+   "userTurns": 5,
+   "firstUtterance": "I want to buy a television.",
+   "topics": [
+    {
+     "label": "LG 브랜드를 선호하고 삼성은 피함",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Social",
+       "score": 0.9
+      },
+      {
+       "anchor": "Affective",
+       "score": 0.8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 79757,
+   "stratum": "quality",
+   "userTurns": 4,
+   "firstUtterance": "Can you recommend a durable suitcase?",
+   "topics": [
+    {
+     "label": "내구성이 뛰어난 여행용 캐리어",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.9
+      },
+      {
+       "anchor": "Conditional",
+       "score": 0.85
+      }
+     ]
+    },
+    {
+     "label": "흰색 캐리어 선호",
+     "explicitness": "explicit",
+     "confidence": 0.75,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Hedonic",
+       "score": 0.8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 86333,
+   "stratum": "quality",
+   "userTurns": 3,
+   "firstUtterance": "I want buy  a cookware set.",
+   "topics": [
+    {
+     "label": "내구성이 뛰어난 조리기구 세트",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.9
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 124299,
+   "stratum": "quality",
+   "userTurns": 3,
+   "firstUtterance": "Do you have tape that doesn't leave adhesive marks?",
+   "topics": [
+    {
+     "label": "접착 자국이 남지 않는 테이프 필요",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.9
+      }
+     ]
+    },
+    {
+     "label": "제품 정보에 기능이 명시되어야 함",
+     "explicitness": "explicit",
+     "confidence": 0.75,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Epistemic",
+       "score": 0.85
+      }
+     ]
+    },
+    {
+     "label": "신뢰할 수 있는 제품 선택",
+     "explicitness": "explicit",
+     "confidence": 0.7,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Affective",
+       "score": 0.8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 4516,
+   "stratum": "explore",
+   "userTurns": 3,
+   "firstUtterance": "I want a type of cheese spread for my breakfast toast. Can you recommend some for me?",
+   "topics": [
+    {
+     "label": "이탈리아산 치즈 스프레드를 시도하고 싶음",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Hedonic",
+       "score": 0.8
+      },
+      {
+       "anchor": "Conditional",
+       "score": 0.6
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 5969,
+   "stratum": "explore",
+   "userTurns": 5,
+   "firstUtterance": "Hi",
+   "topics": [
+    {
+     "label": "품질 좋은 더마롤러를 원함",
+     "explicitness": "explicit",
+     "confidence": 0.8,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 1.0
+      }
+     ]
+    },
+    {
+     "label": "적절한 길이 선택에 대한 불확실성",
+     "explicitness": "explicit",
+     "confidence": 0.7,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Epistemic",
+       "score": 0.8
+      },
+      {
+       "anchor": "Affective",
+       "score": 0.6
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 24741,
+   "stratum": "replace",
+   "userTurns": 3,
+   "firstUtterance": "I'm interested in upgrading my phone, what are the best deals currently available?",
+   "topics": [
+    {
+     "label": "Xiaomi 제품에 대한 관심",
+     "explicitness": "explicit",
+     "confidence": 0.8,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Epistemic",
+       "score": 0.8
+      }
+     ]
+    },
+    {
+     "label": "Note 10 Pro에서 Note 12 Pro로의 업그레이드",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.9
+      },
+      {
+       "anchor": "Conditional",
+       "score": 0.7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 3340,
+   "stratum": "replace",
+   "userTurns": 5,
+   "firstUtterance": "My mouse is broken, recommend one for me please!",
+   "topics": [
+    {
+     "label": "무선 마우스를 원함",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 1
+      }
+     ]
+    },
+    {
+     "label": "Logitech 또는 Razer 브랜드를 선호함",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Epistemic",
+       "score": 0.9
+      },
+      {
+       "anchor": "Social",
+       "score": 0.7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 26736,
+   "stratum": "situation",
+   "userTurns": 4,
+   "firstUtterance": "Hi there, I'm looking to buy a chair. Can you recommend something?",
+   "topics": [
+    {
+     "label": "편안한 의자 필요",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Functional",
+       "score": 0.9
+      },
+      {
+       "anchor": "Affective",
+       "score": 0.7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "convId": 29792,
+   "stratum": "situation",
+   "userTurns": 5,
+   "firstUtterance": "how are you ?",
+   "topics": [
+    {
+     "label": "구체적인 상품 사진을 먼저 보고 싶음",
+     "explicitness": "explicit",
+     "confidence": 0.8,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Epistemic",
+       "score": 0.8
+      }
+     ]
+    },
+    {
+     "label": "원하는 상품이 마음에 들지 않음",
+     "explicitness": "explicit",
+     "confidence": 0.85,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Affective",
+       "score": 0.9
+      }
+     ]
+    },
+    {
+     "label": "선호하는 상품을 찾았음",
+     "explicitness": "explicit",
+     "confidence": 0.9,
+     "evidenceValid": true,
+     "criterionLike": true,
+     "anchors": [
+      {
+       "anchor": "Hedonic",
+       "score": 0.85
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

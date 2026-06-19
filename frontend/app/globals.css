@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── ValueCommit design language ──────────────────────────────────────
+   primary  #4F46E5 (Indigo) · hover #4338CA · tonal #EEF2FF
+   semantic positive #047857/#ECFDF5 · text #191919/#606060
+   border   #e4e8eb · bg #f5f6f8                                       */
+
+:root {
+  /* 한글 글리프 + 시스템 폴백 — 라틴 컷(Text/Display) 다음에서 한글을 받친다.
+     Google Sans엔 한글이 없어 한국어는 Noto Sans KR로 글자별 폴백된다. */
+  --kr-fallback: "Noto Sans KR", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", "Segoe UI", sans-serif;
+}
+
+@layer base {
+  body {
+    /* 본문·UI = Text 광학 컷 (작은 글씨 가독성에 최적화된 cut) */
+    font-family: "Google Sans Text", var(--kr-fallback);
+    background-color: #f5f6f8;
+    color: #191919;
+    /* 한국어 어절 단위 줄바꿈 — 글자 중간에서 끊기지 않게 */
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+  /* 제목 = Display 광학 컷 (Material 3 역할별 폰트 배정 방식) */
+  h1,
+  h2,
+  h3 {
+    font-family: "Google Sans Display", var(--kr-fallback);
+  }
+}
+
+@layer components {
+  /* white surface, thin border, subtle shadow */
+  .card {
+    @apply rounded-2xl border border-[#e4e8eb] bg-white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#e4e8eb] bg-white px-3.5 py-2 text-sm font-medium text-[#404040] transition-colors duration-150 disabled:opacity-50;
+  }
+  .btn:hover:not(:disabled) {
+    @apply border-[#c9cdd2] bg-[#fafbfc];
+  }
+  .btn-primary {
+    @apply border-[#4f46e5] bg-[#4f46e5] font-semibold text-white;
+  }
+  .btn-primary:hover:not(:disabled) {
+    @apply border-[#4338ca] bg-[#4338ca];
+  }
+  .btn-danger {
+    @apply border-[#ffd6d6] bg-[#fff5f5] text-[#e03131];
+  }
+  .btn-danger:hover:not(:disabled) {
+    @apply bg-[#ffeded];
+  }
+  /* ValueCommit "V" square mark */
+  .brand-mark {
+    @apply inline-flex shrink-0 items-center justify-center rounded-lg bg-[#4f46e5] font-extrabold text-white;
+  }
+  .brand-text {
+    @apply font-extrabold tracking-tight text-[#4f46e5];
+  }
+  /* chat input — bordered box with brand focus ring */
+  .chat-input {
+    @apply rounded-xl border-2 border-[#e4e8eb] bg-white transition-colors duration-150;
+  }
+  .chat-input:focus-within {
+    @apply border-[#4f46e5];
+  }
+}
+
+/* message entrance */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.msg-in { animation: fadeUp 0.22s ease-out both; }
+
+/* thinking dots — brand indigo */
+@keyframes pulseDot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.35; }
+  40% { transform: scale(1); opacity: 1; }
+}
+.thinking-dot {
+  @apply inline-block h-2 w-2 rounded-full bg-[#4f46e5];
+  animation: pulseDot 1.2s infinite ease-in-out;
+}
+.thinking-dot:nth-child(2) { animation-delay: 0.15s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.3s; }

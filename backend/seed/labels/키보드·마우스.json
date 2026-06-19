@@ -1,0 +1,602 @@
+[
+  {
+    "id": "nv_4057699404462265550",
+    "tags": [
+      "게이밍",
+      "무선",
+      "유선"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "gaming": true,
+      "connectivity": "유무선",
+      "polling": "8K"
+    },
+    "shortDesc": "8K 폴링을 지원하는 ATK X1 Ultimate 유무선 게이밍 마우스이다."
+  },
+  {
+    "id": "nv_3813473053136113781",
+    "tags": [
+      "기계식",
+      "무선",
+      "저소음"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식",
+      "connectivity": "3모드(무선)",
+      "lowNoise": true
+    },
+    "shortDesc": "가스켓 구조의 저소음 GK798PRO 3모드 무선 기계식 키보드이다."
+  },
+  {
+    "id": "nv_5466748692964915517",
+    "tags": [
+      "무선",
+      "사무용",
+      "저소음",
+      "슬림"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "멤브레인",
+      "connectivity": "무선(블루투스)",
+      "lowNoise": true,
+      "slim": true,
+      "use": "사무용"
+    },
+    "shortDesc": "사무실용 앱코 AK10 무선 블루투스 저소음 슬림 멤브레인 키보드이다."
+  },
+  {
+    "id": "nv_241392510272432593",
+    "tags": [
+      "기계식",
+      "무선",
+      "유선",
+      "저소음"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식",
+      "connectivity": "유무선",
+      "lowNoise": true
+    },
+    "shortDesc": "저소음 디딤돌축을 쓴 프리플로우 archon AK68 유무선 기계식 키보드이다."
+  },
+  {
+    "id": "nv_5984326222274987088",
+    "tags": [],
+    "attributes": {
+      "deviceType": "마우스 그립테이프(액세서리)"
+    },
+    "shortDesc": "마우스 본체가 아니라 로지텍 지슈라용 그립테이프 액세서리이다."
+  },
+  {
+    "id": "nv_4369346255776292175",
+    "tags": [],
+    "attributes": {
+      "deviceType": "키보드 스위치(부품)"
+    },
+    "shortDesc": "키보드 본체가 아니라 몬스타 KTT 강백축 V3 리니어 스위치 부품이다."
+  },
+  {
+    "id": "nv_383893260611127983",
+    "tags": [],
+    "attributes": {
+      "deviceType": "마우스피트(액세서리)"
+    },
+    "shortDesc": "마우스 본체가 아니라 LAMZU PARO용 마우스피트 ICE 버전 액세서리이다."
+  },
+  {
+    "id": "nv_220940942791649557",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "키보드·마우스가 아니라 가물치용 입벌리개(낚시 도구)이다."
+  },
+  {
+    "id": "nv_4655387548207002160",
+    "tags": [
+      "기계식",
+      "무선",
+      "유선",
+      "저소음"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식",
+      "connectivity": "유무선",
+      "lowNoise": true,
+      "polling": "8K"
+    },
+    "shortDesc": "저소음 갈축에 8K를 지원하는 그루브스톤 GV10M 유무선 기계식 키보드이다."
+  },
+  {
+    "id": "nv_4902032806419251650",
+    "tags": [],
+    "attributes": {
+      "deviceType": "키보드 스위치(부품)"
+    },
+    "shortDesc": "키보드 본체가 아니라 몽돌 블랙 리니어 기계식 키보드 스위치 패키지이다."
+  },
+  {
+    "id": "nv_7454626021730913468",
+    "tags": [
+      "게이밍",
+      "기계식"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식(갈축)",
+      "gaming": true,
+      "led": true
+    },
+    "shortDesc": "갈축에 레인보우 LED를 갖춘 콕스 CK420 게이밍 기계식 키보드이다."
+  },
+  {
+    "id": "nv_8098895908269714749",
+    "tags": [
+      "기계식",
+      "무선",
+      "유선"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식",
+      "connectivity": "유무선",
+      "layout": "풀배열",
+      "display": "LCD"
+    },
+    "shortDesc": "풀배열 알루미늄에 LCD를 단 AJAZZ AC100 MAX 유무선 기계식 키보드이다."
+  },
+  {
+    "id": "nv_1242738105253678643",
+    "tags": [
+      "게이밍",
+      "무선"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "gaming": true,
+      "connectivity": "무선"
+    },
+    "shortDesc": "로지텍 G PRO X SUPERLIGHT 2 무선 게이밍 마우스이다."
+  },
+  {
+    "id": "nv_4453786207524063572",
+    "tags": [
+      "기계식",
+      "무선",
+      "유선",
+      "저소음"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식",
+      "connectivity": "유무선",
+      "layout": "텐키리스(88키)",
+      "lowNoise": true
+    },
+    "shortDesc": "저소음 딥씨축을 쓴 씽크웨이 TV88 유무선 텐키리스 기계식 키보드이다."
+  },
+  {
+    "id": "nv_4880375598644857129",
+    "tags": [
+      "무선",
+      "슬림"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "팬터그래프",
+      "connectivity": "무선(블루투스)",
+      "foldable": true
+    },
+    "shortDesc": "휴대용 접이식인 아이노트 X-Folding 블루투스 팬터그래프 키보드이다."
+  },
+  {
+    "id": "nv_5892312379621454511",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "키보드·마우스가 아니라 고프로 액션캠용 서핑 마우스피스 마운트이다."
+  },
+  {
+    "id": "nv_2932508354874004923",
+    "tags": [
+      "기계식",
+      "무선",
+      "유선",
+      "저소음"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식",
+      "connectivity": "유무선",
+      "lowNoise": true
+    },
+    "shortDesc": "오테뮤 저소음 피치축을 쓴 큐센 DT35 유무선 기계식 키보드이다."
+  },
+  {
+    "id": "nv_6844946350118707566",
+    "tags": [],
+    "attributes": {
+      "deviceType": "키캡(액세서리)"
+    },
+    "shortDesc": "키보드 본체가 아니라 다예 SALON ABS 이중사출 커스텀 키캡 세트이다."
+  },
+  {
+    "id": "nv_8113129915733560811",
+    "tags": [
+      "무선",
+      "저소음"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "connectivity": "무선(블루투스)",
+      "lowNoise": true,
+      "rechargeable": true
+    },
+    "shortDesc": "충전식으로 쓰는 플레이기어 무소음 블루투스 무선 마우스이다."
+  },
+  {
+    "id": "nv_434655399997699788",
+    "tags": [
+      "무선",
+      "사무용",
+      "슬림"
+    ],
+    "attributes": {
+      "deviceType": "키보드+마우스 세트",
+      "switch": "멤브레인",
+      "connectivity": "무선",
+      "slim": true
+    },
+    "shortDesc": "로지텍 MK470 슬림 무선 멤브레인 키보드·마우스 세트이다."
+  },
+  {
+    "id": "nv_5665168384794145564",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "키보드·마우스가 아니라 페리오 입냄새 제거용 구강(마우스) 스프레이이다."
+  },
+  {
+    "id": "nv_908769182144290489",
+    "tags": [
+      "게이밍",
+      "무선"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "gaming": true,
+      "connectivity": "무선"
+    },
+    "shortDesc": "지프로 슈퍼라이트2 계열인 로지텍 지슈라2 무선 게이밍 마우스이다."
+  },
+  {
+    "id": "nv_3368734347210842571",
+    "tags": [
+      "게이밍",
+      "기계식"
+    ],
+    "attributes": {
+      "deviceType": "키보드(+마우스패드)",
+      "switch": "기계식(자석축)",
+      "gaming": true,
+      "rapidTrigger": true
+    },
+    "shortDesc": "자석축 래피드트리거를 갖춘 커세어 K70 MAX 게이밍 기계식 키보드(마우스패드 포함)이다."
+  },
+  {
+    "id": "nv_5919014665534139309",
+    "tags": [],
+    "attributes": {
+      "deviceType": "팜레스트/손목받침(액세서리)"
+    },
+    "shortDesc": "키보드·마우스 본체가 아니라 아이모 키보드·마우스용 팜레스트(손목받침) 세트이다."
+  },
+  {
+    "id": "nv_8767847308514091909",
+    "tags": [
+      "무선"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "connectivity": "무선(블루투스)"
+    },
+    "shortDesc": "레노버 탭 Y700 3세대용 블루투스 무선 마우스이다."
+  },
+  {
+    "id": "nv_6602501900369095703",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "키보드·마우스가 아니라 클라리넷·색소폰용 마우스피스 패치이다."
+  },
+  {
+    "id": "nv_8901923966758434972",
+    "tags": [],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "무접점(정전용량)",
+      "led": true
+    },
+    "shortDesc": "삼색사출 RGB를 갖춘 앱코 KN20C 무접점(정전용량) 키보드이다."
+  },
+  {
+    "id": "nv_7198190067973452342",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "키보드·마우스가 아니라 키보드 옆에 두는 USB 자바라 LED 조명(독서등)이다."
+  },
+  {
+    "id": "nv_2543692821028440144",
+    "tags": [],
+    "attributes": {
+      "deviceType": "키캡(액세서리)"
+    },
+    "shortDesc": "키보드 본체가 아니라 고양이 젤리 모양 실리콘 커스텀 키캡이다."
+  },
+  {
+    "id": "nv_8996151324007773059",
+    "tags": [
+      "무선"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "connectivity": "무선(블루투스)",
+      "multiDevice": true
+    },
+    "shortDesc": "여러 기기를 연결하는 로지텍 K780 무선 블루투스 멀티 키보드이다."
+  },
+  {
+    "id": "nv_981480523464494940",
+    "tags": [
+      "게이밍",
+      "무선"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "gaming": true,
+      "connectivity": "무선",
+      "polling": "8K",
+      "modular": true
+    },
+    "shortDesc": "8K를 지원하는 Orbital 패스파인더 모듈형 무선 게이밍 마우스이다."
+  },
+  {
+    "id": "nv_5030732640243796366",
+    "tags": [
+      "기계식",
+      "사무용"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식(MX2A 적축)",
+      "layout": "풀배열",
+      "led": true,
+      "use": "사무용"
+    },
+    "shortDesc": "MX2A 적축을 쓴 체리 MX 3.0S RGB 풀배열 사무용 기계식 키보드이다."
+  },
+  {
+    "id": "nv_3838495877742312042",
+    "tags": [
+      "기계식",
+      "무선",
+      "유선"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식",
+      "connectivity": "유무선(블루투스)",
+      "layout": "87키(텐키리스)",
+      "hotswap": true
+    },
+    "shortDesc": "핫스왑을 지원하는 QSENN Q87 유무선 블루투스 87키 기계식 키보드이다."
+  },
+  {
+    "id": "nv_2394373690593253042",
+    "tags": [
+      "게이밍",
+      "기계식"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식",
+      "gaming": true,
+      "layout": "87키"
+    },
+    "shortDesc": "MCHOSE 마이콩 G87 커스텀 기계식 게이밍 키보드이다."
+  },
+  {
+    "id": "nv_2498514747579880825",
+    "tags": [],
+    "attributes": {
+      "deviceType": "키캡(아티산 액세서리)"
+    },
+    "shortDesc": "키보드 본체가 아니라 보당 포인트 아티산 커스텀 키캡이다."
+  },
+  {
+    "id": "nv_4123561753634538762",
+    "tags": [
+      "게이밍",
+      "무선",
+      "유선"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "connectivity": "유무선",
+      "lightweight": true
+    },
+    "shortDesc": "초경량 유무선으로 나온 ATK A9 잠자리 게이밍 마우스이다."
+  },
+  {
+    "id": "nv_2204399583062483112",
+    "tags": [
+      "무선",
+      "사무용",
+      "게이밍"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "connectivity": "무선",
+      "use": [
+        "사무용",
+        "게임"
+      ]
+    },
+    "shortDesc": "사무·게임용으로 쓰는 현대 무선 광 마우스이다."
+  },
+  {
+    "id": "nv_5652454593850421808",
+    "tags": [],
+    "attributes": {
+      "deviceType": "키캡(액세서리)"
+    },
+    "shortDesc": "키보드 본체가 아니라 솜사탕 한무무 XDA PBT 키캡 세트이다."
+  },
+  {
+    "id": "nv_4510599975507503280",
+    "tags": [],
+    "attributes": {
+      "deviceType": "마우스 가죽 슬리브/케이스(액세서리)"
+    },
+    "shortDesc": "마우스 본체가 아니라 애플 매직 마우스 등에 씌우는 가죽 슬리브이다."
+  },
+  {
+    "id": "nv_5781251456912028612",
+    "tags": [
+      "무선",
+      "인체공학",
+      "저소음"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "connectivity": "무선",
+      "form": "버티컬",
+      "ergonomic": true,
+      "lowNoise": true,
+      "rechargeable": true
+    },
+    "shortDesc": "디자이너용으로 나온 코시 M2136WL 충전식 무소음 버티컬 무선 마우스이다."
+  },
+  {
+    "id": "nv_5411637406605177508",
+    "tags": [
+      "무선",
+      "저소음"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "connectivity": "무선",
+      "lowNoise": true,
+      "rechargeable": true,
+      "multiDevice": true,
+      "antibacterial": true
+    },
+    "shortDesc": "항균·멀티페어링되는 아이리버 Air Lift 50 충전식 무소음 무선 마우스이다."
+  },
+  {
+    "id": "nv_4772661197274467963",
+    "tags": [
+      "게이밍",
+      "기계식"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식",
+      "gaming": true
+    },
+    "shortDesc": "ASUS ROG STRIX SCOPE 2 X 기계식 게이밍 키보드(영문)이다."
+  },
+  {
+    "id": "nv_6097852096340416932",
+    "tags": [
+      "기계식"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식(맥스 적축)",
+      "layout": "65%"
+    },
+    "shortDesc": "맥스 적축을 쓴 NUPHY Halo65 V2 IO 기계식 키보드이다."
+  },
+  {
+    "id": "nv_5475544094781053367",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "키보드·마우스가 아니라 날진 서스테인 와이드 마우스(넓은 입구) 물병 1L이다."
+  },
+  {
+    "id": "nv_6599200044130040100",
+    "tags": [
+      "게이밍",
+      "무선"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "gaming": true,
+      "connectivity": "무선"
+    },
+    "shortDesc": "Pulsar lab X2F 무선 게이밍 마우스이다."
+  },
+  {
+    "id": "nv_4410956705104880968",
+    "tags": [
+      "게이밍",
+      "무선"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "gaming": true,
+      "connectivity": "무선"
+    },
+    "shortDesc": "로지텍 G703 HERO 무선 게이밍 마우스이다."
+  },
+  {
+    "id": "nv_8230499343027481861",
+    "tags": [
+      "무선",
+      "슬림"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "connectivity": "무선(블루투스)",
+      "slim": true,
+      "portable": true
+    },
+    "shortDesc": "휴대용으로 나온 USB 소형 무선 블루투스 슬림 마우스이다."
+  },
+  {
+    "id": "nv_5128845196151644508",
+    "tags": [
+      "게이밍",
+      "유선"
+    ],
+    "attributes": {
+      "deviceType": "마우스",
+      "gaming": true,
+      "connectivity": "유선"
+    },
+    "shortDesc": "스틸시리즈 PRIME 유선 게이밍 마우스이다."
+  },
+  {
+    "id": "nv_762459911922868160",
+    "tags": [
+      "기계식",
+      "무선",
+      "유선"
+    ],
+    "attributes": {
+      "deviceType": "키보드",
+      "switch": "기계식(HMX 청죽축)",
+      "connectivity": "유무선",
+      "layout": "75%",
+      "led": true
+    },
+    "shortDesc": "HMX 청죽축을 쓴 PMO WAVE75 유무선 CNC알루미늄 RGB 기계식 키보드이다."
+  },
+  {
+    "id": "nv_1081171114022562834",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "키보드·마우스가 아니라 알토·테너·소프라노 색소폰용 마우스피스 패치이다."
+  }
+]

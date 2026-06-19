@@ -1,0 +1,1230 @@
+{
+ "nk_07b446be": {
+  "personaId": "nk_07b446be",
+  "personaName": "조광호",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "BargainValue": "high"
+  },
+  "hiddenIntentions": [
+   "제품의 내구성과 고장 없이 오래 사용할 수 있는지를 꼼꼼히 따진다.",
+   "건강 상태에 악영향을 주지 않는 제품인지 확인한다.",
+   "복잡한 기능보다 기본에 충실하고 조작이 쉬운 제품을 선호한다."
+  ],
+  "scenarioId": "replacement_upgrade",
+  "speechStyle": "간결하고 실용적인 말투로, 필요한 기능과 가격만 간단히 확인하고 결정한다.",
+  "matchRationale": "은퇴 후에도 오래 사용할 제품을 선호하며, 고장난 기기를 교체하는 상황이 가장 자연스럽다."
+ },
+ "nk_00f8e56b": {
+  "personaId": "nk_00f8e56b",
+  "personaName": "최서영",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "dominant",
+   "Epistemic": "present",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Adventure": "low",
+   "Gratification": "high",
+   "BargainValue": "high",
+   "Idea": "high",
+   "Utilitarian": "low"
+  },
+  "hiddenIntentions": [
+   "사실 가격이 가장 중요하지만, 무직이라 예산이 빠듯하다는 것을 말하기 부끄러워한다.",
+   "제품이 심리적 안정과 평온을 주는지 중요하게 여기지만, 건강 회복 중인 자신의 취약함을 드러내고 싶지 않아 한다."
+  ],
+  "scenarioId": "first_time_exploration",
+  "speechStyle": "부드럽고 망설이는 말투, 자신의 생각을 조금씩 풀어내며, 가격과 실용성을 은근히 강조한다.",
+  "matchRationale": "건강 회복 중이며 운동을 즐기고, 새로운 카테고리에 호기심이 있어 처음 스마트워치를 탐색하는 시나리오가 자연스럽다."
+ },
+ "nk_056b1b8d": {
+  "personaId": "nk_056b1b8d",
+  "personaName": "이진희",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "present",
+   "Emotional": "dominant",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Gratification": "high",
+   "Role": "high",
+   "BargainValue": "high",
+   "Utilitarian": "high"
+  },
+  "hiddenIntentions": [
+   "무릎 통증과 피로를 덜어줄 편안함이 진짜 중요하지만, 겉으로는 예쁜 디자인에 집중하는 척 한다. (줄넘기 시도 후 무릎 통증으로 포기한 경험)",
+   "아이를 위해 쓰는 돈을 아끼면서도 자신에게 소소한 사치는 허용할 수 있는 균형을 찾고 싶어 한다. (한부모 가정에서의 경제적 부담과 디저트/사우나에 지출하는 모습)",
+   "오래 쓸 수 있는 내구성을 중요시하지만, 충동적인 감성 소비를 합리화하기 위해 '가성비'를 핑계로 삼는다. (실용적인 직업과 정서적 소비의 이중성)"
+  ],
+  "scenarioId": "body_comfort_health",
+  "speechStyle": "직접적이면서도 감정이 담긴 중간 길이의 문장으로, 자신의 신체적 불편함이나 피로를 먼저 언급한 후 원하는 기능을 설명한다.",
+  "matchRationale": "이진희 씨는 무릎 통증과 현장 피로에 시달리며 편안한 신발을 필요로 하지만, 운동화를 살 때 외형도 고려하는 정서적 소비 성향이 있어 '신체/건강 적합 구매' 시나리오가 가장 자연스럽다."
+ },
+ "nk_0c71de47": {
+  "personaId": "nk_0c71de47",
+  "personaName": "박진호",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "trace",
+   "Emotional": "dominant",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Adventure": "low",
+   "Gratification": "low",
+   "Role": "low",
+   "BargainValue": "high",
+   "SocialShopping": "low",
+   "Idea": "low",
+   "Utilitarian": "high"
+  },
+  "hiddenIntentions": [
+   "제품이 일상의 안정감을 해치지 않고 오래 사용할 수 있는지 꼼꼼히 따진다 (과거 치열한 경쟁에 지쳐 안정을 추구하는 성향 반영)",
+   "가족과 함께 사용하거나 생활에 무리가 없는지 확인한다 (부모님과 동거하며 가족 중심 생활을 중시)",
+   "구매 후 불안이나 후회가 없을지 사전에 검증하려 한다 (신중하고 불안회피 성격)"
+  ],
+  "scenarioId": "high_involvement",
+  "speechStyle": "상대적으로 길고 신중하며, 자신의 판단에 대해 이유를 자세히 설명하는 스타일",
+  "matchRationale": "업무용 고가 노트북은 신중한 선택이 필요한 제품으로, 실용성과 안정성을 중시하는 박진호 씨의 쇼핑 성향과 가장 잘 부합합니다."
+ },
+ "nk_2529eb9e": {
+  "personaId": "nk_2529eb9e",
+  "personaName": "백승구",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "present",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Role": "high",
+   "Utilitarian": "high",
+   "Adventure": "low",
+   "Gratification": "low",
+   "BargainValue": "low",
+   "SocialShopping": "low",
+   "Idea": "low"
+  },
+  "hiddenIntentions": [
+   "제품이 너무 복잡하지 않고 사용법이 간단해야 한다 (서사: 기술에 능숙하지 않으며 단순한 일상을 선호함)",
+   "선물을 받는 친구가 편안하게 사용할 수 있는지가 중요하다 (서사: 서비스 정신과 상대방 기분을 배려하는 성격)"
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "정중하고 부드러우며, 자신의 무지를 솔직하게 인정하고 느긋하게 설명을 요청하는 말투 (길지 않음, 직접적이지만 예의 있음)",
+  "matchRationale": "서사에서 그는 운동 좋아하는 친구를 위해 스마트워치를 선물하려 하며, 본인은 기술에 익숙하지 않아 조언을 구하는 상황이 가장 자연스럽습니다."
+ },
+ "nk_11948245": {
+  "personaId": "nk_11948245",
+  "personaName": "이민훈",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "present",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "Gratification": "high",
+   "Idea": "high",
+   "SocialShopping": "low"
+  },
+  "hiddenIntentions": [
+   "제품이 개인적인 호기심과 발견의 즐거움을 충족시켜야 한다. (혼자 낯선 골목을 탐방하는 식도락 여행을 즐기는 성향에서 비롯)",
+   "실용성과 미적 감성을 동시에 만족시켜야 한다. (공학적 논리와 인문학적 감성을 모두 갖춘 완벽주의자)"
+  ],
+  "scenarioId": "high_involvement",
+  "speechStyle": "체계적이고 논리적인 설명을 선호하며, 자신의 경험과 감성을 함께 담은 문장을 사용한다. 직접적이지만 부드러운 어조.",
+  "matchRationale": "업무용 노트북을 신중하게 고르는 시나리오는 이민훈의 체계적이고 완벽주의적인 성향과 잘 맞으며, 장기적으로 사용할 제품에 대한 높은 관여도가 그의 성격에 부합한다."
+ },
+ "nk_3196bf42": {
+  "personaId": "nk_3196bf42",
+  "personaName": "김평자",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "present",
+   "Emotional": "present",
+   "Epistemic": "present",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "BargainValue": "high",
+   "Utilitarian": "high",
+   "Role": "high",
+   "SocialShopping": "high",
+   "Idea": "high",
+   "Adventure": "low",
+   "Gratification": "high"
+  },
+  "hiddenIntentions": [
+   "실용성과 내구성을 최우선으로 따지지만, 가끔은 남편이나 손주를 위해 지출을 늘리기도 한다. (가계부를 꼼꼼히 관리하나 고급 과일이나 피자 등 특별한 경우 예산을 초과)",
+   "건강 관리에 대한 관심이 높아 제품이 혈압 안정이나 건강 개선에 도움이 되는지 은근히 따진다. (유튜브 건강 영상을 시청하며 복부 비만과 혈압을 걱정)",
+   "친목 모임 총무로서 다른 사람의 만족을 중요시하므로, 구매 결정에 주변 의견을 크게 반영한다. (회원들의 회비를 관리하고 전국 맛집 지도를 완성하려 함)"
+  ],
+  "scenarioId": "first_time_exploration",
+  "speechStyle": "상세하고 정중하며, 실용성과 가격을 꼼꼼히 묻는 스타일",
+  "matchRationale": "스마트워치를 처음 접하는 나이와 기술 수준을 고려할 때, 첫 구매를 위한 탐색 과정이 가장 자연스럽다."
+ },
+ "nk_271609d4": {
+  "personaId": "nk_271609d4",
+  "personaName": "안진철",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "Role": "high",
+   "SocialShopping": "low",
+   "Adventure": "low",
+   "Gratification": "low",
+   "Idea": "low"
+  },
+  "hiddenIntentions": [
+   "실용성과 내구성이 가장 중요하지만, 아내의 의견도 조용히 반영한다.",
+   "익숙한 브랜드와 제품을 선호하며, 새로운 시도에 따른 위험을 피하려 한다.",
+   "사소한 기능보다는 일상에서 편안하게 사용할 수 있는 제품을 원한다."
+  ],
+  "scenarioId": "replacement_upgrade",
+  "speechStyle": "짧고 직설적이며, 실용적 이유를 간략히 말한다.",
+  "matchRationale": "안진철은 실용적이고 안정적인 소비를 선호하므로, 고장난 기기를 더 좋은 제품으로 교체하는 시나리오가 가장 자연스럽다."
+ },
+ "nk_36875f7c": {
+  "personaId": "nk_36875f7c",
+  "personaName": "권순옥",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "present",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Adventure": "low",
+   "Gratification": "low",
+   "Role": "low",
+   "BargainValue": "high",
+   "SocialShopping": "low",
+   "Idea": "high",
+   "Utilitarian": "high"
+  },
+  "hiddenIntentions": [
+   "제품의 사양과 성능을 수치로 비교할 수 있는 데이터가 없는 제품은 신뢰하지 않는다. (근거: 치밀한 분석력과 수학적 사고로 오차를 허용하지 않는 성향)",
+   "구매 후 계획이 틀어질 가능성이 있는 제품은 불안해하며 피하려 한다. (근거: 예상치 못한 일정 변경에 당황하고 계속 곱씹는 버릇)",
+   "다른 사람의 추천보다는 자신이 직접 검증한 정보를 더 신뢰한다. (근거: 큐레이터의 논리 오류를 지적하며 자신만의 정답지를 만드는 행동)"
+  ],
+  "scenarioId": "first_time_exploration",
+  "speechStyle": "직접적이고 간결하며, 구체적인 수치와 논리적 근거를 요구하는 스타일. 선택 이유를 상세히 설명함.",
+  "matchRationale": "권순옥 씨는 스마트워치를 처음 구매할 때에도 철저한 분석과 비교를 통해 합리적인 선택을 하려 할 것이므로, 첫 탐색 시나리오가 가장 자연스럽다."
+ },
+ "nk_3f48e355": {
+  "personaId": "nk_3f48e355",
+  "personaName": "김민지",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "present",
+   "Emotional": "present",
+   "Epistemic": "dominant",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Adventure": "high",
+   "Gratification": "high",
+   "Role": "low",
+   "BargainValue": "low",
+   "SocialShopping": "low",
+   "Idea": "high",
+   "Utilitarian": "low"
+  },
+  "hiddenIntentions": [
+   "독특한 감성과 브랜드 스토리에 끌리지만, 가성비도 신경쓰는 실용적인 면이 있다. (취준생으로서 예산 관리 필요, 엑셀 생활비 정리)",
+   "다른 사람들이 인정하는 트렌디한 아이템을 선택하여 자신의 취향과 마케터 지망생으로서의 감각을 드러내고 싶어한다. (인스타그램에서 핫한 브랜드 수집, 브랜드 마케터 꿈)",
+   "기분 전환을 위해 충동적으로 구매할 때가 있지만, 후회하지 않도록 실용성도 고려한다. (기분에 따라 몰아서 하는 취업 준비, 울적할 때 코인 노래방)"
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "20대 여성 취준생으로, 친근하고 감정이 풍부한 대화체를 사용하며 이유를 덧붙여 설명하는 편이다.",
+  "matchRationale": "친구를 위한 선물 구매 상황은 그녀의 사회적 관계와 실용적인 면을 동시에 보여주며, 브랜드에 대한 지식 부족을 솔직히 말하는 태도가 서사와 잘 맞는다."
+ },
+ "nk_617efe9b": {
+  "personaId": "nk_617efe9b",
+  "personaName": "유수범",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "present",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "BargainValue": "high"
+  },
+  "hiddenIntentions": [
+   "튼튼하고 오래 쓸 수 있는 제품을 원한다. (배달 업무에서의 꼼꼼함과 책임감)",
+   "가격 대비 성능이 좋아야 한다. (소박한 생활 유지와 관리비 부담)",
+   "기능이 복잡하지 않고 실용적이어야 한다. (브랜드 지식이 부족하고 단순한 생활 선호)"
+  ],
+  "scenarioId": "first_time_exploration",
+  "speechStyle": "간결하고 직설적이며, 실용적인 이유를 간단히 덧붙이는 편이다.",
+  "matchRationale": "처음 접하는 카테고리이므로 정보 탐색이 필요하며, 브랜드 지식이 부족한 유수범 씨의 상황에 가장 적합하다."
+ },
+ "nk_6fd5ea65": {
+  "personaId": "nk_6fd5ea65",
+  "personaName": "고장환",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "trace",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "BargainValue": "low",
+   "SocialShopping": "low"
+  },
+  "hiddenIntentions": [
+   "친구가 운동할 때 불편함이 없도록 조작이 간편하고 실용적인 제품이어야 합니다.",
+   "선물이 부담스럽지 않도록 적당한 가격대면서도 오래 사용할 수 있는 내구성이 중요합니다.",
+   "자신이 직접 써보지 않은 카테고리이므로 판매자의 신뢰와 AS가 보장되는 제품을 선호합니다."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "짧고 직설적이며, 자신의 경험을 바탕으로 이유를 설명하는 편",
+  "matchRationale": "친구에게 선물하는 상황은 개인의 필요보다 타인의 이익을 고려하는 사회적 동기가 자연스럽게 발현되며, 고장환 씨의 교회·친구 중심 생활과 부합합니다."
+ },
+ "nk_9b133854": {
+  "personaId": "nk_9b133854",
+  "personaName": "유경순",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "Role": "high",
+   "Gratification": "low"
+  },
+  "hiddenIntentions": [
+   "가족과 함께 사용할 수 있는지가 구매 결정의 핵심이지만, 본인은 '실용적이다'라고만 표현한다.",
+   "익숙하지 않은 제품이나 브랜드는 불안해서 구매를 망설인다.",
+   "남들이 뭐라고 하든 자신의 루틴과 생활 패턴에 맞는 제품만 고른다."
+  ],
+  "scenarioId": "high_involvement",
+  "speechStyle": "간결하고 직접적이며, 필요한 이유를 명확히 말하는 편이다.",
+  "matchRationale": "신중하고 꼼꼼한 성격에 비춰 고가의 업무용 노트북을 고를 때 정보를 꼼꼼히 비교하며 오래 사용할 제품을 선택할 가능성이 높다."
+ },
+ "nk_9b35f6c3": {
+  "personaId": "nk_9b35f6c3",
+  "personaName": "김부자",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "BargainValue": "high",
+   "Adventure": "low",
+   "Gratification": "low",
+   "Role": "low",
+   "SocialShopping": "low",
+   "Idea": "low"
+  },
+  "hiddenIntentions": [
+   "무엇보다 오래 쓸 수 있는 내구성이 중요합니다 (낡은 양말도 덧대서 쓰는 절약 습관에서 비롯됨).",
+   "건강에 해롭지 않아야 합니다 (당뇨와 혈압 관리를 평생 해온 신체적 조건을 고려).",
+   "조금이라도 비싸면 꼭 필요한 물건도 망설입니다 (가계부에 백 원 단위까지 기록하는 철저한 검약 정신)."
+  ],
+  "scenarioId": "budget_value",
+  "speechStyle": "짧고 직접적이며, 가격과 실용성을 먼저 묻고 건강과 안전을 덧붙이는 방식으로 말한다.",
+  "matchRationale": "김부자 씨는 평생 절약과 실용을 중시했으므로, 예산을 제한하고 가성비를 따지는 구매 상황이 가장 자연스럽다."
+ },
+ "nk_2a72ab35": {
+  "personaId": "nk_2a72ab35",
+  "personaName": "김홍경",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "dominant",
+   "Epistemic": "trace",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Gratification": "high",
+   "Utilitarian": "high"
+  },
+  "hiddenIntentions": [
+   "조작이 간편하고 익숙한 제품을 원한다 (고령으로 인한 디지털 기기 사용 어려움, 서사에서 '스마트워치 브랜드를 잘 모른다'는 점이 이를 뒷받침).",
+   "가족과의 화목을 해치지 않는 제품을 선호한다 (가족 화목을 최우선으로 여기는 성향).",
+   "정서적 안정감을 주는 디자인이나 기능을 중시한다 (외로움을 타고 안정을 추구하는 성격, 서사에서 '사우나', '가족과의 외식' 등이 정서적 안정의 예)."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "짧고 직설적이며, 상대에 대한 배려가 묻어나는 말투 (예: '친구한테 선물할 건데, 뭐가 좋을까? 나는 이런 거 잘 몰라서...')",
+  "matchRationale": "어르신이지만 운동 좋아하는 친구를 위해 선물을 고를 때, 브랜드 지식이 부족하지만 정성은 담고 싶어 하므로 이 시나리오가 적합하다."
+ },
+ "nk_1a31f577": {
+  "personaId": "nk_1a31f577",
+  "personaName": "김원민",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "present",
+   "Emotional": "dominant",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "BargainValue": "high",
+   "Gratification": "high",
+   "Utilitarian": "high"
+  },
+  "hiddenIntentions": [
+   "불안을 덜어줄 제품의 신뢰성과 A/S를 가장 중요하게 생각한다 (건강과 미래에 대한 불안감이 강하기 때문).",
+   "주변 사람들에게 인정받을 수 있는 세련된 디자인을 원한다 (겉으로는 분위기를 주도하는 성격).",
+   "장기적인 재정 목표를 고려한 가성비를 따진다 (더 넓은 집으로 이사 가고 싶은 욕심)."
+  ],
+  "scenarioId": "first_time_exploration",
+  "speechStyle": "조심스럽고 꼼꼼하게 질문하며, 신뢰를 중요시하는 말투",
+  "matchRationale": "건강과 미래에 대한 불안감이 강해 처음 접하는 스마트워치 카테고리에서도 신뢰할 수 있는 정보를 꼼꼼히 탐색하고 싶어하는 성향이 반영됨."
+ },
+ "nk_3c40f9dc": {
+  "personaId": "nk_3c40f9dc",
+  "personaName": "윤후영",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "present",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Gratification": "high",
+   "Idea": "high",
+   "Utilitarian": "low",
+   "Adventure": "low",
+   "Role": "low",
+   "BargainValue": "low",
+   "SocialShopping": "low"
+  },
+  "hiddenIntentions": [
+   "편안함과 휴식을 최우선으로 따지지만, 말로는 그렇게 표현하지 않는다 (서사: 휴식과 낮잠을 즐기는 모습).",
+   "새로운 것을 배우는 데 호기심이 있지만, 복잡하거나 번거로운 과정은 싫어한다 (서사: 최신 기술 배우는 유연함 vs 공구 정리 미루는 습관).",
+   "아내와의 조용한 시간을 소중히 여겨, 아내의 의견을 자주 따른다 (서사: 아내 손에 이끌려 산책)."
+  ],
+  "scenarioId": "first_time_exploration",
+  "speechStyle": "짧고 직설적이며 이유를 길게 설명하지 않지만, 새롭거나 궁금한 것에는 짧은 호기심을 드러냄.",
+  "matchRationale": "호기심과 새로운 것에 대한 관심, 소박한 생활 스타일이 처음 접하는 카테고리 탐색 시나리오와 잘 맞음."
+ },
+ "nk_4319666e": {
+  "personaId": "nk_4319666e",
+  "personaName": "오선희",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high"
+  },
+  "hiddenIntentions": [
+   "장기적인 내구성과 안정적인 성능을 가장 중요하게 생각하며, 작은 고장이나 불편으로 시간 낭비하는 것을 피하려 한다.",
+   "익숙하고 신뢰할 수 있는 브랜드나 단골 매장을 선호하며, 새로운 제품에 대한 학습 부담을 최소화하려 한다.",
+   "업무와 가정의 균형을 중시하여, 쇼핑 과정 자체가 피로를 주지 않도록 효율적이고 직관적인 결정을 원한다."
+  ],
+  "scenarioId": "high_involvement",
+  "speechStyle": "직설적이고 실용적이며, 구매 이유를 간결하게 설명하는 스타일.",
+  "matchRationale": "오선희 씨는 실용적이고 장기적인 가치를 중시하는 직장인으로, 업무용 노트북을 신중하게 선택하는 고관여 구매 시나리오가 가장 자연스럽다."
+ },
+ "nk_43317133": {
+  "personaId": "nk_43317133",
+  "personaName": "송차남",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "present",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "Role": "high",
+   "BargainValue": "low"
+  },
+  "hiddenIntentions": [
+   "가족이나 친구에게 도움이 되는 제품을 고르려고 한다.",
+   "비싸지 않으면서도 오래 사용할 수 있는 내구성을 중요하게 생각한다.",
+   "사용법이 간단하고 복잡하지 않은 것을 선호한다."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "직설적이고 간결하게 말하며, 이유를 덧붙이는 편이다.",
+  "matchRationale": "친구를 위한 선물 구매 상황이 그녀의 관계 중심적 성향과 건강 관심에 잘 부합한다."
+ },
+ "nk_6a8d982f": {
+  "personaId": "nk_6a8d982f",
+  "personaName": "신영석",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "dominant",
+   "Epistemic": "present",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Adventure": "low",
+   "Gratification": "low",
+   "Role": "low",
+   "BargainValue": "low",
+   "SocialShopping": "low",
+   "Idea": "low",
+   "Utilitarian": "high"
+  },
+  "hiddenIntentions": [
+   "가족과의 시간을 중요시하므로 쇼핑 과정이 번거롭거나 시간을 많이 빼앗기지 않기를 바란다 (가족 화목을 최우선으로 여기는 성향).",
+   "직장에서 안전과 내구성을 중시한 경험 때문에 제품의 안전성과 오래 사용할 수 있는 내구성을 은근히 따진다 (폐기물 처리 기술자로서의 직업적 배경).",
+   "기능이 너무 복잡하기보다는 기본에 충실하고 실용적인 제품을 선호하며, 불필요한 화려함보다는 실속을 중시한다 (낚시 장비 리뷰를 보면서도 실용적 정보에 집중)."
+  ],
+  "scenarioId": "replacement_upgrade",
+  "speechStyle": "조용하고 간결하게 말하며, 이유를 덧붙여 설명하는 편안한 어투",
+  "matchRationale": "실용적이고 장기적인 사용을 중시하는 신영석 씨에게 기존 제품을 더 나은 것으로 교체하는 시나리오가 가장 자연스럽습니다."
+ },
+ "nk_6863e77a": {
+  "personaId": "nk_6863e77a",
+  "personaName": "백정현",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "dominant",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Idea": "high",
+   "Gratification": "high",
+   "Utilitarian": "low"
+  },
+  "hiddenIntentions": [
+   "새로운 기술이나 독특한 디자인에 끌리지만, 실용성도 중요하게 여겨서 둘 사이에서 고민할 수 있음 (인디 게임과 IT 기기 리뷰를 즐기고 실용 기술에 능숙하기 때문)",
+   "혼자 행동하는 것을 편안해 하므로, 쇼핑 과정에서 판매자의 과도한 설명이나 사회적 상호작용을 부담스러워할 수 있음 (혼자 놀이공원 가고 남의 시선을 신경 쓰지 않는 성향)"
+  ],
+  "scenarioId": "first_time_exploration",
+  "speechStyle": "짧고 간결하며, 필요한 정보만 물어보는 편. 이유를 함께 말하는 경우가 많음.",
+  "matchRationale": "백정현 씨는 새로운 기술과 기기를 탐색하는 것을 즐기는 정보통신기술 전공자로, 스마트워치를 처음 접하는 상황에서 정보를 찾고 비교하는 과정을 좋아할 것이므로 이 시나리오가 적합함."
+ },
+ "nk_74d4eaf7": {
+  "personaId": "nk_74d4eaf7",
+  "personaName": "최관영",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "dominant",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Adventure": "low",
+   "Gratification": "high",
+   "Role": "low",
+   "BargainValue": "low",
+   "SocialShopping": "low",
+   "Idea": "high",
+   "Utilitarian": "low"
+  },
+  "hiddenIntentions": [
+   "계획과 분석을 중시하는 성향에 맞춰 제품의 사양과 기능을 꼼꼼히 비교하고 싶어 한다.",
+   "환경을 고려해 불필요한 플라스틱 포장이나 낭비가 없는 제품을 선호한다.",
+   "변경이나 예외 상황을 피해 안정적이고 검증된 선택을 원한다."
+  ],
+  "scenarioId": "first_time_exploration",
+  "speechStyle": "질문이 많고 꼼꼼하며, 선택 이유를 논리적으로 설명하려 한다.",
+  "matchRationale": "그녀의 높은 탐구적 가치(epistemic)와 완벽주의적 성향이 새로운 카테고리를 처음 접할 때 정보를 체계적으로 탐색하는 시나리오와 잘 부합한다."
+ },
+ "nk_776bc0b0": {
+  "personaId": "nk_776bc0b0",
+  "personaName": "박주형",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "dominant",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Gratification": "high",
+   "Idea": "high",
+   "Utilitarian": "high",
+   "Adventure": "low",
+   "SocialShopping": "low",
+   "Role": "low"
+  },
+  "hiddenIntentions": [
+   "제품이 자신의 꼼꼼한 성향을 만족시킬 수 있을지 (서사: 코딩 검수, 효율적인 데이터 구조 설계에 집착)",
+   "일상에서 소소한 즐거움을 주는지 (서사: 당구, 북카페, 분식 같은 단순한 즐거움 선호)",
+   "가족과의 시간에 방해되지 않는 제품인지 (서사: 가족과 함께 식사, 아이와 블록 놀이 등 가족 중심 생활)"
+  ],
+  "scenarioId": "high_involvement",
+  "speechStyle": "짧고 간결하게, 선택 이유를 명확히 말하는 편",
+  "matchRationale": "그는 업무와 자기 개발을 위해 성능 좋은 노트북에 관심이 많고, 신중하게 비교하며 구매할 가능성이 높습니다."
+ },
+ "nk_84df7797": {
+  "personaId": "nk_84df7797",
+  "personaName": "고인웅",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "present",
+   "Emotional": "dominant",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Adventure": "low",
+   "Gratification": "high",
+   "Role": "high",
+   "BargainValue": "low",
+   "SocialShopping": "low",
+   "Idea": "low",
+   "Utilitarian": "medium"
+  },
+  "hiddenIntentions": [
+   "가족과의 화합과 휴식을 최우선으로 하여, 구매 결정 시 가족 구성원의 의견을 반영하고 편안한 분위기를 해치지 않는 제품을 선호한다. (가족 합의 메뉴 선택, 느긋한 가족 여행 선호)",
+   "스트레스 해소와 정서적 안정을 중시하므로, 구매 후 사용 과정에서 심리적 편안함이나 만족감을 주는 제품을 은근히 따진다. (게임으로 스트레스 해소, 반려견 산책으로 정리 시간)",
+   "불필요한 복잡함이나 유행을 피하고, 검증된 실용성과 내구성을 가진 제품을 선택하려는 경향이 있다. (직무에서 정확성과 효율 중시, 평소 간소한 식사와 취미 생활)"
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "간결하고 실용적인 어조로, 필요시 이유를 짧게 덧붙이며 말한다.",
+  "matchRationale": "운동을 좋아하는 동호회 친구에게 선물하는 상황이 인물의 사회적 관계 중시 성향과 실용적 접근 방식에 잘 부합합니다."
+ },
+ "nk_857ad06f": {
+  "personaId": "nk_857ad06f",
+  "personaName": "김미영",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "present",
+   "Emotional": "dominant",
+   "Epistemic": "present",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Adventure": "low",
+   "Gratification": "high",
+   "Role": "low",
+   "BargainValue": "low",
+   "SocialShopping": "high",
+   "Idea": "high",
+   "Utilitarian": "low"
+  },
+  "hiddenIntentions": [
+   "제품의 디자인과 정돈된 미감이 심리적 안정감을 주는지 중요하게 따진다. (서사: 소품 수집, 건축 다큐멘터리 선호)",
+   "구매 후 후회하지 않도록 모든 정보를 꼼꼼히 확인하는 완벽주의적 기준을 숨기고 있다. (서사: 보고서 오차 없음, 리뷰 분석)",
+   "친구와의 쇼핑 경험을 통해 관계적 유대감을 얻는 것을 중요시하지만 직접 드러내지 않는다. (서사: 친구와 백화점 쇼핑 즐김)"
+  ],
+  "scenarioId": "high_involvement",
+  "speechStyle": "정보를 바탕으로 이유를 설명하는 직접적인 스타일",
+  "matchRationale": "고가의 업무용 노트북을 신중하게 선택하는 시나리오는 김미영 씨의 완벽주의적 분석 성향과 오차 없이 정리하는 전문가적 태도에 부합합니다."
+ },
+ "nk_89447144": {
+  "personaId": "nk_89447144",
+  "personaName": "서성훈",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "Adventure": "low",
+   "Gratification": "low",
+   "Role": "low",
+   "BargainValue": "low",
+   "SocialShopping": "low",
+   "Idea": "low"
+  },
+  "hiddenIntentions": [
+   "내구성이 좋고 오래 쓸 수 있는 제품이어야 한다 (기술자로서 제품의 질과 수명을 중요시함)",
+   "너무 튀지 않고 무난한 디자인이어야 한다 (과시적 소비를 피하는 성향)",
+   "가족이나 친구에게 부담스럽지 않은 선물이어야 한다 (배려심이 깊고 실용적임)"
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "간결하고 직설적이며, 필요한 정보만 묻고 이유를 간단히 설명함",
+  "matchRationale": "운동 좋아하는 친구에게 선물할 스마트워치를 찾는 상황이 서성훈의 관계 중심적이고 실용적인 성향과 잘 맞음"
+ },
+ "nk_8865c72c": {
+  "personaId": "nk_8865c72c",
+  "personaName": "오재용",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "dominant",
+   "Epistemic": "present",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Adventure": "low",
+   "Gratification": "low",
+   "Role": "high",
+   "BargainValue": "low",
+   "SocialShopping": "low",
+   "Idea": "medium",
+   "Utilitarian": "medium"
+  },
+  "hiddenIntentions": [
+   "제품의 신뢰성과 내구성을 꼼꼼히 따져서 구매 후 불안감이 생기지 않게 하려 한다 (서사: 갑작스러운 변수에 위축되고 손떨림).",
+   "겉으로 드러나는 과시보다는 실용적이면서도 정성이 느껴지는 선물을 원한다 (서사: 할머니를 극진히 모시고 가족과의 시간을 중시).",
+   "자신이 잘 모르는 분야라도 전문가의 조언을 신중히 듣고 결정하려 한다 (서사: 브랜드를 잘 모른다고 솔직히 인정)."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "간결하고 정직하게 말하며, 자신의 무지를 솔직히 인정하고 상대의 조언을 구하는 편이다.",
+  "matchRationale": "선물용 구매 시나리오는 오재용이 주변 사람을 챙기는 성향과 잘 맞으며, 스마트워치에 대한 지식 부족을 인정하는 태도가 서사와 일치한다."
+ },
+ "nk_8a3fd52c": {
+  "personaId": "nk_8a3fd52c",
+  "personaName": "조성덕",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high"
+  },
+  "hiddenIntentions": [
+   "실용성과 내구성을 최우선으로 하되, 가족의 의견을 존중하기 위해 자신의 선호를 숨길 수 있음",
+   "건강 관리에 도움이 되는 제품을 비용보다 우선시함",
+   "새 기술보다 익숙한 것을 선호하지만, 가족이 원하면 따라줌"
+  ],
+  "scenarioId": "body_comfort_health",
+  "speechStyle": "짧고 직설적이며, 이유를 간단히 말하는 편. 예: '걷기 편한 운동화 찾아요. 발이 편해야 해요.'",
+  "matchRationale": "건강 관리로 매일 걷는 그에게 편한 운동화 구매는 실용적이고 건강을 고려한 선택이기 때문."
+ },
+ "nk_99c594fb": {
+  "personaId": "nk_99c594fb",
+  "personaName": "성연진",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "present",
+   "Emotional": "present",
+   "Epistemic": "dominant",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Adventure": "high",
+   "Idea": "high",
+   "Gratification": "high",
+   "SocialShopping": "low",
+   "BargainValue": "low",
+   "Role": "low",
+   "Utilitarian": "low"
+  },
+  "hiddenIntentions": [
+   "제품이 활동적인 라이프스타일(배드민턴, 서핑, 트레킹)에 적합해야 한다. (서사: 주말 배드민턴, 양양 서핑, 제주 트레킹)",
+   "남들과 겹치지 않는 독특한 디자인이나 경험을 제공해야 한다. (서사: 이색 외국 요리, 예술적 취향)",
+   "가족과 함께 즐길 수 있는 제품이어야 한다. (서사: 가족과 배드민턴, 여행 계획)"
+  ],
+  "scenarioId": "taste_identity",
+  "speechStyle": "흥분된 어조로 자세히 설명하며, 자신의 경험과 취향을 구체적으로 말한다.",
+  "matchRationale": "운동을 즐기고 독특한 디자인을 선호하는 성연진 씨에게 취향/정체성 중심의 러닝화 구매 시나리오가 가장 자연스럽다."
+ },
+ "nk_8f95a653": {
+  "personaId": "nk_8f95a653",
+  "personaName": "이은미",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high"
+  },
+  "hiddenIntentions": [
+   "품질과 가성비의 균형을 중요하게 여기지만 말로는 가격만 강조한다 (일식집 단골이면서 실속 추구).",
+   "일상에서의 편안함과 안정을 해치지 않는 제품을 선호한다 (정시 퇴근, 스트레스 회피 성향).",
+   "불필요한 기능이나 변화보다는 검증된 사용 경험을 중시한다 (단골 가게, 변화를 싫어하는 성향)."
+  ],
+  "scenarioId": "budget_value",
+  "speechStyle": "짧고 직설적이며, 실용적인 정보(가격, 내구성)를 먼저 확인한다.",
+  "matchRationale": "이은미는 실용적이고 가성비를 중시하는 성향이므로, 예산 내에서 최적의 선택을 찾는 가성비 구매 시나리오가 자연스럽다."
+ },
+ "nk_a16c0e5c": {
+  "personaId": "nk_a16c0e5c",
+  "personaName": "나승만",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "present",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "BargainValue": "high",
+   "Role": "high"
+  },
+  "hiddenIntentions": [
+   "제품의 내구성과 정밀함이 말하지 않아도 가장 중요하다 (평생 공학도로 살아온 습관).",
+   "고장 나도 직접 수리할 수 있을지 따져본다 (버니어 캘리퍼스로 집안 물건을 직접 고치는 경험).",
+   "선물할 상대의 실용적 필요보다 제품의 본질적 성능을 먼저 생각한다 (설계도면 오차를 잡아내던 깐깐함)."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "짧고 간결하게 말하며, 기술적 근거를 덧붙이는 편이다.",
+  "matchRationale": "운동 좋아하는 친구에게 선물할 스마트워치를 찾는 상황이, 그의 사회적 관계와 실용적 가치 추구 성향에 가장 잘 맞는다."
+ },
+ "nk_9f2be5d5": {
+  "personaId": "nk_9f2be5d5",
+  "personaName": "정영가",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "present",
+   "Emotional": "present",
+   "Epistemic": "present",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Gratification": "high",
+   "SocialShopping": "high",
+   "Idea": "high"
+  },
+  "hiddenIntentions": [
+   "선물을 고를 때 상대방이 말하지 않은 불편함까지 고려하여 세심하게 선택한다. (서사: '상대가 말하지 않은 불편함까지 읽어내는 세심한 관찰력')",
+   "제품의 품질과 분위기를 직접 확인하려고 매장을 방문하는 것을 선호한다. (서사: '직접 매장을 방문해 음식의 질과 분위기를 확인하며 식사합니다')",
+   "자신의 취향을 중요시하지만 가족이나 타인의 의견을 우선시하는 경향이 있다. (서사: '정작 본인의 힘든 점이나 의견은 뒤로 미루는 버릇')"
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "부드럽고 배려 있는 말투로, 선택 이유를 자세히 이야기한다.",
+  "matchRationale": "운동을 좋아하는 친구에게 선물할 스마트워치를 고르는 상황에서, 정영가 씨의 세심한 배려심과 정보 탐색 성향이 잘 발휘되며, 그녀의 평소 관계 중심 가치관과 부합한다."
+ },
+ "nk_a1b00a6c": {
+  "personaId": "nk_a1b00a6c",
+  "personaName": "강애순",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "dominant",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Adventure": "high",
+   "Gratification": "high",
+   "Idea": "high",
+   "Utilitarian": "low",
+   "SocialShopping": "low"
+  },
+  "hiddenIntentions": [
+   "가성비보다는 정서적 위안과 안정감을 주는 제품을 선호하며, 불필요한 소비를 피하려 함 (서사: 주말 소금빵 한 조각으로 스트레스 해소, 예산 관리 중요시).",
+   "독특하고 개성 있는 디자인이나 경험을 중시하며, 남들과 비슷한 것은 피하려 함 (서사: 화려한 대로변 쇼핑몰보다 작은 공방 선호, 예술적 영감 추구).",
+   "제품의 내구성과 실용성을 기본으로 요구하되, 겉으로 드러나지 않는 감성적 가치가 있을 때 구매 결정을 내림 (서사: 꼼꼼한 경리 사무원 생활과 예술 취미의 균형)."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "상대방에게 설명하듯 조리 있게 말하며, 이유를 자세히 덧붙이는 편. 길이가 적당하고 직접적이면서도 배려심이 느껴짐.",
+  "matchRationale": "강애순은 운동을 즐기는 친구에게 선물할 스마트워치를 찾는 상황이 자연스러우며, 브랜드 지식이 부족해 정보 탐색이 필요하지만 자신의 취향보다는 상대방의 필요를 고려할 것이므로 'gift_for_other' 시나리오가 적합합니다."
+ },
+ "nk_a801c1db": {
+  "personaId": "nk_a801c1db",
+  "personaName": "안미순",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "dominant",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "Role": "high",
+   "BargainValue": "high",
+   "Adventure": "low",
+   "Gratification": "low",
+   "SocialShopping": "low",
+   "Idea": "low"
+  },
+  "hiddenIntentions": [
+   "돈을 아껴서 손주들에게 더 많이 챙겨주고 싶은 마음",
+   "가족들이 편안해할 수 있는 물건을 고르고 싶다",
+   "구매 결정에서 실수하지 않아서 가족에게 민폐 끼치는 것을 피하고 싶다"
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "조심스럽고 정중하게, 자신이 모르는 부분은 솔직히 인정하고 조언을 구하는 스타일",
+  "matchRationale": "선물을 주는 것은 그녀의 사회적 관계 중시 성향과 부합하며, 스마트워치에 대한 지식 부족은 그녀가 처음 탐색하는 상황과 유사하여 자연스럽다."
+ },
+ "nk_b6e3baf4": {
+  "personaId": "nk_b6e3baf4",
+  "personaName": "최영택",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "present",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Adventure": "low",
+   "Gratification": "low",
+   "Role": "high",
+   "BargainValue": "high",
+   "SocialShopping": "low",
+   "Idea": "low",
+   "Utilitarian": "high"
+  },
+  "hiddenIntentions": [
+   "실제로는 가격 대비 성능이 뛰어난 제품인지 꼼꼼히 따지려 한다 (서사에서 가격과 품질을 빠르게 계산하는 직관력을 가진 점).",
+   "자녀에게 경제적 부담을 주지 않기 위해 예산을 초과하지 않으려 한다 (서사에서 독립적인 노후를 강조하는 점).",
+   "친구에게 선물할 때도 자신의 기준으로 실용성을 확인하려 한다 (서사에서 실리를 추구하는 성향)."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "짧고 직접적으로 말하며, 가성비와 실용성을 이유로 설명하는 편이다.",
+  "matchRationale": "친구를 위한 선물로, 실용적이고 가성비를 중시하는 그의 성향과 잘 맞습니다."
+ },
+ "nk_b82bf549": {
+  "personaId": "nk_b82bf549",
+  "personaName": "김종철",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "dominant",
+   "Emotional": "present",
+   "Epistemic": "present",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Gratification": "high",
+   "Role": "high",
+   "SocialShopping": "high",
+   "BargainValue": "low"
+  },
+  "hiddenIntentions": [
+   "구매를 통해 지역 사회와의 유대감을 강화하고 싶어한다 (배드민턴 클럽 활동을 위한 장비나 이웃과의 선물 교환).",
+   "제품이 자신의 지적 취미(역사, 전략 게임)와 조화를 이루는지 중요하게 생각한다.",
+   "혼자 사는 외로움을 달래기 위해 쇼핑에서 위안을 얻기도 한다."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "조용하고 정중한 어조로, 필요한 정보를 차분히 물어보며 결정을 내린다.",
+  "matchRationale": "선물을 통해 사회적 관계를 강화하려는 성향과, 운동을 좋아하는 친구를 배려하는 그의 온정적인 리더십이 잘 드러난다."
+ },
+ "nk_b8d5f69d": {
+  "personaId": "nk_b8d5f69d",
+  "personaName": "김지연",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "dominant",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "Role": "high",
+   "BargainValue": "low"
+  },
+  "hiddenIntentions": [
+   "운동 감량이나 건강 데이터를 정확하게 측정할 수 있는 제품인지 확인한다 (수의사로서 정확성과 실용성을 중시).",
+   "화려한 디자인보다 심플하고 무난한 스타일이어야 선물로 부담스럽지 않다고 생각한다 (자신의 과시적 소비를 경계하는 성향).",
+   "사용법이 복잡하지 않고 직관적이어야 친구가 바로 활용할 수 있을 거라고 염두에 둔다 (기술에 대한 자신의 낮은 관심을 반영)."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "짧고 직설적이며, 이유를 간략히 말하는 편. 전문적이지만 감정은 절제됨.",
+  "matchRationale": "김지연은 기술 기기보다 운동과 자연을 즐기는 성격으로, 자신이 잘 모르는 카테고리인 스마트워치를 운동을 좋아하는 친구에게 선물하려는 상황이 그녀의 실용적이고 관계 중심적인 성향에 부합한다."
+ },
+ "nk_bb6b46c7": {
+  "personaId": "nk_bb6b46c7",
+  "personaName": "정봉수",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "present",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "BargainValue": "high",
+   "Role": "high"
+  },
+  "hiddenIntentions": [
+   "속마음: 가격을 가장 신경 쓰지만 체면 때문에 말하지 않음 (평생 몸으로 부딪혀 실속을 챙겨온 삶)",
+   "속마음: 고장 나지 않고 오래 쓸 수 있는지를 중요하게 여김 (낡은 문고리까지 손수 고치는 손재주)",
+   "속마음: 복잡한 기능보다 기본에 충실한 제품을 선호함 (스마트워치 대신 목욕탕에서 동네 친구들과 수다를 즐기는 정서)"
+  ],
+  "scenarioId": "first_time_exploration",
+  "speechStyle": "짧고 직설적인 전라도 사투리, 이유를 간략하게 말함 (예: '뭔지 모르겠네, 싼 게 좋은 거 아니가')",
+  "matchRationale": "스마트워치에 대한 지식이 전혀 없고, 처음 접하는 제품군이므로 '처음 사보는 카테고리 탐색' 시나리오가 가장 자연스럽다."
+ },
+ "nk_c8b2a1a6": {
+  "personaId": "nk_c8b2a1a6",
+  "personaName": "권준하",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "present",
+   "Emotional": "dominant",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Gratification": "high",
+   "BargainValue": "high",
+   "Utilitarian": "high",
+   "Adventure": "low",
+   "Role": "low",
+   "SocialShopping": "low",
+   "Idea": "low"
+  },
+  "hiddenIntentions": [
+   "안정감을 주고 불안을 덜어주는 제품을 선호하지만, 실제로는 자신의 미래 불안을 잊게 해줄 수 있는 기능을 더 중요하게 생각한다.",
+   "가성비와 실용성을 중요시하지만, 동시에 부모님께 부담을 주지 않으면서도 체면을 세울 수 있는 제품을 찾는다.",
+   "타인의 시선을 의식해 무난하고 호불호가 갈리지 않는 제품을 선택하려는 경향이 있다."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "짧고 간결하지만, 상대방의 반응을 살피며 조심스럽게 말하는 편이다. 이유를 덧붙여 설명하는 습관이 있다.",
+  "matchRationale": "선물용 스마트워치 시나리오는 권준하가 영업 경험으로 상대방의 니즈를 파악하고 맞춤 제안하는 데 능숙하며, 지인에게 도움을 주는 것을 좋아하는 성향에 가장 부합한다."
+ },
+ "nk_dbf3d6f0": {
+  "personaId": "nk_dbf3d6f0",
+  "personaName": "남선순",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "present",
+   "Emotional": "present",
+   "Epistemic": "dominant",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Role": "high",
+   "Utilitarian": "high",
+   "Idea": "high"
+  },
+  "hiddenIntentions": [
+   "선물을 받는 친구가 편하게 사용할 수 있을지가 가장 중요하다 (이웃과의 관계를 중시하는 성향).",
+   "제품이 너무 복잡하지 않고 조작이 쉬워야 한다 (스마트폰으로 유튜브만 볼 정도의 기술 수준).",
+   "동네에서 평판 좋은 제품이거나 주변 사람의 추천을 받은 것이라야 안심된다 (공동체 의존 성향)."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "조용하고 친근하게, 자신의 경험을 바탕으로 이유를 설명하는 편.",
+  "matchRationale": "이웃을 챙기는 성격에 잘 맞는 선물 구매 상황이기 때문."
+ },
+ "nk_bbd1022e": {
+  "personaId": "nk_bbd1022e",
+  "personaName": "김인경",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "dominant",
+   "Emotional": "dominant",
+   "Epistemic": "present",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Gratification": "high",
+   "Role": "high",
+   "Adventure": "low"
+  },
+  "hiddenIntentions": [
+   "제품이 자신에게 정서적 안정과 소소한 즐거움을 주는지 확인한다 (네일/와인에서 보듯 자가 위안 추구).",
+   "주변에 부담되지 않으면서도 적당한 품격을 유지할 수 있는지 살핀다 (정갈한 네일, 유명 한우집).",
+   "낯선 시도보다는 이미 신뢰하는 방식이나 장소를 선호한다 (익숙한 일행, 검증된 장소)."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "정중하고 조리 있게 말하며, 이유를 함께 설명하는 편이다.",
+  "matchRationale": "이 시나리오는 친구를 위한 선물 구매로, 그녀의 사회적 관계 중심 성향과 브랜드에 대한 낮은 관여도를 반영하며, 정서적 만족과 적당한 유대감을 추구하는 그녀의 성격에 잘 맞는다."
+ },
+ "nk_df3163a1": {
+  "personaId": "nk_df3163a1",
+  "personaName": "장선미",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "BargainValue": "high",
+   "Role": "high",
+   "Gratification": "low",
+   "Adventure": "low",
+   "SocialShopping": "low",
+   "Idea": "low"
+  },
+  "hiddenIntentions": [
+   "가족에게 부담이 되지 않도록 실용적이고 오래 쓸 수 있는 제품을 원한다. (서사: 가족 안정을 최우선, 전세 자금 모으는 중)",
+   "잘 모르는 기술 제품은 신뢰할 수 있는 브랜드나 주변 추천이 중요하다. (서사: 브랜드 잘 모름, 가족과 친구 관계 중시)",
+   "비싸더라도 한 번 사면 오래 쓰는 것이 더 이득이라고 생각한다. (서사: 안정적 근무, 장기적인 내 집 마련 목표)"
+  ],
+  "scenarioId": "budget_value",
+  "speechStyle": "짧고 직설적이며 가격과 내구성을 먼저 확인하고, 브랜드나 사용 후기를 자주 묻는다.",
+  "matchRationale": "장선미 씨는 가족의 안정을 최우선으로 하며 예산 내에서 실용적인 제품을 찾는 성향이 강하므로, 가성비를 중시하는 예산 제약 구매 시나리오가 가장 자연스럽다."
+ },
+ "nk_e17cc00b": {
+  "personaId": "nk_e17cc00b",
+  "personaName": "이은선",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "BargainValue": "high",
+   "Utilitarian": "high"
+  },
+  "hiddenIntentions": [
+   "실용성과 내구성을 최우선으로 해 장기적으로 비용을 아끼려 한다.",
+   "화려함보다는 기본에 충실한 제품으로 일상의 안정감을 유지하려 한다."
+  ],
+  "scenarioId": "budget_value",
+  "speechStyle": "간결하고 실용적인 질문을 하며, 가격과 기능을 직접 비교하는 스타일.",
+  "matchRationale": "이은선은 가계부를 기록하며 불필요한 지출을 줄이는 실속형 소비자이므로, 제한된 예산 내에서 최고의 가성비를 찾는 budget_value 시나리오가 가장 자연스럽다."
+ },
+ "nk_e0b348f7": {
+  "personaId": "nk_e0b348f7",
+  "personaName": "전진숙",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "dominant",
+   "Epistemic": "present",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Utilitarian": "high",
+   "Role": "high"
+  },
+  "hiddenIntentions": [
+   "가족에게 부담을 주지 않으면서도 자신의 건강을 챙길 수 있는 제품을 원한다. (서사: 혈당과 혈압 관리, 3세대 부양)",
+   "오래 사용할 수 있는 내구성과 심플한 디자인을 선호하며, 불필요한 기능보다 핵심 기능에 집중한다. (서사: 소박한 생활, 정갈한 집밥 선호)",
+   "자신의 작은 취미(네일, 정원)를 위한 소소한 지출은 허용하지만, 큰돈은 가족을 위해 아낀다. (서사: 화려한 네일 아트로 기분 전환, 가족 책임감)"
+  ],
+  "scenarioId": "budget_value",
+  "speechStyle": "간결하고 실용적인 말투, 이유를 간단히 덧붙임",
+  "matchRationale": "예산 내에서 건강 관리를 위한 실용적인 제품을 찾는 전진숙의 성향에 부합합니다."
+ },
+ "nk_e2abab62": {
+  "personaId": "nk_e2abab62",
+  "personaName": "김민정",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "dominant",
+   "Emotional": "dominant",
+   "Epistemic": "present",
+   "Conditional": "trace"
+  },
+  "motivationTendencies": {
+   "Idea": "high",
+   "Role": "high",
+   "SocialShopping": "high",
+   "Gratification": "high"
+  },
+  "hiddenIntentions": [
+   "친구에게 선물을 사면서도 자신이 정보통임을 인정받고 싶어 함 (서사: 사회관계망서비스에서 정보를 빠르게 수집해 공유하는 정보통 역할).",
+   "실제로는 미래에 대한 불안감 때문에 지출에 신중하지만, 자신의 감성과 취향을 드러내는 데 주저하지 않음 (서사: 미혼과 무직 상태의 불안, 소금빵과 감성적 공간을 즐기는 모습).",
+   "아버지와의 갈등에서 오는 심리적 부담을 쇼핑에서의 조화로운 선택으로 해소하려 함 (서사: 아버지의 보수적 가치관과 충돌하며 느끼는 복합 감정)."
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "친근하고 상세하게 설명하며, 자신의 경험과 정보를 바탕으로 조언을 구하는 듯한 말투.",
+  "matchRationale": "선물을 고르는 과정에서 정보 탐색과 사회적 관계를 중요시하는 그녀의 성향이 가장 잘 드러나기 때문."
+ },
+ "nk_e92ad041": {
+  "personaId": "nk_e92ad041",
+  "personaName": "최재원",
+  "traitLevels": {
+   "Functional": "dominant",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "dominant",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Idea": "high",
+   "Utilitarian": "high",
+   "Adventure": "low",
+   "Gratification": "low",
+   "Role": "low",
+   "BargainValue": "low",
+   "SocialShopping": "low"
+  },
+  "hiddenIntentions": [
+   "완벽한 내구성과 정밀한 설계를 원한다. (방송 장비 관리 경험에서 나사 하나까지 용도별로 정렬하는 철저함)",
+   "새 장비에 대한 불안을 없애기 위해 기술적 원리를 완벽히 이해하고 싶다. (최신 디지털 장비 매뉴얼을 완벽히 숙지할 때까지 밤잠을 설치며 걱정하는 성향)"
+  ],
+  "scenarioId": "high_involvement",
+  "speechStyle": "간결하고 이유를 명확히 말하는 스타일. 꼼꼼한 질문을 하고 기술적 세부사항을 확인한다.",
+  "matchRationale": "최재원은 고가의 업무용 노트북을 살 때 완벽한 성능과 내구성을 꼼꼼히 따지는 성향이므로, 고관여 구매 시나리오가 가장 자연스럽다."
+ },
+ "nk_f550ed60": {
+  "personaId": "nk_f550ed60",
+  "personaName": "이소연",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "dominant",
+   "Epistemic": "present",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "Adventure": "low",
+   "Gratification": "high",
+   "Role": "low",
+   "BargainValue": "low",
+   "SocialShopping": "high",
+   "Idea": "high",
+   "Utilitarian": "low"
+  },
+  "hiddenIntentions": [
+   "제품이 건강이나 정서적 안정에 도움이 되는지 꼼꼼히 살핀다 (낙동강 산책과 건강 빵 굽기로 일상 균형 유지).",
+   "남편과 함께 사용하거나 공유할 수 있는 제품인지 은근히 따진다 (부부가 함께 빵집 투어와 조깅을 즐김).",
+   "평소 생활 리듬을 방해하지 않고 안정감을 주는 제품을 선호한다 (변화보다 평온한 일상을 중시)."
+  ],
+  "scenarioId": "body_comfort_health",
+  "speechStyle": "직설적이고 간결하게 말하며, 선택 이유를 건강이나 편안함에 초점 맞춰 설명함",
+  "matchRationale": "건강과 편안함을 중시하는 그녀에게 발볼이 넓은 러닝화는 일상 걷기와 건강 관리에 적합한 선택이기 때문."
+ },
+ "nk_f13e4582": {
+  "personaId": "nk_f13e4582",
+  "personaName": "송현수",
+  "traitLevels": {
+   "Functional": "present",
+   "Social": "trace",
+   "Emotional": "present",
+   "Epistemic": "trace",
+   "Conditional": "present"
+  },
+  "motivationTendencies": {
+   "BargainValue": "high",
+   "Utilitarian": "high"
+  },
+  "hiddenIntentions": [
+   "선물이지만 예산을 초과하지 않으려 함 (아이를 위한 저축 의식)",
+   "친구가 실생활에서 유용하게 쓸 수 있는 실용적인 제품을 원함 (일회성 선물 지양)",
+   "브랜드보다 기본 성능과 내구성을 중요시함 (전문지식 부족으로 실용성에 의존)"
+  ],
+  "scenarioId": "gift_for_other",
+  "speechStyle": "짧고 직접적이며, 자신의 무지를 솔직하게 인정하는 말투 (예: '브랜드는 잘 몰라요')",
+  "matchRationale": "선물을 위해 정보가 부족한 상황에서 조언을 구하는 모습이 송현수의 실제 쇼핑 성향과 부합함"
+ }
+}

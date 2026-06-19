@@ -1,0 +1,583 @@
+[
+  {
+    "id": "gift_for_other",
+    "title": "선물용 스마트워치",
+    "initialUserNeed": "운동 좋아하는 친구에게 줄 스마트워치를 찾고 있어요. 제가 브랜드는 잘 몰라요.",
+    "targetCategory": "스마트워치",
+    "recipient": "운동을 좋아하는 친구",
+    "context": "선물",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "수령자의 운동 생활양식에 맞아야 함",
+        "description": "운동을 좋아하는 친구의 생활양식에 맞는 기능(GPS, 심박, 방수)이 분명해야 한다.",
+        "anchors": {
+          "Functional": 0.7,
+          "Conditional": 0.9,
+          "Epistemic": 0.3,
+          "Social": 0.5,
+          "Emotional": 0.3,
+          "Hedonic": 0.2
+        },
+        "priority": "must_have",
+        "evidenceTheUserMightSay": [
+          "운동 좋아하는 친구",
+          "러닝할 때 쓸 수 있는"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "no_gps_or_sport_function",
+            "userReaction": "dislike",
+            "possibleUtterance": "운동 기능이 약한 것 같아요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      },
+      {
+        "label": "선물의 사회적 적절성 (너무 저렴해 보이지 않기)",
+        "description": "선물로 보았을 때 너무 저렴해 보이면 체면이 깎인다고 느낀다.",
+        "anchors": {
+          "Functional": 0.2,
+          "Conditional": 0.75,
+          "Epistemic": 0.2,
+          "Social": 0.9,
+          "Emotional": 0.45,
+          "Hedonic": 0.2
+        },
+        "priority": "high",
+        "evidenceTheUserMightSay": [
+          "선물인데 너무 저렴해 보이면 좀 그래요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "priceCue:very_low",
+            "userReaction": "dislike",
+            "possibleUtterance": "선물인데 너무 저렴해 보이면 좀 그래요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      },
+      {
+        "label": "장기 사용 신뢰",
+        "description": "오래 써도 문제없다는 신뢰(한달사용 리뷰 등)가 필요하다.",
+        "anchors": {
+          "Functional": 0.6,
+          "Conditional": 0.3,
+          "Epistemic": 0.4,
+          "Social": 0.2,
+          "Emotional": 0.75,
+          "Hedonic": 0.1
+        },
+        "priority": "high",
+        "evidenceTheUserMightSay": [
+          "오래 써도 괜찮을까요",
+          "한달 사용 리뷰가 궁금해요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "longTermReviewRatio>=0.3",
+            "userReaction": "like",
+            "possibleUtterance": "한달 사용 리뷰 비율이 높은 게 마음에 들어요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      },
+      {
+        "label": "실패 회피 (브랜드 무지)",
+        "description": "브랜드를 잘 모르기 때문에 실패 확률이 낮은 안전한 선택을 원한다.",
+        "anchors": {
+          "Functional": 0.3,
+          "Conditional": 0.3,
+          "Epistemic": 0.6,
+          "Social": 0.3,
+          "Emotional": 0.8,
+          "Hedonic": 0.1
+        },
+        "priority": "medium",
+        "evidenceTheUserMightSay": [
+          "브랜드는 잘 몰라요",
+          "실패하고 싶지 않아요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "sellerCue:new_or_low_grade",
+            "userReaction": "dislike",
+            "possibleUtterance": "셀러를 믿을 수 있는지 잘 모르겠어요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      },
+      {
+        "label": "예산 부담 회피",
+        "description": "선물이지만 예산(약 20만원)을 크게 넘으면 부담스럽다.",
+        "anchors": {
+          "Functional": 0.6,
+          "Conditional": 0.5,
+          "Epistemic": 0.2,
+          "Social": 0.3,
+          "Emotional": 0.4,
+          "Hedonic": 0.1
+        },
+        "priority": "medium",
+        "evidenceTheUserMightSay": [
+          "20만원이 넘으면 부담돼요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "price>200000",
+            "userReaction": "dislike",
+            "possibleUtterance": "선물이지만 20만원이 넘으면 좀 부담돼요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "mustAvoidProductCues": [
+      "priceCue:very_low",
+      "sellerCue:new_or_low_grade"
+    ],
+    "preferredProductCues": [
+      "trustCue:high",
+      "longTermReviewRatio>=0.3",
+      "sport_function"
+    ],
+    "likelyDialoguePatterns": [
+      "multi_turn_refinement",
+      "preference_revision_after_recommendation",
+      "gift_proxy_purchase"
+    ],
+    "pscon": {
+      "observedShareEN": 0.02,
+      "realUtterances": [
+        "I want to buy a fancy watch as a gift for someone",
+        "I want to buy some gifts for my girlfriend, do you have any recommendations?",
+        "No, it is a gift for my teacher."
+      ],
+      "topClarifyingAttributes": [
+        "Brand",
+        "Price",
+        "Departments(수령자)"
+      ],
+      "insight": "선물 대화는 드물지만(2%) 수령자가 다양함(연인/선생님/가족). 'fancy watch as a gift'가 본 데모 시나리오와 직접 일치."
+    }
+  },
+  {
+    "id": "first_time_exploration",
+    "title": "처음 사보는 카테고리 탐색",
+    "initialUserNeed": "스마트워치를 처음 사보는데 뭘 봐야 할지 모르겠어요.",
+    "targetCategory": "스마트워치",
+    "context": "첫 구매 탐색",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "탐색 기준 학습 필요",
+        "description": "무엇을 비교해야 하는지부터 배우고 싶다.",
+        "anchors": {
+          "Functional": 0.4,
+          "Conditional": 0.2,
+          "Epistemic": 0.9,
+          "Social": 0.2,
+          "Emotional": 0.5,
+          "Hedonic": 0.3
+        },
+        "priority": "high",
+        "evidenceTheUserMightSay": [
+          "뭘 봐야 할지 모르겠어요"
+        ],
+        "productCueTriggers": [],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "mustAvoidProductCues": [],
+    "preferredProductCues": [
+      "trustCue:high"
+    ],
+    "likelyDialoguePatterns": [
+      "multi_turn_refinement",
+      "clarification_then_recommend",
+      "inquire_after_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0.02,
+      "realUtterances": [
+        "I'm not sure what brand I like. Do you have a good brand to recommend?",
+        "I am not sure. I want a quality dermaroller. I am not even sure of the length right for me"
+      ],
+      "topClarifyingAttributes": [
+        "Brand",
+        "Type",
+        "Feature"
+      ],
+      "insight": "탐색형은 브랜드 추천 요청 형태로 자주 나타남 — 기준 학습 needs가 brand 질문으로 표면화."
+    }
+  },
+  {
+    "id": "specific_context",
+    "title": "특정 상황용 구매 (출장/여행)",
+    "initialUserNeed": "다음 주 출장에서 쓸 가벼운 노트북이 필요해요.",
+    "targetCategory": "노트북",
+    "context": "출장",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "휴대성과 시급성",
+        "description": "가볍고 배송이 빨라야 한다.",
+        "anchors": {
+          "Functional": 0.7,
+          "Conditional": 0.9,
+          "Epistemic": 0.2,
+          "Social": 0.1,
+          "Emotional": 0.4,
+          "Hedonic": 0.1
+        },
+        "priority": "must_have",
+        "evidenceTheUserMightSay": [
+          "다음 주까지 필요해요",
+          "가벼운 게 좋아요"
+        ],
+        "productCueTriggers": [],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "mustAvoidProductCues": [],
+    "preferredProductCues": [
+      "weightKg<=1.3"
+    ],
+    "likelyDialoguePatterns": [
+      "multi_turn_refinement",
+      "clarification_then_recommend",
+      "simple_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0.04,
+      "realUtterances": [
+        "I need a comfortable chair for my home office, something ergonomic would be great.",
+        "please, do you sell travel bags?"
+      ],
+      "topClarifyingAttributes": [
+        "Type",
+        "Feature",
+        "Size"
+      ],
+      "insight": "상황 특정(홈오피스/여행)은 4%. 상황 언급이 바로 기능 조건(ergonomic)으로 이어짐."
+    }
+  },
+  {
+    "id": "high_involvement",
+    "title": "고관여 구매 (고가 노트북)",
+    "initialUserNeed": "오래 쓸 업무용 노트북을 신중하게 고르고 싶어요.",
+    "targetCategory": "노트북",
+    "context": "고관여 비교 구매",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "장기 사용 신뢰와 보증",
+        "description": "보증과 장기 사용 후기가 중요하다.",
+        "anchors": {
+          "Functional": 0.7,
+          "Conditional": 0.3,
+          "Epistemic": 0.6,
+          "Social": 0.1,
+          "Emotional": 0.8,
+          "Hedonic": 0.1
+        },
+        "priority": "must_have",
+        "evidenceTheUserMightSay": [
+          "오래 쓸",
+          "AS가 중요해요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "longTermReviewRatio>=0.3",
+            "userReaction": "like",
+            "possibleUtterance": "장기 사용 후기가 많은 게 좋네요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "mustAvoidProductCues": [
+      "sellerCue:new_or_low_grade"
+    ],
+    "preferredProductCues": [
+      "trustCue:high",
+      "warranty"
+    ],
+    "likelyDialoguePatterns": [
+      "multi_turn_refinement",
+      "inquire_after_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0.13,
+      "realUtterances": [
+        "I'd like a larger screen, at least 55 inches, and I prefer a well-known brand for good quality.",
+        "Can you recommend a durable suitcase?",
+        "These two seem more reliable."
+      ],
+      "topClarifyingAttributes": [
+        "Brand",
+        "Price",
+        "Reviews"
+      ],
+      "insight": "품질/신뢰 신호가 13%로 최다 — durable/reliable/warranty 표현. 실패 회피가 실데이터의 지배적 hidden intention."
+    }
+  },
+  {
+    "id": "taste_identity",
+    "title": "취향/정체성 중심 구매",
+    "initialUserNeed": "남들과 겹치지 않는 디자인의 러닝화를 찾고 있어요.",
+    "targetCategory": "러닝화",
+    "context": "취향 표현",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "차별성과 취향 표현",
+        "description": "흔하지 않은 디자인으로 정체성을 표현하고 싶다.",
+        "anchors": {
+          "Functional": 0.3,
+          "Conditional": 0.2,
+          "Epistemic": 0.3,
+          "Social": 0.6,
+          "Emotional": 0.2,
+          "Hedonic": 0.9
+        },
+        "priority": "high",
+        "evidenceTheUserMightSay": [
+          "남들과 겹치지 않는",
+          "흔한 건 싫어요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "popularityCue:very_popular",
+            "userReaction": "dislike",
+            "possibleUtterance": "너무 흔한 모델이라 별로예요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "mustAvoidProductCues": [
+      "popularityCue:very_popular"
+    ],
+    "preferredProductCues": [
+      "noveltyCue:distinctive"
+    ],
+    "likelyDialoguePatterns": [
+      "multi_turn_refinement",
+      "preference_revision_after_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0.01,
+      "realUtterances": [
+        "Not sure. But I want to try something new, preferably from Italy."
+      ],
+      "topClarifyingAttributes": [
+        "Style",
+        "Color",
+        "Material"
+      ],
+      "insight": "EN 데이터에서 취향/정체성 표현은 희소 — formative study에서 보완 관찰 필요."
+    }
+  },
+  {
+    "id": "budget_value",
+    "title": "예산 제약 가성비 구매",
+    "initialUserNeed": "5만원 이하 예산 안에서 가성비 좋은 스마트워치를 찾아요.",
+    "targetCategory": "스마트워치",
+    "context": "예산 제약",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "예산 내 최대 효용",
+        "description": "엄격한 예산 안에서 효용을 극대화하고 싶다.",
+        "anchors": {
+          "Functional": 0.9,
+          "Conditional": 0.5,
+          "Epistemic": 0.4,
+          "Social": 0.1,
+          "Emotional": 0.3,
+          "Hedonic": 0.1
+        },
+        "priority": "must_have",
+        "evidenceTheUserMightSay": [
+          "5만원 이하",
+          "가성비"
+        ],
+        "productCueTriggers": [],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "mustAvoidProductCues": [
+      "priceCue:high"
+    ],
+    "preferredProductCues": [
+      "priceCue:very_low",
+      "priceCue:low"
+    ],
+    "likelyDialoguePatterns": [
+      "multi_turn_refinement",
+      "simple_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0.06,
+      "realUtterances": [
+        "Can you check for price ranges below 200 euros?",
+        "I think they are too expensive, are there any under 30 dollars",
+        "my budget is $2000, do you have any other computer more powerful and with higher price."
+      ],
+      "topClarifyingAttributes": [
+        "Price",
+        "Brand"
+      ],
+      "insight": "예산은 상한만이 아니라 '예산만큼 더 좋은 것' 상향 요청도 관찰됨 — 예산=appropriateness 신호."
+    }
+  },
+  {
+    "id": "body_comfort_health",
+    "title": "신체/건강 적합 구매",
+    "initialUserNeed": "발볼이 넓어서 편한 러닝화가 필요해요.",
+    "targetCategory": "러닝화",
+    "context": "신체 적합",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "신체 적합성과 실패 회피",
+        "description": "몸에 맞지 않으면 반품해야 하므로 실패 회피가 강하다.",
+        "anchors": {
+          "Functional": 0.8,
+          "Conditional": 0.6,
+          "Epistemic": 0.4,
+          "Social": 0.1,
+          "Emotional": 0.7,
+          "Hedonic": 0.1
+        },
+        "priority": "must_have",
+        "evidenceTheUserMightSay": [
+          "발볼이 넓어서",
+          "반품이 걱정돼요"
+        ],
+        "productCueTriggers": [],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "mustAvoidProductCues": [],
+    "preferredProductCues": [
+      "trustCue:high"
+    ],
+    "likelyDialoguePatterns": [
+      "multi_turn_refinement",
+      "clarification_then_recommend",
+      "condition_conflict_no_answer"
+    ],
+    "pscon": {
+      "observedShareEN": 0.02,
+      "realUtterances": [
+        "I need a comfortable chair for my home office, something ergonomic would be great."
+      ],
+      "topClarifyingAttributes": [
+        "Size",
+        "Material",
+        "Skin Type"
+      ],
+      "insight": "신체 적합은 Skin Type 같은 전용 clarify 속성이 존재 — 카테고리 의존성 큼."
+    }
+  },
+  {
+    "id": "replacement_upgrade",
+    "title": "기존 제품 교체/업그레이드",
+    "initialUserNeed": "3년 쓴 스마트워치가 고장나서 더 좋은 걸로 바꾸려고요.",
+    "targetCategory": "스마트워치",
+    "context": "업그레이드",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "기존 대비 명확한 개선",
+        "description": "이전 제품보다 분명히 나아야 한다.",
+        "anchors": {
+          "Functional": 0.9,
+          "Conditional": 0.4,
+          "Epistemic": 0.5,
+          "Social": 0.2,
+          "Emotional": 0.4,
+          "Hedonic": 0.3
+        },
+        "priority": "high",
+        "evidenceTheUserMightSay": [
+          "배터리가 더 오래가는",
+          "더 좋은 걸로"
+        ],
+        "productCueTriggers": [],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "mustAvoidProductCues": [
+      "priceCue:very_low"
+    ],
+    "preferredProductCues": [
+      "batteryDays>=7"
+    ],
+    "likelyDialoguePatterns": [
+      "multi_turn_refinement"
+    ],
+    "pscon": {
+      "observedShareEN": 0.01,
+      "realUtterances": [
+        "I am looking for a new table sized fridge, since my old one broke.",
+        "My monitor has been broken recently and I need to replace it.",
+        "Thanks, I have a Note 10 Pro so the Note 12 Pro is a good upgrade."
+      ],
+      "topClarifyingAttributes": [
+        "Type",
+        "Size",
+        "Price"
+      ],
+      "insight": "교체형은 기존 제품 스펙이 강한 기준점(reference point)으로 작동 — 기존 대비 비교 발화."
+    }
+  },
+  {
+    "id": "brand_model_based",
+    "title": "브랜드/모델 지정 구매",
+    "initialUserNeed": "RunPro 러닝 워치 최저가로 사고 싶어요.",
+    "targetCategory": "스마트워치",
+    "context": "지명 구매",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "지정 모델 최저가 + 정품 신뢰",
+        "description": "원하는 모델을 싸게, 단 믿을 수 있는 셀러에게서 사고 싶다.",
+        "anchors": {
+          "Functional": 0.7,
+          "Conditional": 0.3,
+          "Epistemic": 0.3,
+          "Social": 0.1,
+          "Emotional": 0.6,
+          "Hedonic": 0.1
+        },
+        "priority": "must_have",
+        "evidenceTheUserMightSay": [
+          "RunPro",
+          "최저가",
+          "정품이죠?"
+        ],
+        "productCueTriggers": [],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "mustAvoidProductCues": [
+      "sellerCue:new_or_low_grade"
+    ],
+    "preferredProductCues": [
+      "brand:RunPro"
+    ],
+    "likelyDialoguePatterns": [
+      "multi_turn_refinement",
+      "simple_recommendation",
+      "inquire_after_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0.14,
+      "realUtterances": [
+        "I have no specific brand preference I just want a nice work laptop",
+        "LG is fine, but I don't like Samsung",
+        "I want to buy a apple laptop. which kind of should I buy, with M1 chip or others?"
+      ],
+      "topClarifyingAttributes": [
+        "Brand",
+        "Type",
+        "Feature"
+      ],
+      "insight": "브랜드 언급 14% + Brand가 clarify 속성 1위(468회). 브랜드 '회피'(don't like Samsung)도 빈번 — 브랜드는 선호이자 제외 기준."
+    }
+  }
+]

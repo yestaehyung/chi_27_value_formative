@@ -1,0 +1,506 @@
+[
+  {
+    "id": "nv_5949035253595058605",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 강원전자 NETmate NM-DS21 모니터 선택기(1:2 DVI)이다."
+  },
+  {
+    "id": "nv_8853267135948965038",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 카메라 미포함 코콤 KVP-70C 2선식 인터폰용 모니터 단품이다."
+  },
+  {
+    "id": "nv_6484184826878943962",
+    "tags": [
+      "게이밍",
+      "고주사율",
+      "QHD"
+    ],
+    "attributes": {
+      "resolution": "QHD",
+      "refresh": "165Hz",
+      "panel": "IPS",
+      "size": "80.01cm",
+      "interface": "TYPE-C",
+      "pivot": true
+    },
+    "shortDesc": "QHD IPS 165Hz에 피벗을 지원하는 인터픽셀 IPQ3242 80.01cm 게이밍 모니터이다."
+  },
+  {
+    "id": "nv_8365468947221995380",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 엠비에프 MBF-HDP430 HDMI to DP 변환 컨버터이다."
+  },
+  {
+    "id": "nv_6710507755963245193",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 삼성 스마트 모니터 M5·M7 전용 수납가방이다."
+  },
+  {
+    "id": "nv_8634047638483632434",
+    "tags": [
+      "게이밍",
+      "고주사율",
+      "커브드"
+    ],
+    "attributes": {
+      "refresh": "165Hz",
+      "curved": true,
+      "size": "27인치"
+    },
+    "shortDesc": "165Hz 무결점 앱코 AVC27F165D 27인치 커브드 게이밍 모니터이다."
+  },
+  {
+    "id": "nv_2703513501521487175",
+    "tags": [
+      "게이밍",
+      "고주사율",
+      "사무용"
+    ],
+    "attributes": {
+      "refresh": "120Hz",
+      "panel": "IPS",
+      "size": "24인치"
+    },
+    "shortDesc": "IPS 120Hz의 제이씨현 UDEA ED2431HF 24인치 사무용·게이밍 무결점 모니터이다."
+  },
+  {
+    "id": "nv_5116565623154567061",
+    "tags": [
+      "프리미엄"
+    ],
+    "attributes": {
+      "size": "32인치",
+      "use": "사진전문가용"
+    },
+    "shortDesc": "사진 전문가용으로 나온 BenQ SW321C 32인치 무결점 모니터이다."
+  },
+  {
+    "id": "nv_4649842924431218862",
+    "tags": [
+      "사무용"
+    ],
+    "attributes": {
+      "size": "32인치",
+      "use": "프로그래밍·코딩"
+    },
+    "shortDesc": "프로그래밍·코딩 모드를 갖춘 벤큐 GW3290QT 32인치 무결점 모니터이다."
+  },
+  {
+    "id": "nv_8868369246846855999",
+    "tags": [
+      "게이밍"
+    ],
+    "attributes": {
+      "panel": "IPS",
+      "size": "15.6인치",
+      "touch": true
+    },
+    "shortDesc": "FHD IPS 터치 스크린을 갖춘 Eyoyo 15.6인치 게임용 LCD 모니터이다."
+  },
+  {
+    "id": "nv_2081399655776937145",
+    "tags": [],
+    "attributes": {
+      "size": "27인치"
+    },
+    "shortDesc": "LG 27U730SAW 27인치 스마트 모니터이다."
+  },
+  {
+    "id": "nv_4057736720531467367",
+    "tags": [
+      "게이밍",
+      "고주사율",
+      "4K",
+      "사무용",
+      "프리미엄"
+    ],
+    "attributes": {
+      "resolution": "4K UHD",
+      "refresh": "480Hz",
+      "panel": "OLED",
+      "size": "32인치",
+      "responseTime": "0.03ms",
+      "pivot": true,
+      "speaker": true
+    },
+    "shortDesc": "4K UHD OLED 480Hz에 스피커를 내장한 LG 울트라기어 32GX870A 게이밍 모니터이다."
+  },
+  {
+    "id": "nv_4131555771234244845",
+    "tags": [
+      "게이밍",
+      "QHD"
+    ],
+    "attributes": {
+      "resolution": "QHD",
+      "refresh": "75Hz",
+      "panel": "IPS",
+      "size": "81cm",
+      "hdr": true
+    },
+    "shortDesc": "QHD IPS 75Hz HDR을 지원하는 크로스오버 Q32V75 81cm 게이밍 모니터이다."
+  },
+  {
+    "id": "nv_698669220529507935",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 ADAM A44H 4인치 스튜디오 모니터 스피커(1통)이다."
+  },
+  {
+    "id": "nv_3436127429693060693",
+    "tags": [
+      "사무용"
+    ],
+    "attributes": {
+      "resolution": "FHD",
+      "size": "24인치",
+      "pivot": true,
+      "color": "화이트"
+    },
+    "shortDesc": "FHD에 피벗을 지원하는 MSI MD2412PW 24인치 화이트 사무용 모니터이다."
+  },
+  {
+    "id": "nv_2168674944270811754",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 GENELEC 8350AW SAM 모니터 스피커 1조(2통)이다."
+  },
+  {
+    "id": "nv_2250870507197155692",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 TV·모니터용 무선 레이저포인터 프리젠터이다."
+  },
+  {
+    "id": "nv_4826275116329882603",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 KM-096A 핫슈 아답타 모니터·스마트폰 브라켓이다."
+  },
+  {
+    "id": "nv_2484975944949983607",
+    "tags": [],
+    "attributes": {
+      "size": "15.6인치",
+      "portable": true
+    },
+    "shortDesc": "카멜 프리즘 CPM1530I 39.6cm 15.6인치 휴대용 포터블 서브 모니터이다."
+  },
+  {
+    "id": "nv_7270769836593337371",
+    "tags": [],
+    "attributes": {
+      "size": "22·24·27인치",
+      "condition": "중고"
+    },
+    "shortDesc": "삼성·LG 중소 브랜드 22·24·27인치 랜덤 중고 모니터이다."
+  },
+  {
+    "id": "nv_6301286644171133101",
+    "tags": [
+      "사무용",
+      "QHD"
+    ],
+    "attributes": {
+      "resolution": "QHD",
+      "refresh": "75Hz",
+      "panel": "IPS",
+      "eyeCare": true
+    },
+    "shortDesc": "QHD IPS 75Hz 아이케어를 지원하는 벤큐 GW3290QT 무결점 모니터이다."
+  },
+  {
+    "id": "nv_2158996584045265374",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 HYB HWG9920 가스스프링 벽걸이 TV·모니터 브라켓이다."
+  },
+  {
+    "id": "nv_7447287237236265944",
+    "tags": [],
+    "attributes": {
+      "portable": true,
+      "touch": true
+    },
+    "shortDesc": "제우스랩 z10t 휴대용 포터블 서브 모니터 터치 버전이다."
+  },
+  {
+    "id": "nv_2974484946457575278",
+    "tags": [
+      "게이밍",
+      "고주사율",
+      "4K"
+    ],
+    "attributes": {
+      "resolution": "4K",
+      "refresh": "144Hz",
+      "panel": "Mini LED",
+      "size": "43인치",
+      "responseTime": "1ms"
+    },
+    "shortDesc": "4K 144Hz Mini LED의 삼성 오디세이 Neo G7 S43CG700 43인치 모니터이다."
+  },
+  {
+    "id": "nv_5191049019125115906",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 카자리코 모니터 부착용 자석 메모보드 세트이다."
+  },
+  {
+    "id": "nv_5665066216120727947",
+    "tags": [
+      "사무용"
+    ],
+    "attributes": {
+      "resolution": "FHD",
+      "size": "23.8인치",
+      "tilt": true,
+      "condition": "중고"
+    },
+    "shortDesc": "FHD 틸트를 지원하는 레노버 T24i-20 23.8인치 중고 모니터이다."
+  },
+  {
+    "id": "nv_7427065757238639483",
+    "tags": [],
+    "attributes": {
+      "resolution": "1920x1080",
+      "panel": "IPS",
+      "size": "32인치"
+    },
+    "shortDesc": "1920x1080 IPS에 HDMI·VGA를 갖춰 IPTV 시청이 가능한 32인치 LED 모니터이다."
+  },
+  {
+    "id": "nv_5913661837722680758",
+    "tags": [
+      "사무용",
+      "고주사율"
+    ],
+    "attributes": {
+      "resolution": "FHD",
+      "refresh": "100Hz",
+      "panel": "IPS",
+      "size": "27인치"
+    },
+    "shortDesc": "FHD IPS 광시야각 100Hz의 삼성전자 에센셜모니터 S27D300G 27인치 사무용 모니터이다."
+  },
+  {
+    "id": "nv_8696687461179061619",
+    "tags": [
+      "고주사율"
+    ],
+    "attributes": {
+      "resolution": "FHD",
+      "refresh": "100Hz",
+      "panel": "IPS"
+    },
+    "shortDesc": "FHD IPS 100Hz의 MSI MP273AW 아이에르고 모니터이다."
+  },
+  {
+    "id": "nv_8140113019375072476",
+    "tags": [
+      "게이밍",
+      "고주사율"
+    ],
+    "attributes": {
+      "refresh": "120Hz",
+      "panel": "IPS"
+    },
+    "shortDesc": "IPS 120Hz의 픽셀아트 PA2442IPS 무결점 게이밍 모니터이다."
+  },
+  {
+    "id": "nv_6602866352216919349",
+    "tags": [
+      "프리미엄"
+    ],
+    "attributes": {
+      "panel": "IPS",
+      "size": "24인치",
+      "use": "전문가용",
+      "condition": "중고"
+    },
+    "shortDesc": "전문가용으로 나온 에이조 EV2485 24인치 IPS 중고 모니터이다."
+  },
+  {
+    "id": "nv_3754044834785363463",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 EV ETX-15P 15인치 2000W 파워드 액티브 스피커이다."
+  },
+  {
+    "id": "nv_2138439421602405436",
+    "tags": [
+      "고주사율"
+    ],
+    "attributes": {
+      "refresh": "100Hz",
+      "size": "24인치"
+    },
+    "shortDesc": "100Hz를 지원하는 삼성전자 S24F330 24인치 컴퓨터 모니터이다."
+  },
+  {
+    "id": "nv_7897509364438599902",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 보인 BLW-22T 삼성·LG TV 호환 각도조절 벽걸이 브라켓이다."
+  },
+  {
+    "id": "nv_94908499850752525",
+    "tags": [],
+    "attributes": {
+      "size": "10.25·12.3인치",
+      "touch": true,
+      "use": "차량용"
+    },
+    "shortDesc": "카플레이·안드로이드오토를 지원하는 벤츠 차량용 10.25·12.3인치 터치스크린 모니터이다."
+  },
+  {
+    "id": "nv_3888666305199876166",
+    "tags": [],
+    "attributes": {
+      "resolution": "Full HD",
+      "size": "22인치",
+      "condition": "중고"
+    },
+    "shortDesc": "Full HD 16:9의 삼성 S22F354 22인치 LED 중고 모니터이다."
+  },
+  {
+    "id": "nv_718674300189911549",
+    "tags": [
+      "고주사율",
+      "4K",
+      "커브드"
+    ],
+    "attributes": {
+      "resolution": "4K",
+      "refresh": "165Hz",
+      "curved": true,
+      "size": "32인치"
+    },
+    "shortDesc": "4K 165Hz 커브드 삼성 Neo G7 S32BG750 32형 모니터가 포함된 DM500SEA-ACI7W 구성이다."
+  },
+  {
+    "id": "nv_1641305239321648923",
+    "tags": [
+      "게이밍",
+      "고주사율"
+    ],
+    "attributes": {
+      "refresh": "100Hz",
+      "borderless": true
+    },
+    "shortDesc": "100Hz 보더리스의 어드밴스원 EP-270F100 무결점 게이밍 모니터이다."
+  },
+  {
+    "id": "nv_8221453964070307110",
+    "tags": [
+      "4K"
+    ],
+    "attributes": {
+      "resolution": "UHD",
+      "size": "65인치",
+      "use": "사이니지"
+    },
+    "shortDesc": "수도권 벽걸이 설치를 포함하는 LG 65UH5F 65인치 UHD 사이니지 DID 모니터이다."
+  },
+  {
+    "id": "nv_7245498788084505494",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 모니터 전자파 차단용 보안경이다."
+  },
+  {
+    "id": "nv_4676639553311375109",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 LNS LK-20 산업용 저울 표시기(인디케이터)이다."
+  },
+  {
+    "id": "nv_3572993566029647269",
+    "tags": [],
+    "attributes": {
+      "size": "19인치",
+      "condition": "중고"
+    },
+    "shortDesc": "HP LE1911 19인치 LCD 듀얼·CCTV용 보조 중고 모니터이다."
+  },
+  {
+    "id": "nv_5988697912637763623",
+    "tags": [
+      "게이밍",
+      "사무용",
+      "고주사율"
+    ],
+    "attributes": {
+      "refresh": "100Hz",
+      "panel": "IPS",
+      "eyeCare": true
+    },
+    "shortDesc": "IPS 광시야각 100Hz 아이케어의 BenQ GW2490 오피스·게이밍 무결점 모니터이다."
+  },
+  {
+    "id": "nv_1731868553546004782",
+    "tags": [],
+    "attributes": {
+      "eyeCare": true,
+      "armIncluded": true
+    },
+    "shortDesc": "모니터암 일체형 아이케어 벤큐 PD2705UA 무결점 모니터이다."
+  },
+  {
+    "id": "nv_6890304207415429333",
+    "tags": [
+      "QHD"
+    ],
+    "attributes": {
+      "resolution": "QHD",
+      "panel": "IPS",
+      "portable": true,
+      "wireless": true
+    },
+    "shortDesc": "QHD IPS 무선 DeX를 지원하는 클라인즈 K1331 휴대용 포터블 모니터이다."
+  },
+  {
+    "id": "nv_8008607104295500422",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 Coms AS903 모니터 선택기(2:4 HDMI)이다."
+  },
+  {
+    "id": "nv_306434717694452874",
+    "tags": [],
+    "attributes": {
+      "size": "19인치",
+      "condition": "중고"
+    },
+    "shortDesc": "삼성·LG·HP·DELL 19인치 랜덤 발송 CCTV·사무작업용 중고 모니터이다."
+  },
+  {
+    "id": "nv_2304461841250630694",
+    "tags": [
+      "4K"
+    ],
+    "attributes": {
+      "resolution": "UHD",
+      "size": "43인치",
+      "use": "사이니지"
+    },
+    "shortDesc": "LG전자 43UH5F 43인치 UHD DID 광고용 사이니지 모니터이다."
+  },
+  {
+    "id": "nv_6030143247879055606",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 무선 호출벨 한글표시 수신기 전광판이다."
+  },
+  {
+    "id": "nv_2664601369538368868",
+    "tags": [],
+    "attributes": {},
+    "shortDesc": "디스플레이가 아니라 모니터 일체형 풀HD 무선 CCTV 키트(CCTV 4대 포함)이다."
+  }
+]

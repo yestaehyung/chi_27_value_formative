@@ -1,0 +1,597 @@
+[
+  {
+    "id": "nv_9162747311267163607",
+    "tags": [
+      "사무용"
+    ],
+    "attributes": {
+      "use": "사무용",
+      "brand": "삼성전자",
+      "cpu": "i5",
+      "os": "윈도우11홈"
+    },
+    "shortDesc": "윈도우11홈을 탑재한 인텔 i5 사무·업무용 삼성 갤럭시북4 노트북이다."
+  },
+  {
+    "id": "nv_2507095256539721848",
+    "tags": [
+      "사무용",
+      "영상편집",
+      "경량휴대"
+    ],
+    "attributes": {
+      "use": [
+        "사무용",
+        "영상편집"
+      ],
+      "weightClass": "경량",
+      "ram": "16GB",
+      "storage": "512GB"
+    },
+    "shortDesc": "MS오피스를 갖춘 16GB/512GB 사양의 가벼운 사무·영상편집용 베이직북 노트북이다."
+  },
+  {
+    "id": "nv_1064061380831968659",
+    "tags": [
+      "프리미엄"
+    ],
+    "attributes": {
+      "brand": "삼성전자",
+      "cpu": "울트라7",
+      "ram": "16GB",
+      "os": "윈도우11"
+    },
+    "shortDesc": "루나레이크 인텔 울트라7과 16GB를 탑재한 삼성 갤럭시북5 프로 노트북이다."
+  },
+  {
+    "id": "nv_4899844483725658035",
+    "tags": [
+      "사무용",
+      "학생용",
+      "2in1"
+    ],
+    "attributes": {
+      "use": [
+        "사무용",
+        "대학생"
+      ],
+      "form": "2in1",
+      "touch": true,
+      "brand": "삼성전자",
+      "os": "윈도우11"
+    },
+    "shortDesc": "터치·360도 회전을 지원하는 사무·대학생용 삼성 갤럭시북4 360 2in1 노트북이다."
+  },
+  {
+    "id": "nv_3125133820706863825",
+    "tags": [
+      "2in1",
+      "프리미엄"
+    ],
+    "attributes": {
+      "brand": "마이크로소프트",
+      "form": "2in1",
+      "display": "OLED",
+      "ram": "16GB",
+      "storage": "512GB"
+    },
+    "shortDesc": "OLED·키보드·슬림펜2 패키지로 구성된 마이크로소프트 서피스 프로 11 2in1 노트북이다."
+  },
+  {
+    "id": "nv_7260874919747046375",
+    "tags": [],
+    "attributes": {
+      "itemType": "USB허브"
+    },
+    "shortDesc": "노트북용 4in1 C타입 USB 멀티포트 허브로, 노트북 본체가 아닌 주변기기다."
+  },
+  {
+    "id": "nv_3897763086419852891",
+    "tags": [],
+    "attributes": {
+      "itemType": "펜촉"
+    },
+    "shortDesc": "갤럭시북·갤럭시탭용 S펜 티타늄 펜촉으로, 노트북 본체가 아닌 액세서리다."
+  },
+  {
+    "id": "nv_1151367308597811942",
+    "tags": [],
+    "attributes": {
+      "itemType": "키보드"
+    },
+    "shortDesc": "노트북 느낌의 슬림한 사무용 저소음 무선 키보드로, 노트북 본체가 아니다."
+  },
+  {
+    "id": "nv_6044749528601746006",
+    "tags": [],
+    "attributes": {
+      "itemType": "백팩"
+    },
+    "shortDesc": "13인치 노트북을 수납하는 엑스디디자인 백팩으로, 노트북 본체가 아닌 가방이다."
+  },
+  {
+    "id": "nv_4055283419054433076",
+    "tags": [],
+    "attributes": {
+      "itemType": "백팩"
+    },
+    "shortDesc": "노트북 수납용 백팩으로, 노트북 본체가 아닌 가방이다."
+  },
+  {
+    "id": "nv_6097840386265387799",
+    "tags": [
+      "프리미엄"
+    ],
+    "attributes": {
+      "brand": "삼성",
+      "storage": "2TB"
+    },
+    "shortDesc": "2TB SSD와 한컴오피스를 포함한 삼성 갤럭시북4 울트라 노트북이다."
+  },
+  {
+    "id": "nv_825219767230164837",
+    "tags": [
+      "프리미엄"
+    ],
+    "attributes": {
+      "brand": "Apple",
+      "cpu": "M5",
+      "storage": "512GB",
+      "screen": "14인치"
+    },
+    "shortDesc": "M5 칩과 512GB를 탑재한 애플 맥북 프로 14 노트북이다."
+  },
+  {
+    "id": "nv_2583722283895209303",
+    "tags": [
+      "프리미엄"
+    ],
+    "attributes": {
+      "brand": "삼성",
+      "storage": "512GB"
+    },
+    "shortDesc": "512GB SSD로 교체된 삼성 갤럭시북5 프로 노트북이다."
+  },
+  {
+    "id": "nv_2776456853186857734",
+    "tags": [],
+    "attributes": {
+      "itemType": "HDD"
+    },
+    "shortDesc": "노트북용 시게이트 500GB 바라쿠다 하드디스크로, 노트북 본체가 아닌 저장장치다."
+  },
+  {
+    "id": "nv_8064964308999788915",
+    "tags": [
+      "사무용",
+      "고성능",
+      "프리미엄"
+    ],
+    "attributes": {
+      "brand": "HP",
+      "cpu": "U7",
+      "ram": "32GB",
+      "storage": "1TB",
+      "os": "W11P"
+    },
+    "shortDesc": "32GB·1TB·2.5K에 5G와 AI를 갖춘 HP 엘리트북 X G1i 비즈니스 노트북이다."
+  },
+  {
+    "id": "nv_953577251652642888",
+    "tags": [],
+    "attributes": {
+      "itemType": "스피커"
+    },
+    "shortDesc": "노트북과 함께 쓰는 브리츠 블루투스 라디오 스피커로, 노트북 본체가 아니다."
+  },
+  {
+    "id": "nv_7036692328367386795",
+    "tags": [
+      "사무용",
+      "2in1"
+    ],
+    "attributes": {
+      "use": "비즈니스",
+      "form": "2in1",
+      "brand": "마이크로소프트",
+      "cpu": "Ultra5",
+      "ram": "16GB",
+      "storage": "512GB"
+    },
+    "shortDesc": "루나레이크 Ultra5·16GB를 갖춘 마이크로소프트 서피스 프로11 비즈니스 2in1 노트북이다."
+  },
+  {
+    "id": "nv_5823195674486642284",
+    "tags": [],
+    "attributes": {
+      "itemType": "랜케이블"
+    },
+    "shortDesc": "노트북·공유기 연결용 CAT5E 인터넷 랜케이블로, 노트북 본체가 아니다."
+  },
+  {
+    "id": "nv_3024610091246874991",
+    "tags": [
+      "게이밍",
+      "고성능",
+      "영상편집"
+    ],
+    "attributes": {
+      "use": [
+        "게이밍",
+        "포토샵"
+      ],
+      "brand": "LG",
+      "cpu": "i7",
+      "condition": "중고"
+    },
+    "shortDesc": "코어 i7 고사양의 LG 울트라기어 GT 중고 게이밍 노트북으로 포토샵에도 적합하다."
+  },
+  {
+    "id": "nv_1536696380141119021",
+    "tags": [
+      "사무용"
+    ],
+    "attributes": {
+      "brand": "레노버",
+      "cpu": "R7",
+      "ram": "16GB",
+      "storage": "512GB+1TB",
+      "screen": "14인치"
+    },
+    "shortDesc": "AMD 라이젠7·16GB·WUXGA를 갖춘 레노버 씽크북 14 노트북이다."
+  },
+  {
+    "id": "nv_3450016474817976360",
+    "tags": [],
+    "attributes": {
+      "itemType": "도킹스테이션"
+    },
+    "shortDesc": "노트북·맥북용 USB-C 5in1 멀티허브 도킹스테이션으로, 노트북 본체가 아니다."
+  },
+  {
+    "id": "nv_2148967042838579413",
+    "tags": [
+      "사무용"
+    ],
+    "attributes": {
+      "brand": "레노버",
+      "screen": "13인치"
+    },
+    "shortDesc": "레노버 씽크패드 X13 Gen6 비즈니스 노트북이다."
+  },
+  {
+    "id": "nv_258706162350671509",
+    "tags": [],
+    "attributes": {
+      "itemType": "SSD"
+    },
+    "shortDesc": "노트북 업그레이드용 패트리어트 P220 2TB SATA SSD로, 노트북 본체가 아닌 저장장치다."
+  },
+  {
+    "id": "nv_5006308961708496222",
+    "tags": [],
+    "attributes": {
+      "itemType": "이어폰"
+    },
+    "shortDesc": "노트북·컴퓨터용 아이리버 3.5mm 유선 이어폰으로, 노트북 본체가 아니다."
+  },
+  {
+    "id": "nv_1259952899019477033",
+    "tags": [],
+    "attributes": {
+      "brand": "삼성전자",
+      "cpu": "i5",
+      "ram": "16GB",
+      "storage": "512GB"
+    },
+    "shortDesc": "코어 i5·16GB·512GB 사양의 삼성 갤럭시북4 노트북이다."
+  },
+  {
+    "id": "nv_3752745752746180127",
+    "tags": [
+      "사무용",
+      "학생용",
+      "경량휴대"
+    ],
+    "attributes": {
+      "use": [
+        "업무용",
+        "사무용",
+        "대학생"
+      ],
+      "weightClass": "휴대용",
+      "brand": "삼성",
+      "cpu": "울트라5",
+      "ram": "16GB",
+      "storage": "256GB"
+    },
+    "shortDesc": "인텔 울트라5·16GB의 업무·사무·대학생용 삼성 휴대용 노트북이다."
+  },
+  {
+    "id": "nv_1333081535689962919",
+    "tags": [
+      "게이밍",
+      "고성능"
+    ],
+    "attributes": {
+      "use": "게이밍",
+      "brand": "ASUS",
+      "cpu": "라이젠7",
+      "gpu": "RTX5060",
+      "ram": "16GB",
+      "storage": "1TB",
+      "screen": "16인치"
+    },
+    "shortDesc": "라이젠7·RTX5060·16GB/1TB를 탑재한 ASUS TUF Gaming A16 게이밍 노트북이다."
+  },
+  {
+    "id": "nv_1804002388809495612",
+    "tags": [],
+    "attributes": {
+      "itemType": "외장ODD"
+    },
+    "shortDesc": "노트북·맥 호환 블루레이/DVD 외장 ODD로, 노트북 본체가 아니다."
+  },
+  {
+    "id": "nv_4487139501131931399",
+    "tags": [],
+    "attributes": {
+      "brand": "삼성전자"
+    },
+    "shortDesc": "삼성 갤럭시북 이온 NT950XCJ 노트북이다."
+  },
+  {
+    "id": "nv_6897403071570266673",
+    "tags": [
+      "고성능"
+    ],
+    "attributes": {
+      "brand": "삼성",
+      "ram": "32GB",
+      "storage": "256GB",
+      "screen": "15.6인치"
+    },
+    "shortDesc": "32GB·15.6인치의 고성능 삼성 노트북 NT750QCR이다."
+  },
+  {
+    "id": "nv_7212439491842800824",
+    "tags": [
+      "사무용"
+    ],
+    "attributes": {
+      "brand": "HP",
+      "ram": "8G",
+      "storage": "SSD120G",
+      "os": "Win10",
+      "condition": "중고"
+    },
+    "shortDesc": "8GB·SSD120GB·Win10의 HP 프로북 650-G1 중고 비즈니스 노트북이다."
+  },
+  {
+    "id": "nv_6021980542239406941",
+    "tags": [
+      "고성능"
+    ],
+    "attributes": {
+      "use": [
+        "주식용",
+        "가정용",
+        "캐드용",
+        "전문가용"
+      ],
+      "brand": "삼성",
+      "cpu": "i7",
+      "condition": "중고"
+    },
+    "shortDesc": "코어 i7 고사양의 주식·캐드·전문가용 삼성 중고 노트북이다."
+  },
+  {
+    "id": "nv_1542678000600623426",
+    "tags": [],
+    "attributes": {
+      "itemType": "테이블"
+    },
+    "shortDesc": "높이조절 노트북 테이블(소파테이블)로, 노트북 본체가 아닌 가구다."
+  },
+  {
+    "id": "nv_7752610404723035433",
+    "tags": [],
+    "attributes": {
+      "brand": "삼성",
+      "cpu": "I7",
+      "ram": "8G",
+      "storage": "SSD256",
+      "os": "WIN10"
+    },
+    "shortDesc": "코어 i7·8GB·SSD256GB·Win10의 삼성 노트북 NT901X3H이다."
+  },
+  {
+    "id": "nv_1147615695989788813",
+    "tags": [
+      "경량휴대"
+    ],
+    "attributes": {
+      "weightClass": "경량",
+      "brand": "LG",
+      "storage": "512GB",
+      "screen": "14인치"
+    },
+    "shortDesc": "512GB SSD를 탑재한 14인치 경량 LG 그램 노트북이다."
+  },
+  {
+    "id": "nv_3566023973538995212",
+    "tags": [],
+    "attributes": {
+      "itemType": "배터리"
+    },
+    "shortDesc": "맥북에어 13인치용 A1405 교체 배터리로, 노트북 본체가 아니다."
+  },
+  {
+    "id": "nv_8757636751083583530",
+    "tags": [
+      "게이밍",
+      "고성능"
+    ],
+    "attributes": {
+      "use": "게이밍",
+      "brand": "에이서",
+      "screen": "16인치"
+    },
+    "shortDesc": "슬림 폼팩터의 에이서 프레데터 헬리오스 네오 16S 게이밍 노트북이다."
+  },
+  {
+    "id": "nv_5899922010609347679",
+    "tags": [],
+    "attributes": {
+      "brand": "삼성",
+      "storage": "256GB"
+    },
+    "shortDesc": "256GB SSD를 추가 장착한 삼성 갤럭시북2 NT750XEW 노트북이다."
+  },
+  {
+    "id": "nv_7977914405796543620",
+    "tags": [],
+    "attributes": {
+      "itemType": "배터리"
+    },
+    "shortDesc": "DELL 래티튜드 5591/5580용 VG93N 노트북 배터리로, 노트북 본체가 아니다."
+  },
+  {
+    "id": "nv_3191599883502069411",
+    "tags": [],
+    "attributes": {
+      "brand": "삼성전자",
+      "os": "Win11",
+      "color": "그레이"
+    },
+    "shortDesc": "Win11과 한컴오피스를 포함한 삼성 갤럭시북5 NT750XHD 노트북이다."
+  },
+  {
+    "id": "nv_4908096171920208337",
+    "tags": [
+      "경량휴대",
+      "가성비"
+    ],
+    "attributes": {
+      "weightClass": "초경량",
+      "brand": "삼성",
+      "cpu": "펜티엄",
+      "ram": "8GB",
+      "storage": "128GB",
+      "condition": "리퍼"
+    },
+    "shortDesc": "초경량·최저가를 내세운 펜티엄·8GB·128GB 삼성 노트북9 리퍼 제품이다."
+  },
+  {
+    "id": "nv_915536419752518047",
+    "tags": [
+      "게이밍",
+      "고성능",
+      "대화면"
+    ],
+    "attributes": {
+      "brand": "LG",
+      "gpu": "GTX1650Ti",
+      "os": "WIN11",
+      "screen": "17인치"
+    },
+    "shortDesc": "GTX1650Ti를 탑재한 17인치 고성능 LG 울트라기어 게이밍 노트북이다."
+  },
+  {
+    "id": "nv_4939911893908657306",
+    "tags": [],
+    "attributes": {
+      "itemType": "백팩"
+    },
+    "shortDesc": "남성용 가죽 노트북 백팩으로, 노트북 본체가 아닌 가방이다."
+  },
+  {
+    "id": "nv_7949391212066138504",
+    "tags": [],
+    "attributes": {
+      "brand": "삼성",
+      "cpu": "i5",
+      "ram": "4GB",
+      "storage": "120GB",
+      "os": "윈도우10",
+      "screen": "39.6cm"
+    },
+    "shortDesc": "코어 i5(2세대)·4GB·120GB·Win10의 삼성 39.6cm 노트북이다."
+  },
+  {
+    "id": "nv_6207392315611873549",
+    "tags": [],
+    "attributes": {
+      "itemType": "목업"
+    },
+    "shortDesc": "14인치 인테리어용 가짜 목업 모형 노트북으로, 실제 노트북 본체가 아니다."
+  },
+  {
+    "id": "nv_1929316746503257563",
+    "tags": [],
+    "attributes": {
+      "itemType": "백팩"
+    },
+    "shortDesc": "빅토리녹스 에센셜 24L 경량 노트북 백팩으로, 노트북 본체가 아닌 가방이다."
+  },
+  {
+    "id": "nv_5307574497414695453",
+    "tags": [],
+    "attributes": {
+      "itemType": "USB허브"
+    },
+    "shortDesc": "노트북·맥북용 코드웨이 4in1 USB-C 멀티허브로, 노트북 본체가 아니다."
+  },
+  {
+    "id": "nv_8133912895580554137",
+    "tags": [
+      "경량휴대",
+      "2in1",
+      "영상편집",
+      "프리미엄"
+    ],
+    "attributes": {
+      "use": "크리에이터",
+      "form": "2in1",
+      "touch": true,
+      "weightClass": "경량",
+      "brand": "LG",
+      "cpu": "Ultra5",
+      "ram": "16GB",
+      "storage": "512GB",
+      "screen": "16인치"
+    },
+    "shortDesc": "144Hz 터치·360도 회전을 지원하는 크리에이터용 경량 LG 그램 프로360 2in1 노트북이다."
+  },
+  {
+    "id": "nv_6890254158979528488",
+    "tags": [
+      "사무용",
+      "대화면",
+      "학생용"
+    ],
+    "attributes": {
+      "use": [
+        "업무용",
+        "가정용",
+        "인강용",
+        "사무용"
+      ],
+      "brand": "HP",
+      "screen": "17인치"
+    },
+    "shortDesc": "17인치 대화면의 업무·가정·인강·사무용 HP 노트북이다."
+  },
+  {
+    "id": "nv_8218746169211348640",
+    "tags": [
+      "사무용"
+    ],
+    "attributes": {
+      "use": "사무용",
+      "brand": "DELL",
+      "screen": "15인치"
+    },
+    "shortDesc": "DELL 15 Pro Essential 사무용 노트북이다."
+  }
+]
