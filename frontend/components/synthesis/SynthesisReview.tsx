@@ -526,7 +526,8 @@ export default function SynthesisReview() {
             <button
               key={r.personaId}
               onClick={() => setModalId(r.personaId)}
-              className="card p-3 text-left transition-all duration-150 hover:-translate-y-px hover:border-[#4f46e5] hover:shadow-[0_6px_20px_-6px_rgba(79,70,229,0.25)]"
+              style={{ transitionProperty: "transform, border-color, box-shadow, scale", transitionDuration: "150ms" }}
+              className="card p-3 text-left hover:-translate-y-px hover:border-[#4f46e5] hover:shadow-[0_6px_20px_-6px_rgba(79,70,229,0.25)] active:scale-[0.98]"
             >
               {body}
             </button>

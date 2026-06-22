@@ -105,7 +105,7 @@ export default function SimulatePage() {
           <button
             key={k}
             onClick={() => setView(k)}
-            className={`rounded-lg px-4 py-1.5 font-medium transition-colors ${
+            className={`rounded-lg px-4 py-1.5 font-medium transition-colors duration-150 active:scale-[0.96] ${
               view === k ? "bg-[#4f46e5] text-white" : "text-[#606060] hover:text-[#191919]"
             }`}
           >
@@ -179,7 +179,8 @@ export default function SimulatePage() {
                   key={p.id}
                   onClick={() => (sel ? setDetailOpen(true) : setPersonaId(p.id))}
                   title={sel ? "한 번 더 클릭 → 자세히 보기" : ""}
-                  className={`rounded-xl border p-3 text-left transition-all duration-150 ${
+                  style={{ transitionProperty: "color, background-color, border-color, box-shadow, scale", transitionDuration: "150ms" }}
+                  className={`rounded-xl border p-3 text-left active:scale-[0.98] ${
                     sel
                       ? "border-[#4f46e5] bg-[#eef2ff] ring-1 ring-[#4f46e5]"
                       : "border-[#e4e8eb] bg-white hover:border-[#4f46e5] hover:bg-[#fafbff]"
@@ -235,7 +236,7 @@ export default function SimulatePage() {
                 {Object.entries(result.evaluation).map(([k, v]) => (
                   <div key={k} className="flex justify-between border-b border-slate-50 pb-1">
                     <dt className="text-slate-500">{k}</dt>
-                    <dd className="font-mono font-medium">{v === null ? "–" : String(v)}</dd>
+                    <dd className="font-mono font-medium tabular-nums">{v === null ? "–" : String(v)}</dd>
                   </div>
                 ))}
               </dl>

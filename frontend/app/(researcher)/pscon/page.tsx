@@ -57,9 +57,10 @@ export default function PsconListPage() {
           <Link
             key={c.convId}
             href={`/pscon/${c.convId}`}
-            className="card group p-4 transition-all duration-150 hover:border-[#4f46e5]"
+            style={{ transitionProperty: "border-color, box-shadow", transitionDuration: "150ms" }}
+            className="card group p-4 hover:-translate-y-px hover:border-[#4f46e5] hover:shadow-[0_6px_20px_-6px_rgba(79,70,229,0.25)]"
           >
-            <div className="flex items-center justify-between text-[11px] text-[#9aa0a6]">
+            <div className="flex items-center justify-between text-[11px] tabular-nums text-[#9aa0a6]">
               <span className="font-mono">#{c.convId}</span>
               <span>{c.turnCount}턴 · 추천 {c.recommendTurns}</span>
             </div>
@@ -79,7 +80,7 @@ export default function PsconListPage() {
                 ))}
               </div>
             )}
-            <div className="mt-2 flex items-center gap-3 text-[11px] font-medium">
+            <div className="mt-2 flex items-center gap-3 text-[11px] font-medium tabular-nums">
               <span className="text-[#047857]">👍 {c.liked}</span>
               <span className="text-[#e03131]">👎 {c.disliked}</span>
               {c.analyzed && <span className="ml-auto rounded-full bg-[#eef2ff] px-2 py-0.5 text-[10px] font-semibold text-[#4f46e5]">분석됨</span>}

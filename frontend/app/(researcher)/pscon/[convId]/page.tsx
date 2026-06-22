@@ -112,7 +112,7 @@ export default function PsconViewerPage() {
               쇼핑 대화 <span className="ml-1 text-xs font-normal text-[#9aa0a6]">— PSCon 원본</span>
             </div>
             <div className="flex items-center gap-1.5 text-[11px]">
-              {!isComplete && <span className="mr-1 font-mono text-[#9aa0a6]">{visible}/{total}</span>}
+              {!isComplete && <span className="mr-1 font-mono tabular-nums text-[#9aa0a6]">{visible}/{total}</span>}
               {playing ? (
                 <button onClick={pause} className="btn px-2.5 py-1 text-[11px]">⏸ 일시정지</button>
               ) : (
