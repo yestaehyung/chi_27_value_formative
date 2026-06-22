@@ -35,7 +35,7 @@ export default function EvidenceDrawer({
       >
         <div className="flex items-start justify-between">
           <h3 className="text-base font-bold">왜 이렇게 이해했나요?</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={onClose} aria-label="닫기" className="-mr-2 -mt-1 flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors duration-150 hover:bg-slate-100 hover:text-slate-600 active:scale-[0.92]">✕</button>
         </div>
 
         {!data ? (

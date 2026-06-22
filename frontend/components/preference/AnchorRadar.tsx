@@ -132,7 +132,7 @@ export default function AnchorRadar({
                 <div key={i}>
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-[#404040]">{c.topicLabel}</span>
-                    <span className="font-mono text-[#4f46e5]">+{c.contribution.toFixed(2)}</span>
+                    <span className="font-mono tabular-nums text-[#4f46e5]">+{c.contribution.toFixed(2)}</span>
                   </div>
                   <div className="mt-0.5 flex flex-wrap gap-1 text-[9px]">
                     <span className={`rounded px-1 py-0.5 ${c.confidence === "confirmed" ? "bg-[#ecfdf5] text-[#047857]" : "bg-white text-[#787c82]"}`}>

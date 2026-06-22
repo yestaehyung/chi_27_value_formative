@@ -92,13 +92,14 @@ export default function Spotlight({
     <div className="fixed inset-0 z-[100]">
       {box ? (
         <div
-          className="pointer-events-none absolute rounded-xl ring-2 ring-[#4f46e5] transition-all duration-200"
+          className="pointer-events-none absolute rounded-xl ring-2 ring-[#4f46e5] duration-200"
           style={{
             top: box.top,
             left: box.left,
             width: box.width,
             height: box.height,
             boxShadow: "0 0 0 9999px rgba(17,17,17,0.55)",
+            transitionProperty: "top, left, width, height",
           }}
         />
       ) : (

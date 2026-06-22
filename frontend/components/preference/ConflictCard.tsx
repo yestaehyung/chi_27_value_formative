@@ -53,7 +53,7 @@ export default function ConflictCard({
                 onClick={() => onResolve(o.id)}
                 onMouseEnter={() => setHovered(o.id)}
                 onMouseLeave={() => setHovered(null)}
-                className="block w-full rounded-xl border border-[#e4e8eb] bg-white px-4 py-2.5 text-left text-xs font-medium text-[#404040] transition-colors duration-150 hover:border-[#4f46e5] hover:bg-[#f7fdf9] hover:text-[#047857]"
+                className="block w-full rounded-xl border border-[#e4e8eb] bg-white px-4 py-2.5 text-left text-xs font-medium text-[#404040] transition-colors duration-150 hover:border-[#4f46e5] hover:bg-[#f7fdf9] hover:text-[#047857] active:scale-[0.98]"
               >
                 {o.label}
               </button>
@@ -61,7 +61,7 @@ export default function ConflictCard({
             {options.some((o) => o.action === "manual_edit") && (
               <button
                 onClick={() => setManualMode(true)}
-                className="block w-full rounded-xl border border-dashed border-[#c9cdd2] bg-white px-4 py-2.5 text-left text-xs text-[#787c82] transition hover:border-[#4f46e5] hover:text-[#047857]"
+                className="block w-full rounded-xl border border-dashed border-[#c9cdd2] bg-white px-4 py-2.5 text-left text-xs text-[#787c82] transition-colors duration-150 hover:border-[#4f46e5] hover:text-[#047857] active:scale-[0.98]"
               >
                 직접 수정하기
               </button>

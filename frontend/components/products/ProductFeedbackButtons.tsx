@@ -98,7 +98,7 @@ export default function ProductFeedbackButtons({
               </div>
               <button
                 onClick={() => setShowReason(false)}
-                className="shrink-0 text-lg leading-none text-[#9aa0a6] hover:text-[#191919]"
+                className="-mr-2 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg leading-none text-[#9aa0a6] transition-colors duration-150 hover:bg-[#f0f2f4] hover:text-[#191919] active:scale-[0.92]"
                 aria-label="닫기"
               >✕</button>
             </div>

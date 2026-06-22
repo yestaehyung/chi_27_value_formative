@@ -279,8 +279,8 @@ export default function SimulatePage() {
                onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-[#e4e8eb] px-5 py-3">
               <h3 className="text-sm font-semibold">페르소나 상세</h3>
-              <button onClick={() => setDetailOpen(false)}
-                      className="text-lg leading-none text-[#9aa0a6] hover:text-[#191919]">✕</button>
+              <button onClick={() => setDetailOpen(false)} aria-label="닫기"
+                      className="-mr-2 flex h-10 w-10 items-center justify-center rounded-lg text-lg leading-none text-[#9aa0a6] transition-colors duration-150 hover:bg-[#f0f2f4] hover:text-[#191919] active:scale-[0.92]">✕</button>
             </div>
 
             <div className="grid flex-1 grid-cols-1 overflow-hidden sm:grid-cols-[230px_1fr]">

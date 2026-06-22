@@ -10,6 +10,7 @@ export default function AgentAvatar({ className = "h-7 w-7" }: { className?: str
       src={AGENT_AVATAR_URL}
       alt="쇼핑 에이전트"
       className={`shrink-0 rounded-full bg-[#c4b5fd] object-cover ${className}`}
+      style={{ outline: "1px solid rgba(0,0,0,0.1)", outlineOffset: "-1px" }}
     />
   );
 }

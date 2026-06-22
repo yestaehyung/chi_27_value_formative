@@ -56,7 +56,7 @@ export default function CurrentUnderstandingPanel({
             </span>
             <span className="font-medium text-[#191919]" title={chip.displayRationale}>{chip.label}</span>
           </div>
-          <span className="shrink-0 text-[10px] text-[#b0b8c1]" title="근거 개수">({chip.evidenceCount})</span>
+          <span className="shrink-0 text-[10px] tabular-nums text-[#b0b8c1]" title="근거 개수">({chip.evidenceCount})</span>
         </div>
 
         {!editable ? null : isEditing ? (
@@ -103,14 +103,14 @@ export default function CurrentUnderstandingPanel({
             </div>
 
             {/* 보조 — 중요도 / 수정 / 근거. 전부 노출하되 작게/muted 로 위계 구분 */}
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#9aa0a6]">
+            <div className="-mb-1 mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-[#9aa0a6]">
               <span className="flex items-center gap-0.5">
                 중요도
-                <button className="rounded px-1 hover:bg-[#f0f2f4] hover:text-[#4f46e5]" title="중요도 낮춤" onClick={() => onChipAction(chip.id, "decrease_priority")}>⬇</button>
-                <button className="rounded px-1 hover:bg-[#f0f2f4] hover:text-[#4f46e5]" title="중요도 높임" onClick={() => onChipAction(chip.id, "increase_priority")}>⬆</button>
+                <button className="rounded px-1.5 py-1 transition-colors duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.9]" title="중요도 낮춤" onClick={() => onChipAction(chip.id, "decrease_priority")}>⬇</button>
+                <button className="rounded px-1.5 py-1 transition-colors duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.9]" title="중요도 높임" onClick={() => onChipAction(chip.id, "increase_priority")}>⬆</button>
               </span>
-              <button className="hover:text-[#4f46e5]" onClick={() => { setEditing(chip.id); setEditText(chip.label); }}>수정</button>
-              <button className="hover:text-[#4f46e5]" data-tutorial="evidence" onClick={() => onShowEvidence(chip.id)}>근거</button>
+              <button className="rounded px-1.5 py-1 transition-colors duration-150 hover:text-[#4f46e5] active:scale-[0.96]" onClick={() => { setEditing(chip.id); setEditText(chip.label); }}>수정</button>
+              <button className="rounded px-1.5 py-1 transition-colors duration-150 hover:text-[#4f46e5] active:scale-[0.96]" data-tutorial="evidence" onClick={() => onShowEvidence(chip.id)}>근거</button>
             </div>
           </>
         )}

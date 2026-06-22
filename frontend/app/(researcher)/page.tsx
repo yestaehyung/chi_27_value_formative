@@ -45,8 +45,8 @@ export default function Home() {
           <Link
             key={e.href}
             href={e.href}
-            style={{ animationDelay: `${i * 70}ms` }}
-            className="msg-in card group flex items-center gap-5 p-5 transition-all duration-150 hover:-translate-y-px hover:border-[#4f46e5] hover:shadow-[0_6px_20px_-6px_rgba(79,70,229,0.25)] sm:gap-6 sm:p-6"
+            style={{ animationDelay: `${i * 70}ms`, transitionProperty: "transform, border-color, box-shadow", transitionDuration: "150ms" }}
+            className="msg-in card group flex items-center gap-5 p-5 hover:-translate-y-px hover:border-[#4f46e5] hover:shadow-[0_6px_20px_-6px_rgba(79,70,229,0.25)] sm:gap-6 sm:p-6"
           >
             <span className="font-mono text-sm tabular-nums text-[#c2c7cd]">
               {e.index}
@@ -64,7 +64,7 @@ export default function Home() {
               <p className="mt-1 text-sm leading-relaxed text-[#606060]">{e.desc}</p>
             </div>
 
-            <span className="shrink-0 text-lg text-[#c9cdd2] transition-all duration-150 group-hover:translate-x-0.5 group-hover:text-[#4f46e5]">
+            <span className="shrink-0 text-lg text-[#c9cdd2] transition-[transform,color] duration-150 group-hover:translate-x-0.5 group-hover:text-[#4f46e5]">
               →
             </span>
           </Link>
