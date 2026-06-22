@@ -62,6 +62,11 @@ def _migrate() -> None:
             ("tags", "TEXT DEFAULT '[]'"),
         ],
     }
+    # 컬럼 이름 변경 (renames) — (table, old, new). 이미 new가 있으면 skip(재실행 안전).
+    # 2026-06-22: intent_labels → dialogue_acts (화행; IntentionTopic 가치와 혼동 해소).
+    renames = [
+        ("turns", "intent_labels", "dialogue_acts"),
+    ]
     with engine.connect() as conn:
         for table, columns in new_columns.items():
             existing = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")}
@@ -70,6 +75,12 @@ def _migrate() -> None:
             for name, ddl in columns:
                 if name not in existing:
                     conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+        for table, old, new in renames:
+            cols = {row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")}
+            if not cols:
+                continue  # table will be created by create_all (already new name)
+            if old in cols and new not in cols:
+                conn.exec_driver_sql(f"ALTER TABLE {table} RENAME COLUMN {old} TO {new}")
         conn.commit()
 
 

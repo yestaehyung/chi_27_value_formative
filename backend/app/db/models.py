@@ -1,15 +1,28 @@
 """SQLAlchemy models matching spec §19.2 DDL.
 
+온톨로지 표지(signpost): 이 파일은 런타임 그래프의 **저장 구조**(노드=테이블 행,
+엣지=관계 테이블)가 정본이다. 닫힌 **라벨 어휘**(화행·TCV5·동기·관계 타입)는
+app/ontology/schema.py 가 단일 출처 — 닫힌 컬럼은 거기 Enum을 사용한다.
+
 sellers / product_metrics are folded into products for the MVP; the normalized
 Product schema (§6.1) keeps the door open for joining real Naver source tables
 (product_info / review_detail / purchase_detail / sme_static / sme_dynamic) later.
 """
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Enum as SAEnum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.database import Base
+from app.ontology.schema import RelationType, ValueAnchor
+
+# 닫힌 라벨 컬럼은 schema.py Enum으로 검증한다 (native_enum=False → SQLite엔 VARCHAR 저장,
+# 물리 타입·마이그레이션 변경 없음. 잘못된 라벨만 ORM 레벨에서 차단). values_callable로
+# Enum.value("Functional")가 저장되게 한다(이름 'FUNCTIONAL'이 아니라).
+_ANCHOR_ENUM = SAEnum(ValueAnchor, native_enum=False, length=32,
+                      values_callable=lambda e: [m.value for m in e])
+_RELTYPE_ENUM = SAEnum(RelationType, native_enum=False, length=32,
+                       values_callable=lambda e: [m.value for m in e])
 
 
 def utcnow() -> datetime:
@@ -56,7 +69,9 @@ class Turn(Base):
     turn_index: Mapped[int] = mapped_column(Integer, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False)  # user | service_agent | user_agent | system
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    intent_labels: Mapped[list] = mapped_column(JSON, default=list)
+    # dialogue_acts: 발화의 화행(PSCon taxonomy: reveal/inquire/accept...).
+    # ※ IntentionTopic(가치 의도)과 다름 — 이건 "말로 뭘 하나"(대화 행위). 2026-06-22 intent→dialogue_act 개명.
+    dialogue_acts: Mapped[list] = mapped_column(JSON, default=list)
     agent_action: Mapped[str | None] = mapped_column(String)
     related_product_ids: Mapped[list] = mapped_column(JSON, default=list)
     raw_llm: Mapped[dict | None] = mapped_column(JSON, default=None)
@@ -204,7 +219,7 @@ class ConceptAnchorMapping(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     concept_id: Mapped[str] = mapped_column(ForeignKey("concepts.id"))
-    anchor: Mapped[str] = mapped_column(String, nullable=False)
+    anchor: Mapped[str] = mapped_column(_ANCHOR_ENUM, nullable=False)  # TCV5 (schema.ValueAnchor)
     score: Mapped[float] = mapped_column(Float, nullable=False)
     confidence: Mapped[str] = mapped_column(String, default="inferred")
     support_count: Mapped[int] = mapped_column(Integer, default=1)  # 집계에 기여한 topic 수
@@ -215,7 +230,7 @@ class AnchorMapping(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     topic_id: Mapped[str] = mapped_column(ForeignKey("intention_topics.id"))
-    anchor: Mapped[str] = mapped_column(String, nullable=False)
+    anchor: Mapped[str] = mapped_column(_ANCHOR_ENUM, nullable=False)  # TCV5 (schema.ValueAnchor)
     score: Mapped[float] = mapped_column(Float, nullable=False)  # intensity (이론모듈 §7.3)
     confidence: Mapped[str] = mapped_column(String, nullable=False, default="inferred")
     # 이론모듈 §7.3 — 5-field anchor mapping
@@ -233,7 +248,7 @@ class IntentionRelation(Base):
     session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id"))
     source_topic_id: Mapped[str] = mapped_column(ForeignKey("intention_topics.id"))
     target_topic_id: Mapped[str] = mapped_column(ForeignKey("intention_topics.id"))
-    type: Mapped[str] = mapped_column(String, nullable=False)
+    type: Mapped[str] = mapped_column(_RELTYPE_ENUM, nullable=False)  # 관계 타입 (schema.RelationType)
     strength: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
     rationale: Mapped[str | None] = mapped_column(Text)
     evidence_ids: Mapped[list] = mapped_column(JSON, default=list)

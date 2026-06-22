@@ -74,7 +74,7 @@ export default function StudySessionPage() {
     const optimisticId = `optimistic_${Date.now()}`;
     setTurns((prev) => [...prev, {
       id: optimisticId, sessionId, turnIndex: prev.length, role: "user",
-      content: text, intentLabels: [], relatedProductIds: [],
+      content: text, dialogueActs: [], relatedProductIds: [],
       createdAt: new Date().toISOString(),
     } as Turn]);
     setBusy(true);
@@ -134,7 +134,7 @@ export default function StudySessionPage() {
       setTurns((prev) => [...prev, {
         id: `local_${Date.now()}`,
         sessionId, turnIndex: prev.length, role: "service_agent",
-        content: res.message, intentLabels: [], relatedProductIds: [],
+        content: res.message, dialogueActs: [], relatedProductIds: [],
         agentAction: "ask_correction", createdAt: new Date().toISOString(),
       } as Turn]);
     } catch (e) {

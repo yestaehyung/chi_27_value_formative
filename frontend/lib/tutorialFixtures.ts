@@ -13,7 +13,7 @@ export const tutorialTurns: Turn[] = [
     turnIndex: 1,
     role: "user",
     content: "친구 생일 선물로 무선 이어폰이나 스마트워치를 고민 중이에요. 너무 싸 보이지 않으면 좋겠어요.",
-    intentLabels: [],
+    dialogueActs: [],
     relatedProductIds: [],
     createdAt: T0,
   },
@@ -25,7 +25,7 @@ export const tutorialTurns: Turn[] = [
     content:
       "말씀해주신 기준대로 세 가지 다른 방향의 상품을 보여드릴게요. 카드의 좋아요/싫어요로 반응해주시면 기준을 더 정확하게 잡을 수 있어요.",
     agentAction: "recommend",
-    intentLabels: [],
+    dialogueActs: [],
     relatedProductIds: ["demo_p1", "demo_p2", "demo_p3"],
     createdAt: T0,
   },

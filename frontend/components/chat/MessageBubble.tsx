@@ -8,7 +8,7 @@ const ROLE_LABEL: Record<string, string> = {
   system: "시스템",
 };
 
-// showMeta: 연구용 라벨(intentLabels·agentAction) 노출 여부.
+// showMeta: 연구용 라벨(dialogueActs·agentAction) 노출 여부.
 // 기본 false → 참가자 화면(§36: 추론·내부 코드 비노출). 연구자 replay에서만 true.
 export default function MessageBubble({ turn, showMeta = false }: { turn: Turn; showMeta?: boolean }) {
   const isUser = turn.role === "user" || turn.role === "user_agent";
@@ -19,9 +19,9 @@ export default function MessageBubble({ turn, showMeta = false }: { turn: Turn; 
       <div className="msg-in flex justify-end">
         <div className="max-w-[80%]">
           <div className="mb-1 flex items-center justify-end gap-2 text-[11px] text-[#9aa0a6]">
-            {showMeta && turn.intentLabels?.length > 0 && (
+            {showMeta && turn.dialogueActs?.length > 0 && (
               <span className="rounded bg-[#eef2ff] px-1.5 py-0.5 font-mono text-[10px] text-[#4f46e5]">
-                {turn.intentLabels.join("·")}
+                {turn.dialogueActs.join("·")}
               </span>
             )}
             <span>{ROLE_LABEL[turn.role] ?? turn.role}</span>

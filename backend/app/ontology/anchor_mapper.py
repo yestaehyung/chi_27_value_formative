@@ -9,31 +9,10 @@ from app.core.ids import new_id
 from app.db import models
 from app.llm.prompts import SYSTEM_BY_TASK, render_user_context
 from app.llm.provider import LLMMessage, LLMProvider
-
-# ── 2층 가치 모델 ───────────────────────────────────────────────────────────
-# Trait 층 (TCV 5가치, Sheth/Newman/Gross 1991) — 비교적 안정적인 사람 특성.
-# 의도(topic)→이론 매핑은 이 trait 층에만 이뤄지고, 참가자별로 세션을 넘어 누적된다.
-TRAIT_ANCHORS = [
-    "Functional",   # 성능·신뢰성·내구성·가격 대비 효용
-    "Social",       # 사회집단 연상·사회적 이미지
-    "Emotional",    # 긍정/부정 정서 (안심·신뢰 / 불안·후회 회피)
-    "Epistemic",    # 호기심·새로움·정보 탐색·지식
-    "Conditional",  # 특정 상황·맥락 의존 효용
-]
-# Motivation 층 (Arnold & Reynolds 2003 헤도닉 6 + Babin Utilitarian) — 상황적
-# 쇼핑 동기. 설문 대신 대화로 끌어내며(아래 task), 세션 내에서 변동한다.
-MOTIVATION_DIMS = [
-    "Adventure",       # 탐험·우연한 발견·새로움
-    "Gratification",   # 스트레스 해소·자기보상
-    "Role",            # 타인을 위한 쇼핑의 즐거움 (선물)
-    "BargainValue",    # 할인·득템의 즐거움
-    "SocialShopping",  # 함께 고르기·타인 반응
-    "Idea",            # 트렌드·신제품·영감 탐색
-    "Utilitarian",     # 목적 달성·효율·과업 종료
-]
-
-# 하위호환: 기존 코드가 VALUE_ANCHORS를 참조 → trait 층을 가리키게 한다.
-VALUE_ANCHORS = TRAIT_ANCHORS
+# ── 2층 가치 모델 — 라벨 정의는 app/ontology/schema.py 가 단일 출처. 여기선 재노출. ──
+#   TRAIT_ANCHORS  = TCV5 가치축 (Sheth/Newman/Gross 1991) — 의도→이론 매핑 대상
+#   MOTIVATION_DIMS = 쇼핑 동기 (Arnold & Reynolds 2003) — 대화로 끌어냄
+from app.ontology.schema import MOTIVATION_DIMS, TRAIT_ANCHORS, VALUE_ANCHORS  # noqa: F401
 
 
 async def fetch_anchor_mappings(

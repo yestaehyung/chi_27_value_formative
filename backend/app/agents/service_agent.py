@@ -116,8 +116,10 @@ def _create_impressions(
     return impressions
 
 
-async def _classify_intents(provider, content: str) -> list[str]:
-    """Intent 분류 (실패 시 라벨 없음으로 강등)."""
+async def _classify_dialogue_acts(provider, content: str) -> list[str]:
+    """화행(dialogue act) 분류 — 발화로 뭘 하는가(reveal/inquire/accept…). PSCon taxonomy.
+    ※ IntentionTopic(가치 의도)과 다름. 실패 시 라벨 없음으로 강등.
+    (LLM task/출력 키는 PSCon 원문 'intent' 유지 — 내부 계약.)"""
     try:
         out = await provider.generate_json(
             [LLMMessage(role="user", content=content)],
@@ -133,18 +135,18 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     provider = get_provider()
     t0 = time.perf_counter()
 
-    # 1-2. save user turn + intent classification.
+    # 1-2. save user turn + dialogue-act classification.
     # 동기 층(M8) 감지는 commit engine으로 이동 — 라이브·시뮬·PSCon이 같은 경로로 12축.
-    t_intent = time.perf_counter()
-    intents = await _classify_intents(provider, content)
-    logging.info("service_agent.intent_classification_latency_sec=%.3f", time.perf_counter() - t_intent)
+    t_da = time.perf_counter()
+    dialogue_acts = await _classify_dialogue_acts(provider, content)
+    logging.info("service_agent.dialogue_act_latency_sec=%.3f", time.perf_counter() - t_da)
     user_turn = models.Turn(
         id=new_id("turn"),
         session_id=session.id,
         turn_index=_next_turn_index(db, session.id),
         role=role,
         content=content,
-        intent_labels=intents,
+        dialogue_acts=dialogue_acts,
     )
     db.add(user_turn)
     _update_surface_intent(session, content)
@@ -169,7 +171,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         .filter(models.ProductImpression.session_id == session.id)
         .count() > 0
     )
-    decision = select_next_action(session, intents, direct_open, category, has_recommendations)
+    decision = select_next_action(session, dialogue_acts, direct_open, category, has_recommendations)
 
     # 가치 수준 적응형 질문 (S3 정보격차 판단): 추천하기에 기준이 부족하면
     # 속성 질문 대신 가치 질문으로 implicit intention을 끌어낸다

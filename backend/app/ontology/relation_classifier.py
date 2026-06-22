@@ -6,20 +6,9 @@ from app.db import models
 from app.llm.prompts import SYSTEM_BY_TASK, render_user_context
 from app.llm.provider import LLMMessage, LLMProvider
 
-# 의도 간 관계의 성질별 메타 분류 (ideation 1번):
-#   co_occurrence(동시적) — 한 세션 안에서 함께 나타남
-#   temporal(비동시적)    — 시간적 순서로 뒤가 앞을 바꿈
-#   causal(인과)          — 한 의도가 다른 의도를 논리적으로 유발
-RELATION_NATURE = {
-    "CONFLICTS_WITH": "co_occurrence",
-    "SUPPORTS": "co_occurrence",
-    "PRIORITIZES": "co_occurrence",
-    "REVISES": "temporal",
-    "WEAKENS": "temporal",
-    "RESOLVES": "temporal",
-    "MOTIVATES": "causal",
-    "REFINES": "causal",
-}
+# 의도 간 관계의 성질별 메타 분류 (RIG ideation 1) — 정의는 schema.py 단일 출처.
+#   co_occurrence(동시적) / temporal(비동시적) / causal(인과)
+from app.ontology.schema import RELATION_TYPE_TO_NATURE as RELATION_NATURE  # noqa: E402
 
 
 # graph design D4 + 측정 설계 M1: 인과 엣지의 증거 수준은 범주(causalEvidence)로

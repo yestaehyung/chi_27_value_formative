@@ -46,7 +46,7 @@ export type Turn = {
   turnIndex: number;
   role: "user" | "service_agent" | "user_agent" | "system";
   content: string;
-  intentLabels: string[];
+  dialogueActs: string[];  // 화행(reveal/inquire/accept…). IntentionTopic(가치)과 다름.
   agentAction?: string;
   relatedProductIds: string[];
   createdAt: string;
