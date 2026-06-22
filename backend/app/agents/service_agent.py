@@ -33,6 +33,7 @@ class AgentTurnResult:
     products: list[models.Product] = field(default_factory=list)
     snapshot: models.PreferenceStateSnapshot | None = None
     conflicts: list[models.PreferenceConflict] = field(default_factory=list)
+    reply_suggestions: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -282,6 +283,11 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         text = await reply_coro
     logging.info("service_agent.generate_reply_latency_sec=%.3f", time.perf_counter() - t_reply)
 
+    # 입력창 위 답변 칩 — 방금 에이전트 말(text)에 이어지는 사용자 후보 (맥락 의존 → reply 후 생성)
+    reply_suggestions = await rg.generate_reply_suggestions(
+        provider, decision.action, text, state_for_llm,
+    )
+
     agent_turn = models.Turn(
         id=new_id("turn"),
         session_id=session.id,
@@ -321,6 +327,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         products=products,
         snapshot=commit.snapshot,
         conflicts=commit.new_conflicts,
+        reply_suggestions=reply_suggestions,
     )
 
 

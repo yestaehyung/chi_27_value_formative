@@ -842,6 +842,20 @@ def card_rationale(ctx: dict) -> dict:
     return {"cards": cards}
 
 
+def reply_suggestion(ctx: dict) -> dict:
+    """결정론적 답변 칩 — 액션별 기본값 (테스트/폴백용; 실 provider는 LLM 생성)."""
+    action = ctx.get("action") or ""
+    if action == "clarify":
+        sug = ["네, 그게 중요해요", "아니요, 그건 아니에요", "잘 모르겠어요"]
+    elif action == "recommend":
+        sug = ["더 저렴한 건 없나요?", "사실 디자인도 중요해요", "오래 쓰는 게 우선이에요"]
+    elif action == "explain":
+        sug = ["다른 기준으로 비교해줘", "이걸로 정할게요", "더 보여줄 수 있나요?"]
+    else:
+        sug = ["좀 더 추천해줘", "가격이 가장 중요해요", "잘 모르겠어요"]
+    return {"suggestions": sug}
+
+
 def generic_text(_prompt: str) -> str:
     return "확인했어요. 제가 이해한 기준이 맞는지 오른쪽 패널에서 확인해 주세요."
 
@@ -864,4 +878,5 @@ TASK_HANDLERS = {
     "feature_clustering": feature_clustering,
     "sme_translation": sme_translation,
     "card_rationale": card_rationale,
+    "reply_suggestion": reply_suggestion,
 }

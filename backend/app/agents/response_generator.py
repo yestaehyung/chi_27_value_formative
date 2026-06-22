@@ -31,16 +31,16 @@ def clarify_text(category: str | None) -> str:
 
 
 def recommend_text(scored: list[ScoredProduct]) -> str:
-    lines = ["말씀해주신 기준대로 세 가지 다른 방향의 상품을 보여드릴게요.", ""]
-    for i, sp in enumerate(scored):
-        letter = LETTERS[i] if i < len(LETTERS) else str(i + 1)
-        p = sp.product
-        price = f"{p.price:,}원" if p.price else "가격 정보 없음"
-        lines.append(f"{letter}. {p.title} ({price}) — {BUCKET_PHRASE.get(sp.bucket, '')}.")
-    lines.append("")
-    lines.append("카드의 좋아요/싫어요로 반응해주시면 기준을 더 정확하게 잡을 수 있어요. "
-                 "제가 이해한 기준은 오른쪽 패널에서 언제든 바꿔주실 수 있어요.")
-    return "\n".join(lines)
+    """챗 버블 초안 — 상품 개별 설명은 카드가 하므로(③ 역할 분리), 여기선 '왜 이 조합인지'
+    비교 관점만 안내한다. 상품별 나열·BUCKET_PHRASE 반복은 제거(카드와 중복 방지)."""
+    n = len(scored)
+    return (
+        f"말씀해주신 기준에 맞춰 서로 다른 방향의 상품 {n}가지를 골라봤어요. "
+        "가격·신뢰·특별함처럼 강조점이 다른 후보들이라, 어떤 쪽이 더 끌리는지 보시면 "
+        "기준을 더 정확히 잡아드릴 수 있어요.\n\n"
+        "각 카드의 설명을 보고 좋아요/싫어요로 반응해주세요. "
+        "제가 이해한 기준은 오른쪽 패널에서 언제든 바꿔주실 수 있어요."
+    )
 
 
 def explain_text(products: list[models.Product]) -> str:
@@ -175,6 +175,45 @@ async def generate_card_rationales(
         if sp.product.id not in out or not out[sp.product.id]["reason"]:
             out[sp.product.id] = _fallback_card(sp.product)
     return out
+
+
+_FALLBACK_SUGGESTIONS = {
+    "clarify": ["네, 그게 중요해요", "아니요, 그건 아니에요", "잘 모르겠어요"],
+    "recommend": ["더 저렴한 건 없나요?", "사실 디자인도 중요해요", "오래 쓰는 게 우선이에요"],
+    "explain": ["다른 기준으로 비교해줘", "이걸로 정할게요", "더 보여줄 수 있나요?"],
+}
+_FALLBACK_DEFAULT = ["좀 더 추천해줘", "가격이 가장 중요해요", "잘 모르겠어요"]
+
+
+async def generate_reply_suggestions(
+    provider: LLMProvider,
+    action: str,
+    agent_reply: str,
+    state_summary: dict | None,
+) -> list[str]:
+    """입력창 위 '답변 칩' 생성 — 방금 에이전트 말에 이어지는 사용자 1인칭 후보 3개.
+    대화 맥락(에이전트 응답)+가치요약 기반. 실패/mock-빈 시 액션별 정적 폴백."""
+    fallback = _FALLBACK_SUGGESTIONS.get(action, _FALLBACK_DEFAULT)
+    if provider.name == "mock":
+        return fallback  # mock은 핸들러가 같은 값 — 호출 절약
+    context = {
+        "action": action,
+        "agentReply": (agent_reply or "")[:500],
+        "userValues": {
+            "summary": (state_summary or {}).get("oneSentenceSummary", ""),
+            "chips": [c.get("label") for c in (state_summary or {}).get("chips", [])],
+        },
+    }
+    try:
+        raw = await provider.generate_json(
+            [LLMMessage(role="user", content=render_user_context(context))],
+            task="reply_suggestion", context=context,
+        )
+        sug = [s.strip() for s in (raw or {}).get("suggestions", [])
+               if isinstance(s, str) and s.strip()]
+        return sug[:3] if sug else fallback
+    except Exception:  # noqa: BLE001
+        return fallback
 
 
 def _fallback_card(p: models.Product) -> dict:

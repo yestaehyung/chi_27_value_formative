@@ -28,6 +28,7 @@ export default function StudySessionPage() {
   const [condition, setCondition] = useState("correctable");
   const [scenarioTitle, setScenarioTitle] = useState("");
   const [initialNeed, setInitialNeed] = useState<string | null>(null);
+  const [chipSuggestions, setChipSuggestions] = useState<string[] | null>(null);
   const [finished, setFinished] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [participantId, setParticipantId] = useState<string>("");
@@ -89,6 +90,8 @@ export default function StudySessionPage() {
       }
       if (res.preferenceState) setState(res.preferenceState);
       if (res.conflicts?.length) setConflicts((prev) => [...prev, ...res.conflicts]);
+      // 입력창 위 답변 칩 — 백엔드가 대화 맥락에 맞춰 동적 생성
+      setChipSuggestions(res.replySuggestions?.length ? res.replySuggestions : null);
     } catch (e) {
       console.error(e);
       setTurns((prev) => prev.filter((t) => t.id !== optimisticId)); // 실패 시 임시 메시지 제거
@@ -303,7 +306,10 @@ export default function StudySessionPage() {
         <UserInputBox
           onSend={sendMessage}
           disabled={busy}
-          suggestions={initialNeed ? [initialNeed, "가능하면 저렴한 게 좋아요.", "오래 써도 괜찮은 건 어느 쪽일까요?"] : undefined}
+          suggestions={
+            chipSuggestions /* 대화 중: 백엔드 동적 칩 */
+            ?? (initialNeed ? [initialNeed] : undefined) /* 첫 턴: 시나리오 기반 */
+          }
         />
       </div>
 
