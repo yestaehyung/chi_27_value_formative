@@ -90,11 +90,20 @@ def search_products(
     diversify_by_tradeoff: bool = True,
     diagnostic_anchor: str | None = None,
 ) -> list[ScoredProduct]:
-    # 1) BM25(FTS5) retrieve — 전체 스캔 대체(카탈로그 확장 대비). 매칭 없으면 카테고리/전체 폴백.
-    ids = search_index.retrieve(db, query, n=200, category=category)
+    # 1) retrieve — 의미 임베딩 우선, 실패/비활성(mock·테스트) 시 BM25(FTS5)로 폴백.
+    #    임베딩이 의미를 보고(예: "운동용 이어폰"↔"러닝 이어버드"), BM25는 글자 trigram만 본다.
+    from app.products import embeddings
+
+    ids = embeddings.retrieve(query, n=200)
+    if ids is None:  # 임베딩 비활성/미로드 → 기존 BM25 경로
+        ids = search_index.retrieve(db, query, n=200, category=category)
     if ids:
         pm = {p.id: p for p in db.query(models.Product).filter(models.Product.id.in_(ids)).all()}
         candidates = [pm[i] for i in ids if i in pm]
+        # 임베딩은 카테고리 필터를 안 하므로(인터페이스 단순), 여기서 적용 — 단 비면 전체 유지
+        if category:
+            in_cat = [p for p in candidates if p.category == category]
+            candidates = in_cat or candidates
     else:
         q = db.query(models.Product)
         if category:

@@ -3,86 +3,220 @@
     "id": "gift_earphones",
     "title": "선물용 무선 이어폰",
     "initialUserNeed": "운동 좋아하는 친구에게 줄 무선 이어폰을 찾고 있어요. 브랜드는 잘 몰라요.",
-    "targetCategory": "무선 이어폰",
+    "targetCategory": "무선이어폰",
     "recipient": "운동을 좋아하는 친구",
     "context": "선물",
     "groundTruthHiddenIntentions": [
       {
         "label": "선물의 사회적 적절성 (너무 저렴해 보이지 않기)",
         "description": "선물로 보았을 때 너무 저렴해 보이면 체면이 깎인다고 느낀다.",
-        "anchors": {"Functional": 0.2, "Conditional": 0.7, "Epistemic": 0.2, "Social": 0.9, "Emotional": 0.45, "Hedonic": 0.2},
+        "anchors": {
+          "Functional": 0.2,
+          "Conditional": 0.7,
+          "Epistemic": 0.2,
+          "Social": 0.9,
+          "Emotional": 0.45,
+          "Hedonic": 0.2
+        },
         "priority": "high",
-        "evidenceTheUserMightSay": ["선물인데 너무 저렴해 보이면 좀 그래요", "받는 사람이 가벼운 선물로 느끼지 않았으면"],
-        "productCueTriggers": [{"ifProductHasCue": "priceCue:very_low", "userReaction": "dislike", "possibleUtterance": "선물인데 너무 저렴해 보이면 좀 그래요."}],
+        "evidenceTheUserMightSay": [
+          "선물인데 너무 저렴해 보이면 좀 그래요",
+          "받는 사람이 가벼운 선물로 느끼지 않았으면"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "priceCue:very_low",
+            "userReaction": "dislike",
+            "possibleUtterance": "선물인데 너무 저렴해 보이면 좀 그래요."
+          }
+        ],
         "hiddenFromServiceAgent": true
       },
       {
         "label": "실패 회피 (브랜드 무지)",
         "description": "브랜드를 잘 모르기 때문에 리뷰·평판으로 실패 확률이 낮은 안전한 선택을 원한다.",
-        "anchors": {"Functional": 0.3, "Conditional": 0.3, "Epistemic": 0.6, "Social": 0.3, "Emotional": 0.8, "Hedonic": 0.1},
+        "anchors": {
+          "Functional": 0.3,
+          "Conditional": 0.3,
+          "Epistemic": 0.6,
+          "Social": 0.3,
+          "Emotional": 0.8,
+          "Hedonic": 0.1
+        },
         "priority": "high",
-        "evidenceTheUserMightSay": ["브랜드는 잘 몰라요", "실패하고 싶지 않아요", "리뷰 많은 게 좋아요"],
+        "evidenceTheUserMightSay": [
+          "브랜드는 잘 몰라요",
+          "실패하고 싶지 않아요",
+          "리뷰 많은 게 좋아요"
+        ],
         "productCueTriggers": [
-          {"ifProductHasCue": "trustCue:low", "userReaction": "dislike", "possibleUtterance": "리뷰 신뢰가 좀 약해 보여요."},
-          {"ifProductHasCue": "trustCue:high", "userReaction": "like", "possibleUtterance": "리뷰가 탄탄해서 안심돼요."}
+          {
+            "ifProductHasCue": "trustCue:low",
+            "userReaction": "dislike",
+            "possibleUtterance": "리뷰 신뢰가 좀 약해 보여요."
+          },
+          {
+            "ifProductHasCue": "trustCue:high",
+            "userReaction": "like",
+            "possibleUtterance": "리뷰가 탄탄해서 안심돼요."
+          }
         ],
         "hiddenFromServiceAgent": true
       },
       {
         "label": "예산 부담 회피",
         "description": "선물이지만 예산(약 10만원)을 크게 넘으면 부담스럽다.",
-        "anchors": {"Functional": 0.5, "Conditional": 0.6, "Epistemic": 0.2, "Social": 0.3, "Emotional": 0.4, "Hedonic": 0.1},
+        "anchors": {
+          "Functional": 0.5,
+          "Conditional": 0.6,
+          "Epistemic": 0.2,
+          "Social": 0.3,
+          "Emotional": 0.4,
+          "Hedonic": 0.1
+        },
         "priority": "medium",
-        "evidenceTheUserMightSay": ["10만원이 넘으면 부담돼요"],
-        "productCueTriggers": [{"ifProductHasCue": "price>100000", "userReaction": "dislike", "possibleUtterance": "선물이지만 10만원이 넘으면 좀 부담돼요."}],
+        "evidenceTheUserMightSay": [
+          "10만원이 넘으면 부담돼요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "price>100000",
+            "userReaction": "dislike",
+            "possibleUtterance": "선물이지만 10만원이 넘으면 좀 부담돼요."
+          }
+        ],
         "hiddenFromServiceAgent": true
       }
     ],
-    "mustAvoidProductCues": ["priceCue:very_low"],
-    "preferredProductCues": ["trustCue:high", "longTermReviewRatio>=0.2"],
-    "likelyDialoguePatterns": ["multi_turn_refinement", "preference_revision_after_recommendation", "gift_proxy_purchase"],
-    "pscon": {"observedShareEN": 0, "realUtterances": [], "topClarifyingAttributes": ["Price", "Brand", "Recipient"], "insight": "NAVER Smart Store 실데이터(무선이어폰 72종) 기반 통제 시나리오 — PSCon 직접 대조 아님."}
+    "mustAvoidProductCues": [
+      "priceCue:very_low"
+    ],
+    "preferredProductCues": [
+      "trustCue:high",
+      "longTermReviewRatio>=0.2"
+    ],
+    "likelyDialoguePatterns": [
+      "multi_turn_refinement",
+      "preference_revision_after_recommendation",
+      "gift_proxy_purchase"
+    ],
+    "pscon": {
+      "observedShareEN": 0,
+      "realUtterances": [],
+      "topClarifyingAttributes": [
+        "Price",
+        "Brand",
+        "Recipient"
+      ],
+      "insight": "NAVER Smart Store 실데이터(무선이어폰 72종) 기반 통제 시나리오 — PSCon 직접 대조 아님."
+    }
   },
   {
     "id": "budget_earphones",
     "title": "예산 5만원 무선 이어폰",
     "initialUserNeed": "5만원 안에서 쓸만한 무선 이어폰을 찾고 있어요.",
-    "targetCategory": "무선 이어폰",
+    "targetCategory": "무선이어폰",
     "recipient": "본인",
     "context": "예산 제약 가성비 구매",
     "groundTruthHiddenIntentions": [
       {
         "label": "예산 상한 (5만원)",
         "description": "5만원을 넘으면 후보에서 제외한다.",
-        "anchors": {"Functional": 0.4, "Conditional": 0.9, "Epistemic": 0.2, "Social": 0.1, "Emotional": 0.2, "Hedonic": 0.1},
+        "anchors": {
+          "Functional": 0.4,
+          "Conditional": 0.9,
+          "Epistemic": 0.2,
+          "Social": 0.1,
+          "Emotional": 0.2,
+          "Hedonic": 0.1
+        },
         "priority": "must_have",
-        "evidenceTheUserMightSay": ["5만원 안에서요", "예산이 정해져 있어요"],
-        "productCueTriggers": [{"ifProductHasCue": "price>50000", "userReaction": "dislike", "possibleUtterance": "예산을 넘어서 부담돼요."}],
+        "evidenceTheUserMightSay": [
+          "5만원 안에서요",
+          "예산이 정해져 있어요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "price>50000",
+            "userReaction": "dislike",
+            "possibleUtterance": "예산을 넘어서 부담돼요."
+          }
+        ],
         "hiddenFromServiceAgent": true
       },
       {
         "label": "가성비 (낮은 가격 + 좋은 평점)",
         "description": "가격이 낮으면서 평점이 높은, 값 대비 만족이 큰 제품을 원한다.",
-        "anchors": {"Functional": 0.6, "Conditional": 0.6, "Epistemic": 0.4, "Social": 0.1, "Emotional": 0.3, "Hedonic": 0.2},
+        "anchors": {
+          "Functional": 0.6,
+          "Conditional": 0.6,
+          "Epistemic": 0.4,
+          "Social": 0.1,
+          "Emotional": 0.3,
+          "Hedonic": 0.2
+        },
         "priority": "high",
-        "evidenceTheUserMightSay": ["가성비 좋은 걸로", "이 가격에 이 정도면 괜찮네요"],
-        "productCueTriggers": [{"ifProductHasCue": "priceCue:low", "userReaction": "like", "possibleUtterance": "가격 대비 괜찮아 보여요."}],
+        "evidenceTheUserMightSay": [
+          "가성비 좋은 걸로",
+          "이 가격에 이 정도면 괜찮네요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "priceCue:low",
+            "userReaction": "like",
+            "possibleUtterance": "가격 대비 괜찮아 보여요."
+          }
+        ],
         "hiddenFromServiceAgent": true
       },
       {
         "label": "최소 품질 (싸구려 회피)",
         "description": "싸다고 너무 품질이 떨어지는 건 싫다 — 가성비는 최저가가 아니라 최소 신뢰를 포함한다.",
-        "anchors": {"Functional": 0.5, "Conditional": 0.4, "Epistemic": 0.5, "Social": 0.2, "Emotional": 0.6, "Hedonic": 0.1},
+        "anchors": {
+          "Functional": 0.5,
+          "Conditional": 0.4,
+          "Epistemic": 0.5,
+          "Social": 0.2,
+          "Emotional": 0.6,
+          "Hedonic": 0.1
+        },
         "priority": "high",
-        "evidenceTheUserMightSay": ["그래도 너무 싸구려는 싫어요", "금방 고장나면 안 돼요"],
-        "productCueTriggers": [{"ifProductHasCue": "trustCue:low", "userReaction": "dislike", "possibleUtterance": "싸긴 한데 품질이 좀 불안해요."}],
+        "evidenceTheUserMightSay": [
+          "그래도 너무 싸구려는 싫어요",
+          "금방 고장나면 안 돼요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "trustCue:low",
+            "userReaction": "dislike",
+            "possibleUtterance": "싸긴 한데 품질이 좀 불안해요."
+          }
+        ],
         "hiddenFromServiceAgent": true
       }
     ],
-    "mustAvoidProductCues": ["price>50000"],
-    "preferredProductCues": ["priceCue:low", "trustCue:high"],
-    "likelyDialoguePatterns": ["budget_constraint", "multi_turn_refinement", "preference_revision_after_recommendation"],
-    "pscon": {"observedShareEN": 0, "realUtterances": [], "topClarifyingAttributes": ["Price", "Quality", "Brand"], "insight": "예산-가성비 긴장(최저가 vs 최소 신뢰)이 hidden intention으로 드러나는 시나리오."}
+    "mustAvoidProductCues": [
+      "price>50000"
+    ],
+    "preferredProductCues": [
+      "priceCue:low",
+      "trustCue:high"
+    ],
+    "likelyDialoguePatterns": [
+      "budget_constraint",
+      "multi_turn_refinement",
+      "preference_revision_after_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0,
+      "realUtterances": [],
+      "topClarifyingAttributes": [
+        "Price",
+        "Quality",
+        "Brand"
+      ],
+      "insight": "예산-가성비 긴장(최저가 vs 최소 신뢰)이 hidden intention으로 드러나는 시나리오."
+    }
   },
   {
     "id": "taste_dress",
@@ -95,169 +229,846 @@
       {
         "label": "차별적 디자인 (남들과 안 겹침)",
         "description": "흔하게 팔리는 디자인은 피하고 싶고, 자기다움이 드러나는 선택을 원한다.",
-        "anchors": {"Functional": 0.2, "Conditional": 0.3, "Epistemic": 0.4, "Social": 0.6, "Emotional": 0.5, "Hedonic": 0.8},
+        "anchors": {
+          "Functional": 0.2,
+          "Conditional": 0.3,
+          "Epistemic": 0.4,
+          "Social": 0.6,
+          "Emotional": 0.5,
+          "Hedonic": 0.8
+        },
         "priority": "must_have",
-        "evidenceTheUserMightSay": ["흔하지 않은 디자인", "남들이랑 겹치기 싫어요"],
+        "evidenceTheUserMightSay": [
+          "흔하지 않은 디자인",
+          "남들이랑 겹치기 싫어요"
+        ],
         "productCueTriggers": [
-          {"ifProductHasCue": "popularityCue:very_popular", "userReaction": "dislike", "possibleUtterance": "이건 너무 많이 팔린 것 같아 식상해요."},
-          {"ifProductHasCue": "noveltyCue:distinctive", "userReaction": "like", "possibleUtterance": "이런 흔치 않은 디자인이 좋아요."}
+          {
+            "ifProductHasCue": "popularityCue:very_popular",
+            "userReaction": "dislike",
+            "possibleUtterance": "이건 너무 많이 팔린 것 같아 식상해요."
+          },
+          {
+            "ifProductHasCue": "noveltyCue:distinctive",
+            "userReaction": "like",
+            "possibleUtterance": "이런 흔치 않은 디자인이 좋아요."
+          }
         ],
         "hiddenFromServiceAgent": true
       },
       {
         "label": "품질·핏 신뢰 (실패 회피)",
         "description": "독특해도 핏·품질이 별로면 안 입게 된다 — 리뷰 신뢰가 필요하다.",
-        "anchors": {"Functional": 0.5, "Conditional": 0.3, "Epistemic": 0.5, "Social": 0.3, "Emotional": 0.6, "Hedonic": 0.3},
+        "anchors": {
+          "Functional": 0.5,
+          "Conditional": 0.3,
+          "Epistemic": 0.5,
+          "Social": 0.3,
+          "Emotional": 0.6,
+          "Hedonic": 0.3
+        },
         "priority": "high",
-        "evidenceTheUserMightSay": ["핏이 어떤지 궁금해요", "리뷰 사진 보고 싶어요"],
-        "productCueTriggers": [{"ifProductHasCue": "trustCue:low", "userReaction": "dislike", "possibleUtterance": "리뷰가 적어서 핏이 불안해요."}],
+        "evidenceTheUserMightSay": [
+          "핏이 어떤지 궁금해요",
+          "리뷰 사진 보고 싶어요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "trustCue:low",
+            "userReaction": "dislike",
+            "possibleUtterance": "리뷰가 적어서 핏이 불안해요."
+          }
+        ],
         "hiddenFromServiceAgent": true
       },
       {
         "label": "가격 합리성",
         "description": "취향이 우선이지만 과도하게 비싸면 망설인다.",
-        "anchors": {"Functional": 0.3, "Conditional": 0.6, "Epistemic": 0.2, "Social": 0.2, "Emotional": 0.3, "Hedonic": 0.3},
+        "anchors": {
+          "Functional": 0.3,
+          "Conditional": 0.6,
+          "Epistemic": 0.2,
+          "Social": 0.2,
+          "Emotional": 0.3,
+          "Hedonic": 0.3
+        },
         "priority": "medium",
-        "evidenceTheUserMightSay": ["그래도 너무 비싸면 고민돼요"],
-        "productCueTriggers": [{"ifProductHasCue": "price>100000", "userReaction": "dislike", "possibleUtterance": "원피스 한 벌에 10만원이 넘으면 좀 망설여져요."}],
+        "evidenceTheUserMightSay": [
+          "그래도 너무 비싸면 고민돼요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "price>100000",
+            "userReaction": "dislike",
+            "possibleUtterance": "원피스 한 벌에 10만원이 넘으면 좀 망설여져요."
+          }
+        ],
         "hiddenFromServiceAgent": true
       }
     ],
-    "mustAvoidProductCues": ["popularityCue:very_popular"],
-    "preferredProductCues": ["noveltyCue:distinctive", "trustCue:high"],
-    "likelyDialoguePatterns": ["taste_identity_expression", "multi_turn_refinement", "preference_revision_after_recommendation"],
-    "pscon": {"observedShareEN": 0, "realUtterances": [], "topClarifyingAttributes": ["Design", "Fit", "Price"], "insight": "인기↔차별성 긴장이 핵심 — popularityCue/noveltyCue가 그대로 hidden intention을 자극."}
+    "mustAvoidProductCues": [
+      "popularityCue:very_popular"
+    ],
+    "preferredProductCues": [
+      "noveltyCue:distinctive",
+      "trustCue:high"
+    ],
+    "likelyDialoguePatterns": [
+      "taste_identity_expression",
+      "multi_turn_refinement",
+      "preference_revision_after_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0,
+      "realUtterances": [],
+      "topClarifyingAttributes": [
+        "Design",
+        "Fit",
+        "Price"
+      ],
+      "insight": "인기↔차별성 긴장이 핵심 — popularityCue/noveltyCue가 그대로 hidden intention을 자극."
+    }
   },
   {
     "id": "seasonal_knit",
     "title": "환절기 데일리 니트",
     "initialUserNeed": "환절기에 데일리로 입을 니트나 가디건을 찾고 있어요.",
-    "targetCategory": "니트/가디건",
+    "targetCategory": "니트·가디건",
     "recipient": "본인",
     "context": "특정 상황용 구매 (환절기)",
     "groundTruthHiddenIntentions": [
       {
         "label": "데일리 활용도 (무난한 코디)",
         "description": "특정 옷 하나가 아니라 여러 코디에 두루 입을 수 있는 활용도를 중시한다.",
-        "anchors": {"Functional": 0.6, "Conditional": 0.7, "Epistemic": 0.3, "Social": 0.4, "Emotional": 0.3, "Hedonic": 0.4},
+        "anchors": {
+          "Functional": 0.6,
+          "Conditional": 0.7,
+          "Epistemic": 0.3,
+          "Social": 0.4,
+          "Emotional": 0.3,
+          "Hedonic": 0.4
+        },
         "priority": "high",
-        "evidenceTheUserMightSay": ["데일리로 입을", "아무데나 잘 어울리는"],
+        "evidenceTheUserMightSay": [
+          "데일리로 입을",
+          "아무데나 잘 어울리는"
+        ],
         "productCueTriggers": [],
         "hiddenFromServiceAgent": true
       },
       {
         "label": "품질·보풀 신뢰 (오래 입기)",
         "description": "보풀이 잘 안 생기고 오래 입어도 괜찮은지 — 장기 사용 리뷰 신뢰가 필요하다.",
-        "anchors": {"Functional": 0.5, "Conditional": 0.3, "Epistemic": 0.5, "Social": 0.2, "Emotional": 0.7, "Hedonic": 0.2},
+        "anchors": {
+          "Functional": 0.5,
+          "Conditional": 0.3,
+          "Epistemic": 0.5,
+          "Social": 0.2,
+          "Emotional": 0.7,
+          "Hedonic": 0.2
+        },
         "priority": "high",
-        "evidenceTheUserMightSay": ["보풀 안 생기는지", "오래 입어도 괜찮을까요", "한 철만 입고 버리긴 싫어요"],
+        "evidenceTheUserMightSay": [
+          "보풀 안 생기는지",
+          "오래 입어도 괜찮을까요",
+          "한 철만 입고 버리긴 싫어요"
+        ],
         "productCueTriggers": [
-          {"ifProductHasCue": "longTermReviewRatio>=0.2", "userReaction": "like", "possibleUtterance": "오래 입었다는 리뷰가 많아 마음에 들어요."},
-          {"ifProductHasCue": "trustCue:low", "userReaction": "dislike", "possibleUtterance": "리뷰가 약해서 품질이 불안해요."}
+          {
+            "ifProductHasCue": "longTermReviewRatio>=0.2",
+            "userReaction": "like",
+            "possibleUtterance": "오래 입었다는 리뷰가 많아 마음에 들어요."
+          },
+          {
+            "ifProductHasCue": "trustCue:low",
+            "userReaction": "dislike",
+            "possibleUtterance": "리뷰가 약해서 품질이 불안해요."
+          }
         ],
         "hiddenFromServiceAgent": true
       },
       {
         "label": "가격 합리성",
         "description": "데일리템이라 너무 비싸면 부담스럽다.",
-        "anchors": {"Functional": 0.3, "Conditional": 0.6, "Epistemic": 0.2, "Social": 0.2, "Emotional": 0.3, "Hedonic": 0.2},
+        "anchors": {
+          "Functional": 0.3,
+          "Conditional": 0.6,
+          "Epistemic": 0.2,
+          "Social": 0.2,
+          "Emotional": 0.3,
+          "Hedonic": 0.2
+        },
         "priority": "medium",
-        "evidenceTheUserMightSay": ["데일리템인데 너무 비싸면"],
-        "productCueTriggers": [{"ifProductHasCue": "price>100000", "userReaction": "dislike", "possibleUtterance": "데일리로 입을 건데 10만원이 넘으면 부담돼요."}],
+        "evidenceTheUserMightSay": [
+          "데일리템인데 너무 비싸면"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "price>100000",
+            "userReaction": "dislike",
+            "possibleUtterance": "데일리로 입을 건데 10만원이 넘으면 부담돼요."
+          }
+        ],
         "hiddenFromServiceAgent": true
       }
     ],
     "mustAvoidProductCues": [],
-    "preferredProductCues": ["trustCue:high", "longTermReviewRatio>=0.2"],
-    "likelyDialoguePatterns": ["multi_turn_refinement", "preference_revision_after_recommendation"],
-    "pscon": {"observedShareEN": 0, "realUtterances": [], "topClarifyingAttributes": ["Versatility", "Quality", "Price"], "insight": "장기 사용 신뢰(한달사용 리뷰)가 실데이터 longTermReviewRatio로 직접 잡히는 시나리오."}
+    "preferredProductCues": [
+      "trustCue:high",
+      "longTermReviewRatio>=0.2"
+    ],
+    "likelyDialoguePatterns": [
+      "multi_turn_refinement",
+      "preference_revision_after_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0,
+      "realUtterances": [],
+      "topClarifyingAttributes": [
+        "Versatility",
+        "Quality",
+        "Price"
+      ],
+      "insight": "장기 사용 신뢰(한달사용 리뷰)가 실데이터 longTermReviewRatio로 직접 잡히는 시나리오."
+    }
   },
   {
     "id": "high_involvement_coat",
     "title": "큰맘 먹고 사는 겨울 코트",
     "initialUserNeed": "몇 년 입을 겨울 코트를 신중하게 고르고 싶어요.",
-    "targetCategory": "코트/패딩",
+    "targetCategory": "코트·패딩·자켓",
     "recipient": "본인",
     "context": "고관여 구매",
     "groundTruthHiddenIntentions": [
       {
         "label": "오래 입을 클래식 (실패 회피)",
         "description": "유행을 타지 않고 몇 년 입을 수 있는 안전한 선택을 원한다.",
-        "anchors": {"Functional": 0.5, "Conditional": 0.5, "Epistemic": 0.6, "Social": 0.4, "Emotional": 0.7, "Hedonic": 0.3},
+        "anchors": {
+          "Functional": 0.5,
+          "Conditional": 0.5,
+          "Epistemic": 0.6,
+          "Social": 0.4,
+          "Emotional": 0.7,
+          "Hedonic": 0.3
+        },
         "priority": "must_have",
-        "evidenceTheUserMightSay": ["몇 년 입을", "유행 안 타는", "실패하고 싶지 않아요"],
-        "productCueTriggers": [{"ifProductHasCue": "trustCue:high", "userReaction": "like", "possibleUtterance": "검증된 느낌이라 오래 입어도 될 것 같아요."}],
+        "evidenceTheUserMightSay": [
+          "몇 년 입을",
+          "유행 안 타는",
+          "실패하고 싶지 않아요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "trustCue:high",
+            "userReaction": "like",
+            "possibleUtterance": "검증된 느낌이라 오래 입어도 될 것 같아요."
+          }
+        ],
         "hiddenFromServiceAgent": true
       },
       {
         "label": "품질 신뢰 (고가일수록 더)",
         "description": "비싼 만큼 소재·마감이 받쳐줘야 하고, 장기 사용 리뷰로 확인하려 한다.",
-        "anchors": {"Functional": 0.6, "Conditional": 0.4, "Epistemic": 0.6, "Social": 0.3, "Emotional": 0.6, "Hedonic": 0.3},
+        "anchors": {
+          "Functional": 0.6,
+          "Conditional": 0.4,
+          "Epistemic": 0.6,
+          "Social": 0.3,
+          "Emotional": 0.6,
+          "Hedonic": 0.3
+        },
         "priority": "high",
-        "evidenceTheUserMightSay": ["소재가 좋은지", "오래 입은 리뷰가 궁금해요"],
+        "evidenceTheUserMightSay": [
+          "소재가 좋은지",
+          "오래 입은 리뷰가 궁금해요"
+        ],
         "productCueTriggers": [
-          {"ifProductHasCue": "longTermReviewRatio>=0.3", "userReaction": "like", "possibleUtterance": "오래 입었다는 리뷰가 많아 신뢰가 가요."},
-          {"ifProductHasCue": "trustCue:low", "userReaction": "dislike", "possibleUtterance": "이 가격엔 리뷰 신뢰가 더 있어야 할 것 같아요."}
+          {
+            "ifProductHasCue": "longTermReviewRatio>=0.3",
+            "userReaction": "like",
+            "possibleUtterance": "오래 입었다는 리뷰가 많아 신뢰가 가요."
+          },
+          {
+            "ifProductHasCue": "trustCue:low",
+            "userReaction": "dislike",
+            "possibleUtterance": "이 가격엔 리뷰 신뢰가 더 있어야 할 것 같아요."
+          }
         ],
         "hiddenFromServiceAgent": true
       },
       {
         "label": "가격 정당화 (비싸도 값어치)",
         "description": "고가 자체는 거부하지 않지만, 그만한 값어치(신뢰·품질)가 보여야 지갑을 연다.",
-        "anchors": {"Functional": 0.4, "Conditional": 0.6, "Epistemic": 0.4, "Social": 0.5, "Emotional": 0.4, "Hedonic": 0.4},
+        "anchors": {
+          "Functional": 0.4,
+          "Conditional": 0.6,
+          "Epistemic": 0.4,
+          "Social": 0.5,
+          "Emotional": 0.4,
+          "Hedonic": 0.4
+        },
         "priority": "medium",
-        "evidenceTheUserMightSay": ["비싸도 그만한 값어치면 괜찮아요"],
+        "evidenceTheUserMightSay": [
+          "비싸도 그만한 값어치면 괜찮아요"
+        ],
         "productCueTriggers": [],
         "hiddenFromServiceAgent": true
       }
     ],
-    "mustAvoidProductCues": ["trustCue:low"],
-    "preferredProductCues": ["trustCue:high", "longTermReviewRatio>=0.3"],
-    "likelyDialoguePatterns": ["high_involvement_deliberation", "multi_turn_refinement", "preference_revision_after_recommendation"],
-    "pscon": {"observedShareEN": 0, "realUtterances": [], "topClarifyingAttributes": ["Durability", "Material", "Price-justification"], "insight": "고가 수용 ↔ 신뢰 요구의 긴장 — 가격이 높을수록 trustCue 요구가 강해지는 hidden intention."}
+    "mustAvoidProductCues": [
+      "trustCue:low"
+    ],
+    "preferredProductCues": [
+      "trustCue:high",
+      "longTermReviewRatio>=0.3"
+    ],
+    "likelyDialoguePatterns": [
+      "high_involvement_deliberation",
+      "multi_turn_refinement",
+      "preference_revision_after_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0,
+      "realUtterances": [],
+      "topClarifyingAttributes": [
+        "Durability",
+        "Material",
+        "Price-justification"
+      ],
+      "insight": "고가 수용 ↔ 신뢰 요구의 긴장 — 가격이 높을수록 trustCue 요구가 강해지는 hidden intention."
+    }
   },
   {
     "id": "sport_earphones",
     "title": "운동용 무선 이어폰",
     "initialUserNeed": "러닝할 때 빠지지 않고 쓸 무선 이어폰을 찾고 있어요.",
-    "targetCategory": "무선 이어폰",
+    "targetCategory": "무선이어폰",
     "recipient": "본인",
     "context": "특정 상황용 구매 (운동)",
     "groundTruthHiddenIntentions": [
       {
         "label": "활동 중 고정력·활용성",
         "description": "달릴 때 빠지지 않고 땀에도 괜찮은, 운동 상황에 맞는 형태(오픈형/이어훅 등)를 원한다.",
-        "anchors": {"Functional": 0.8, "Conditional": 0.8, "Epistemic": 0.3, "Social": 0.2, "Emotional": 0.3, "Hedonic": 0.2},
+        "anchors": {
+          "Functional": 0.8,
+          "Conditional": 0.8,
+          "Epistemic": 0.3,
+          "Social": 0.2,
+          "Emotional": 0.3,
+          "Hedonic": 0.2
+        },
         "priority": "must_have",
-        "evidenceTheUserMightSay": ["러닝할 때 빠지지 않는", "땀 나도 괜찮은", "오픈형이 좋아요"],
+        "evidenceTheUserMightSay": [
+          "러닝할 때 빠지지 않는",
+          "땀 나도 괜찮은",
+          "오픈형이 좋아요"
+        ],
         "productCueTriggers": [],
         "hiddenFromServiceAgent": true
       },
       {
         "label": "검증된 사용감 (실패 회피)",
         "description": "운동 중 불편하면 안 쓰게 되므로, 실제 사용 리뷰가 많은 검증된 제품을 선호한다.",
-        "anchors": {"Functional": 0.5, "Conditional": 0.4, "Epistemic": 0.6, "Social": 0.2, "Emotional": 0.6, "Hedonic": 0.2},
+        "anchors": {
+          "Functional": 0.5,
+          "Conditional": 0.4,
+          "Epistemic": 0.6,
+          "Social": 0.2,
+          "Emotional": 0.6,
+          "Hedonic": 0.2
+        },
         "priority": "high",
-        "evidenceTheUserMightSay": ["운동할 때 써본 후기 있나요", "리뷰 많은 게 안심돼요"],
+        "evidenceTheUserMightSay": [
+          "운동할 때 써본 후기 있나요",
+          "리뷰 많은 게 안심돼요"
+        ],
         "productCueTriggers": [
-          {"ifProductHasCue": "trustCue:high", "userReaction": "like", "possibleUtterance": "리뷰가 많아서 믿고 쓸 수 있겠어요."},
-          {"ifProductHasCue": "popularityCue:popular", "userReaction": "like", "possibleUtterance": "많이들 쓰는 거라 검증된 느낌이에요."}
+          {
+            "ifProductHasCue": "trustCue:high",
+            "userReaction": "like",
+            "possibleUtterance": "리뷰가 많아서 믿고 쓸 수 있겠어요."
+          },
+          {
+            "ifProductHasCue": "popularityCue:popular",
+            "userReaction": "like",
+            "possibleUtterance": "많이들 쓰는 거라 검증된 느낌이에요."
+          }
         ],
         "hiddenFromServiceAgent": true
       },
       {
         "label": "가성비 (과한 음질 비용 회피)",
         "description": "음질 끝판왕보다, 운동용으로 부담 없는 가격대를 선호한다.",
-        "anchors": {"Functional": 0.5, "Conditional": 0.6, "Epistemic": 0.2, "Social": 0.1, "Emotional": 0.3, "Hedonic": 0.2},
+        "anchors": {
+          "Functional": 0.5,
+          "Conditional": 0.6,
+          "Epistemic": 0.2,
+          "Social": 0.1,
+          "Emotional": 0.3,
+          "Hedonic": 0.2
+        },
         "priority": "medium",
-        "evidenceTheUserMightSay": ["운동용인데 너무 비쌀 필요는 없어요"],
-        "productCueTriggers": [{"ifProductHasCue": "price>80000", "userReaction": "dislike", "possibleUtterance": "운동용으로 8만원 넘는 건 과한 것 같아요."}],
+        "evidenceTheUserMightSay": [
+          "운동용인데 너무 비쌀 필요는 없어요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "price>80000",
+            "userReaction": "dislike",
+            "possibleUtterance": "운동용으로 8만원 넘는 건 과한 것 같아요."
+          }
+        ],
         "hiddenFromServiceAgent": true
       }
     ],
     "mustAvoidProductCues": [],
-    "preferredProductCues": ["trustCue:high", "popularityCue:popular"],
-    "likelyDialoguePatterns": ["context_specific_need", "multi_turn_refinement", "preference_revision_after_recommendation"],
-    "pscon": {"observedShareEN": 0, "realUtterances": [], "topClarifyingAttributes": ["Use-context", "Fit", "Price"], "insight": "상황(운동) 적합성 ↔ 음질 비용의 긴장. 형태 정보가 제목에만 있어 functional 의도는 발화로 드러남."}
+    "preferredProductCues": [
+      "trustCue:high",
+      "popularityCue:popular"
+    ],
+    "likelyDialoguePatterns": [
+      "context_specific_need",
+      "multi_turn_refinement",
+      "preference_revision_after_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0,
+      "realUtterances": [],
+      "topClarifyingAttributes": [
+        "Use-context",
+        "Fit",
+        "Price"
+      ],
+      "insight": "상황(운동) 적합성 ↔ 음질 비용의 긴장. 형태 정보가 제목에만 있어 functional 의도는 발화로 드러남."
+    }
+  },
+  {
+    "id": "laptop_general",
+    "title": "노트북 새로 장만",
+    "initialUserNeed": "노트북 하나 새로 사려고 하는데, 게임도 좀 하고 싶어요.",
+    "targetCategory": "노트북",
+    "recipient": "본인",
+    "context": "고관여 자기사용 구매 (장기 사용 전자제품)",
+    "_designNote": "겉으로는 '게이밍'을 말하지만, 실제로는 휴대성·작업 적합성·브랜드 신뢰가 숨은 결정 기준일 수 있는 상황. 스펙 표방(게이밍) ↔ 실사용 맥락(들고 다님/작업)의 긴장이 핵심. GT는 규범적 분포(상황이 유발하는 영역) — 단일 정답 아님.",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "표방한 용도 뒤의 실사용 맥락 (휴대성)",
+        "description": "'게이밍'을 말하지만, 실제로는 들고 다니며 쓰는 일이 많아 무게·배터리 같은 휴대성이 숨은 결정 요인이다. 고성능 게이밍 노트북은 무겁고 배터리가 짧아 실사용과 충돌할 수 있다.",
+        "anchors": {
+          "Functional": 0.7,
+          "Conditional": 0.8,
+          "Epistemic": 0.4,
+          "Social": 0.2,
+          "Emotional": 0.3
+        },
+        "priority": "high",
+        "evidenceTheUserMightSay": [
+          "사실 들고 다닐 일이 많아요",
+          "무거우면 좀 그래요",
+          "카페에서도 쓰고 싶어요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "attr:weight_light",
+            "userReaction": "like",
+            "possibleUtterance": "가벼우니까 들고 다니기 좋겠네요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      },
+      {
+        "label": "실패 회피 — 큰돈 들이는 신뢰",
+        "description": "노트북은 비싸고 오래 쓰는 물건이라, 잘못 사면 손해가 크다. 그래서 검증된 브랜드·많은 리뷰로 실패 확률을 낮추려 한다.",
+        "anchors": {
+          "Functional": 0.5,
+          "Conditional": 0.4,
+          "Epistemic": 0.6,
+          "Social": 0.4,
+          "Emotional": 0.7
+        },
+        "priority": "high",
+        "evidenceTheUserMightSay": [
+          "오래 쓸 건데 괜찮을까요",
+          "AS는 잘 되나요",
+          "리뷰 많은 걸로 하고 싶어요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "trustCue:high",
+            "userReaction": "like",
+            "possibleUtterance": "리뷰가 많으니 믿음이 가요."
+          },
+          {
+            "ifProductHasCue": "sellerCue:trusted",
+            "userReaction": "like",
+            "possibleUtterance": "공식 판매처라 AS 걱정이 덜하네요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      },
+      {
+        "label": "가격 정당화 (성능 대비 값어치)",
+        "description": "비싸도 그만한 값어치(성능·내구)가 있으면 받아들이지만, 안 쓰는 고사양에 돈을 더 내긴 싫다. 예산 상한이라기보다 '과지출 회피'.",
+        "anchors": {
+          "Functional": 0.6,
+          "Conditional": 0.6,
+          "Epistemic": 0.3,
+          "Social": 0.3,
+          "Emotional": 0.4
+        },
+        "priority": "medium",
+        "evidenceTheUserMightSay": [
+          "이 가격이면 이 정도 성능은 돼야죠",
+          "안 쓸 기능에 돈 더 내긴 아까워요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "priceCue:very_high",
+            "userReaction": "dislike",
+            "possibleUtterance": "이건 제가 쓰기엔 과한 사양 같아요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "groundTruthMotivations": {
+      "_note": "동기(Arnold & Reynolds 2003 hedonic 6 + Babin utilitarian). 규범적 분포 — 이 상황이 유발하는 쇼핑 동기 영역. 0~1, 시스템 motivation_scores와 같은 7축.",
+      "Utilitarian": 0.8,
+      "Idea": 0.5,
+      "Adventure": 0.2,
+      "Gratification": 0.3,
+      "Role": 0.1,
+      "BargainValue": 0.4,
+      "SocialShopping": 0.2
+    },
+    "mustAvoidProductCues": [],
+    "preferredProductCues": [
+      "trustCue:high",
+      "sellerCue:trusted"
+    ],
+    "likelyDialoguePatterns": [
+      "stated_vs_actual_use_gap",
+      "multi_turn_refinement",
+      "preference_revision_after_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0,
+      "realUtterances": [],
+      "topClarifyingAttributes": [
+        "Use-purpose",
+        "Portability",
+        "Budget"
+      ],
+      "insight": "표방 용도(게이밍) ↔ 실사용(휴대성)의 간극이 핵심 — 에이전트가 '게이밍'을 액면 그대로 받으면 무거운 고사양을 추천해 실패. 숨은 휴대성 의도를 끌어내야 함. 고관여 + Utilitarian 동기 우세."
+    }
+  },
+  {
+    "id": "monitor_work",
+    "title": "모니터 새로 구매",
+    "initialUserNeed": "모니터 하나 사려는데 큰 거면 좋겠어요.",
+    "targetCategory": "모니터",
+    "recipient": "본인",
+    "context": "자기사용 구매 (작업 환경)",
+    "_designNote": "'큰 거'라는 표면 요구 뒤에, 실제 용도(사무/문서 vs 영상·디자인 작업)에 따라 필요한 가치가 갈린다. 사무용이면 눈 피로·해상도, 작업용이면 색재현·주사율. 표면 스펙(크기) ↔ 실제 작업 맥락의 긴장.",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "실제 작업 맥락 (사무 vs 창작)",
+        "description": "'크다'를 말하지만, 문서·웹 위주면 크기·눈편함이, 영상·디자인이면 색재현·해상도가 진짜 기준이다. 용도가 안 드러나면 엉뚱한 사양을 추천하게 된다.",
+        "anchors": {
+          "Functional": 0.7,
+          "Conditional": 0.8,
+          "Epistemic": 0.4,
+          "Social": 0.1,
+          "Emotional": 0.3
+        },
+        "priority": "high",
+        "evidenceTheUserMightSay": [
+          "주로 문서 작업을 해요",
+          "영상 편집도 가끔 하고요",
+          "오래 보니까 눈이 편했으면"
+        ],
+        "productCueTriggers": [],
+        "hiddenFromServiceAgent": true
+      },
+      {
+        "label": "눈 피로·장시간 사용 (품질)",
+        "description": "오래 보는 물건이라 눈 편함(해상도·패널)이 숨은 기준. 싸도 눈이 불편하면 후회한다.",
+        "anchors": {
+          "Functional": 0.6,
+          "Conditional": 0.4,
+          "Epistemic": 0.5,
+          "Social": 0.1,
+          "Emotional": 0.6
+        },
+        "priority": "high",
+        "evidenceTheUserMightSay": [
+          "하루 종일 보는 거라",
+          "눈 아프면 안 돼요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "trustCue:high",
+            "userReaction": "like",
+            "possibleUtterance": "리뷰에서 눈 편하다는 말이 많네요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      },
+      {
+        "label": "가성비 (크기 대비 합리적)",
+        "description": "큰 화면을 원하지만 과하게 비싸긴 싫다. 크기·해상도 대비 합리적 가격을 선호.",
+        "anchors": {
+          "Functional": 0.4,
+          "Conditional": 0.6,
+          "Epistemic": 0.3,
+          "Social": 0.1,
+          "Emotional": 0.3
+        },
+        "priority": "medium",
+        "evidenceTheUserMightSay": [
+          "이 크기에 이 가격이면 괜찮은 거죠?"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "priceCue:very_high",
+            "userReaction": "dislike",
+            "possibleUtterance": "전문가용까진 필요 없어요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "groundTruthMotivations": {
+      "_note": "규범적 분포 — 이 상황이 유발하는 쇼핑 동기 영역 (7축).",
+      "Utilitarian": 0.8,
+      "Idea": 0.4,
+      "Adventure": 0.2,
+      "Gratification": 0.2,
+      "Role": 0.1,
+      "BargainValue": 0.5,
+      "SocialShopping": 0.1
+    },
+    "mustAvoidProductCues": [],
+    "preferredProductCues": [
+      "trustCue:high"
+    ],
+    "likelyDialoguePatterns": [
+      "stated_vs_actual_use_gap",
+      "multi_turn_refinement"
+    ],
+    "pscon": {
+      "observedShareEN": 0,
+      "realUtterances": [],
+      "topClarifyingAttributes": [
+        "Use-purpose",
+        "Size",
+        "Eye-comfort"
+      ],
+      "insight": "표면 요구(크기) ↔ 실제 용도(사무/창작)의 간극. 용도를 끌어내야 해상도·색재현 vs 눈편함의 적절한 trade-off를 줄 수 있음."
+    }
+  },
+  {
+    "id": "tablet_purpose",
+    "title": "태블릿 구매",
+    "initialUserNeed": "태블릿 하나 살까 하는데 요즘 다들 쓰길래요.",
+    "targetCategory": "태블릿",
+    "recipient": "본인",
+    "context": "자기사용 구매 (용도 모호)",
+    "_designNote": "'다들 쓰니까'라는 모호한 동기 뒤에 실제 용도(필기·학습 vs 그림 vs 미디어 소비)가 숨어 있다. 용도에 따라 펜 지원·성능·화면이 갈린다. 동조 동기(SocialShopping/Idea)가 표면이고, 실사용 용도가 숨은 결정 요인.",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "실제 용도 (필기·학습 vs 그림 vs 미디어)",
+        "description": "'다들 쓰니까'로 시작하지만, 필기·인강이면 펜·가독성이, 그림이면 성능·필압이, 영상 소비면 화면·스피커가 진짜 기준. 용도가 안 드러나면 추천이 표류한다.",
+        "anchors": {
+          "Functional": 0.7,
+          "Conditional": 0.7,
+          "Epistemic": 0.5,
+          "Social": 0.2,
+          "Emotional": 0.3
+        },
+        "priority": "high",
+        "evidenceTheUserMightSay": [
+          "필기용으로 쓰려고요",
+          "인강 보려고",
+          "그림도 좀 그려보고 싶어요"
+        ],
+        "productCueTriggers": [],
+        "hiddenFromServiceAgent": true
+      },
+      {
+        "label": "생태계·호환 (이미 쓰는 기기)",
+        "description": "이미 쓰는 폰·노트북과의 호환(같은 브랜드 생태계)이 숨은 기준일 수 있다. 액세서리·연동을 고려한다.",
+        "anchors": {
+          "Functional": 0.5,
+          "Conditional": 0.5,
+          "Epistemic": 0.4,
+          "Social": 0.4,
+          "Emotional": 0.4
+        },
+        "priority": "medium",
+        "evidenceTheUserMightSay": [
+          "아이폰 쓰는데 연동되면 좋겠어요",
+          "갤럭시랑 같이 쓰려고요"
+        ],
+        "productCueTriggers": [],
+        "hiddenFromServiceAgent": true
+      },
+      {
+        "label": "가격 대비 활용도 (안 쓰게 될 위험)",
+        "description": "비싸게 샀다가 안 쓰게 되는 걸 걱정한다. 용도가 분명치 않을수록 과지출을 경계.",
+        "anchors": {
+          "Functional": 0.4,
+          "Conditional": 0.6,
+          "Epistemic": 0.3,
+          "Social": 0.2,
+          "Emotional": 0.5
+        },
+        "priority": "medium",
+        "evidenceTheUserMightSay": [
+          "비싸게 샀다 안 쓰면 아깝잖아요",
+          "그 가격값 할까요?"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "priceCue:very_high",
+            "userReaction": "dislike",
+            "possibleUtterance": "이건 좀 부담스럽네요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "groundTruthMotivations": {
+      "_note": "규범적 분포 — '다들 쓰니까'라 SocialShopping·Idea(트렌드)가 표면, 그러나 결정엔 Utilitarian이 작동.",
+      "Utilitarian": 0.6,
+      "Idea": 0.6,
+      "Adventure": 0.3,
+      "Gratification": 0.4,
+      "Role": 0.1,
+      "BargainValue": 0.4,
+      "SocialShopping": 0.5
+    },
+    "mustAvoidProductCues": [],
+    "preferredProductCues": [],
+    "likelyDialoguePatterns": [
+      "vague_initial_need",
+      "multi_turn_refinement",
+      "preference_revision_after_recommendation"
+    ],
+    "pscon": {
+      "observedShareEN": 0,
+      "realUtterances": [],
+      "topClarifyingAttributes": [
+        "Use-purpose",
+        "Ecosystem",
+        "Budget"
+      ],
+      "insight": "모호한 동조 동기('다들 쓰니까') ↔ 숨은 실사용 용도. 용도를 끌어내지 못하면 추천이 표류 — 가장 어려운(개방적) 시나리오."
+    }
+  },
+  {
+    "id": "keyboard_mouse_setup",
+    "title": "키보드·마우스 세트 구매",
+    "initialUserNeed": "키보드랑 마우스 새로 바꾸려고요. 게임할 때 쓸 거예요.",
+    "targetCategory": "키보드·마우스",
+    "recipient": "본인",
+    "context": "자기사용 구매 (주변기기)",
+    "_designNote": "'게임용'을 말하지만, 실제로는 사무·타이핑 시간이 더 길거나, 소음(가족·사무실)이 숨은 제약일 수 있다. 게이밍 표방 ↔ 실사용(타이핑 편함/소음)의 긴장.",
+    "groundTruthHiddenIntentions": [
+      {
+        "label": "표방 용도 뒤 실사용 (타이핑·소음)",
+        "description": "'게임용'이라 하지만 실제론 문서·타이핑 시간이 길거나, 늦은 밤·사무실이라 소음이 제약일 수 있다. 시끄러운 청축 게이밍 키보드가 실사용과 충돌할 수 있다.",
+        "anchors": {
+          "Functional": 0.6,
+          "Conditional": 0.8,
+          "Epistemic": 0.3,
+          "Social": 0.2,
+          "Emotional": 0.4
+        },
+        "priority": "high",
+        "evidenceTheUserMightSay": [
+          "사실 문서 작업도 많이 해요",
+          "밤에 쓰는데 소리가 크면 좀",
+          "회사에서도 쓸 거라"
+        ],
+        "productCueTriggers": [],
+        "hiddenFromServiceAgent": true
+      },
+      {
+        "label": "손 편안함·장시간 (품질)",
+        "description": "오래 쓰는 손에 닿는 물건이라, 키감·그립감 같은 사용감이 숨은 기준. 검증된 사용 후기를 선호.",
+        "anchors": {
+          "Functional": 0.5,
+          "Conditional": 0.4,
+          "Epistemic": 0.5,
+          "Social": 0.2,
+          "Emotional": 0.6
+        },
+        "priority": "high",
+        "evidenceTheUserMightSay": [
+          "오래 써도 손이 안 아픈 걸로",
+          "키감 좋다는 후기 있나요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "trustCue:high",
+            "userReaction": "like",
+            "possibleUtterance": "후기가 많아서 안심돼요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      },
+      {
+        "label": "가성비 (게이밍 프리미엄 회피)",
+        "description": "게이밍 브랜드 프리미엄까진 필요 없고, 적당한 가격에 무난한 걸 원한다.",
+        "anchors": {
+          "Functional": 0.4,
+          "Conditional": 0.6,
+          "Epistemic": 0.3,
+          "Social": 0.2,
+          "Emotional": 0.3
+        },
+        "priority": "medium",
+        "evidenceTheUserMightSay": [
+          "너무 비싼 게이밍 장비까진 아니어도 돼요"
+        ],
+        "productCueTriggers": [
+          {
+            "ifProductHasCue": "priceCue:very_high",
+            "userReaction": "dislike",
+            "possibleUtterance": "이 정도 가격은 과한 것 같아요."
+          }
+        ],
+        "hiddenFromServiceAgent": true
+      }
+    ],
+    "groundTruthMotivations": {
+      "_note": "규범적 분포 — 게이밍 표방이지만 결정엔 Utilitarian·BargainValue 작동. Adventure(새 장비 재미) 일부.",
+      "Utilitarian": 0.7,
+      "Idea": 0.4,
+      "Adventure": 0.4,
+      "Gratification": 0.3,
+      "Role": 0.1,
+      "BargainValue": 0.5,
+      "SocialShopping": 0.2
+    },
+    "mustAvoidProductCues": [],
+    "preferredProductCues": [
+      "trustCue:high"
+    ],
+    "likelyDialoguePatterns": [
+      "stated_vs_actual_use_gap",
+      "multi_turn_refinement"
+    ],
+    "pscon": {
+      "observedShareEN": 0,
+      "realUtterances": [],
+      "topClarifyingAttributes": [
+        "Use-purpose",
+        "Noise",
+        "Budget"
+      ],
+      "insight": "게이밍 표방 ↔ 실사용(타이핑·소음) 긴장. 소음·타이핑 맥락을 끌어내야 청축 고소음 게이밍 키보드 오추천을 피함."
+    }
   }
 ]

@@ -173,25 +173,20 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         db, session, commit.snapshot, has_recommendations
     ):
         decision.action = "clarify"
-        # 질문 우선순위:
-        #  (1) 아직 안 드러난 쇼핑 동기 프로브 (설문 동등 정보를 대화로 수집)
-        #  (2) RIG 경로 예측 기반 선제 질문
-        #  (3) 가치(trait) 수준 적응형 질문
-        from app.agents.motivation import next_probe
-
-        probe = next_probe((session.meta or {}).get("motivationScores", {}), session.meta or {})
+        # 질문 우선순위 (2026-06-22 변경):
+        #  (1) RIG 경로 예측 기반 선제 질문
+        #  (2) 가치(trait) 수준 적응형 질문 — 상품 용도/기준을 끌어냄
+        # 동기(motivation) 프로브는 첫 추천을 가로채지 않는다 — 맥락 없는 첫 턴 동기 질문
+        # ("새 제품 발견하는 재미로 둘러보세요?")은 어색하고 추천을 막는다. 동기는 추천 이후
+        # 사용자가 상품을 본 맥락에서 자연스럽게 떠본다. (A2)
         pred = None
-        if not probe:
-            try:
-                from app import rig
+        try:
+            from app import rig
 
-                pred = rig.top_predicted_concept(db, session.id)
-            except Exception:  # noqa: BLE001
-                pred = None
-        if probe:
-            decision.reason = f"motivation probe (dim={probe[1]})"
-            value_question = probe[0]
-        elif pred:
+            pred = rig.top_predicted_concept(db, session.id)
+        except Exception:  # noqa: BLE001
+            pred = None
+        if pred:
             decision.reason = f"anticipatory question from RIG path (concept={pred['normalizedLabel']})"
             value_question = (
                 f"비슷한 분들은 '{pred['exampleIntention']}'도 중요하게 보시던데, "

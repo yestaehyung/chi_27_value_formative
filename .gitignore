@@ -34,6 +34,14 @@ backend/data/
 # ── Research proposal doc (not deployable code, 6.4MB) ──
 *.pdf
 
+# ── ETL intermediates (not loaded at runtime — merged into products.json) ──
+backend/seed_naver/category_reclassified.json
+backend/seed_naver/fashion_reclassified.json
+backend/seed_naver/synthetic_products.json
+backend/seed_naver/scenarios_electronics_draft.json
+backend/seed_naver/product_descriptions.json
+backend/seed_naver/products_naver.json
+
 # ── Logs / OS ─────────────────────────────────
 *.log
 .DS_Store

@@ -60,17 +60,60 @@ def _embed(texts: list[str]) -> list[list[float]] | None:
         return None
 
 
+def _product_text(p) -> str:
+    """임베딩 텍스트 — BM25 _doc와 정합. 생성 서술(description)·태그·카테고리경로 포함해
+    빈약한 제목을 보강한다 (scripts/generate_product_descriptions.py 산출)."""
+    tags = " ".join(p.tags or [])
+    cat_path = (p.attributes or {}).get("categoryPath", "") if p.attributes else ""
+    return f"{p.title or ''} {p.description or ''} {tags} {cat_path} {p.category or ''}".strip()
+
+
 def ensure_product_vectors(products) -> None:
-    """상품 임베딩을 1회 계산해 캐시 (id → 정규화 벡터). 실패 시 다음 호출에서 재시도."""
+    """상품 임베딩을 1회 계산해 캐시 (id → 정규화 벡터). 실패 시 다음 호출에서 재시도.
+    디스크 캐시(seed_dir/product_vectors.json)가 있으면 로드 — 매 시작 재임베딩/비용 방지."""
     global _loaded
     if _loaded or not enabled():
         return
-    items = [(p.id, f"{p.title} {p.category or ''} {p.brand or ''}".strip()) for p in products]
+    items = [(p.id, _product_text(p)) for p in products]
+
+    # 디스크 캐시 — 같은 id 집합이면 재사용
+    cache = settings.seed_dir / "product_vectors.json"
+    if cache.exists():
+        try:
+            import json
+            cached = json.loads(cache.read_text(encoding="utf-8"))
+            if set(cached.keys()) == {pid for pid, _ in items}:
+                _product_vectors.update(cached)
+                _loaded = True
+                _log.info("product vectors loaded from disk cache (%d)", len(cached))
+                return
+        except Exception as e:  # noqa: BLE001
+            _log.warning("vector cache read failed: %s", e)
+
     vecs = _embed([t for _, t in items])
     if vecs is None:
         return
     _product_vectors.update({pid: v for (pid, _), v in zip(items, vecs)})
     _loaded = True
+    try:
+        import json
+        cache.write_text(json.dumps(_product_vectors), encoding="utf-8")
+        _log.info("product vectors cached to disk (%d)", len(_product_vectors))
+    except Exception as e:  # noqa: BLE001
+        _log.warning("vector cache write failed: %s", e)
+
+
+def retrieve(query: str, n: int = 200) -> list[str] | None:
+    """임베딩 의미 검색 — query와 코사인 상위 n개 product_id. 비활성/실패/미로드 시 None
+    (→ 호출부가 BM25로 폴백). 카테고리 필터는 호출부 책임(인터페이스 단순 유지)."""
+    if not enabled() or not _loaded:
+        return None
+    qv = query_vector(query)
+    if qv is None:
+        return None
+    scored = [(cosine(qv, v), pid) for pid, v in _product_vectors.items()]
+    scored.sort(reverse=True)
+    return [pid for _, pid in scored[:n]]
 
 
 def product_vector(product_id: str) -> list[float] | None:

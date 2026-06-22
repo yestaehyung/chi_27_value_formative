@@ -19,6 +19,10 @@ async def lifespan(_app: FastAPI):
         load_seed_concepts(db)
         from app.products.search_index import build_index
         build_index(db)
+        # 의미 검색용 상품 임베딩 (디스크 캐시 우선; mock/무키면 no-op → BM25 폴백)
+        from app.products import embeddings
+        from app.db import models
+        embeddings.ensure_product_vectors(db.query(models.Product).all())
     finally:
         db.close()
     yield

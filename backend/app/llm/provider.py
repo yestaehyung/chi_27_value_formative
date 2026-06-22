@@ -97,6 +97,9 @@ class OpenAIProvider(LLMProvider):
         return msgs
 
     @with_retries(times=2)
+    def _augment_payload(self, payload: Dict[str, Any]) -> None:
+        """Subclass hook: mutate the request payload before send. No-op by default."""
+
     async def _call(self, msgs: list[dict], max_tokens: int, json_mode: bool,
                     temperature: float = 0.2) -> str:
         import httpx
@@ -114,6 +117,7 @@ class OpenAIProvider(LLMProvider):
             payload["temperature"] = temperature
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
+        self._augment_payload(payload)  # subclass hook (DeepSeek thinking toggle 등)
         async with httpx.AsyncClient(timeout=120) as client:
             resp = await client.post(
                 self.api_url,
@@ -166,6 +170,14 @@ class DeepSeekProvider(OpenAIProvider):
         self.model = settings.deepseek_model
         if not self.api_key:
             raise RuntimeError("DEEPSEEK_API_KEY is not set")
+
+    def _augment_payload(self, payload: Dict[str, Any]) -> None:
+        """DeepSeek V4 thinking 토글 (config). off면 reasoning 토큰 생성을 끈다 (4~8배 빠름).
+        기본값(미지정)은 API상 enabled이므로, off일 때만 명시적으로 disabled를 보낸다."""
+        if settings.deepseek_thinking == "off":
+            payload["thinking"] = {"type": "disabled"}
+        elif settings.deepseek_thinking == "on":
+            payload["thinking"] = {"type": "enabled"}
 
     async def embed(self, texts: List[str]) -> List[List[float]]:
         raise NotImplementedError("DeepSeek has no embeddings API; MVP does not need it.")
