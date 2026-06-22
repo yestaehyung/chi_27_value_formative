@@ -224,7 +224,7 @@ export default function SimulatePage() {
               </Link>
             </div>
             <div className="max-h-[32rem] space-y-3 overflow-y-auto">
-              {result.turns.map((t: Turn) => <MessageBubble key={t.id} turn={t} />)}
+              {result.turns.map((t: Turn) => <MessageBubble key={t.id} turn={t} showMeta />)}
             </div>
           </div>
 

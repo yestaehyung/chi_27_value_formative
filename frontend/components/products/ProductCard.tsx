@@ -39,6 +39,7 @@ export default function ProductCard({
               alt={p.title}
               loading="lazy"
               className="h-full w-full object-contain"
+              style={{ outline: "1px solid rgba(0,0,0,0.1)", outlineOffset: "-1px" }}
             />
           </div>
         )}
@@ -50,7 +51,7 @@ export default function ProductCard({
             </span>
             <span className="min-h-[2.4rem] text-sm font-bold leading-snug text-[#191919]">{p.title}</span>
           </div>
-          <div className="shrink-0 whitespace-nowrap text-right">
+          <div className="shrink-0 whitespace-nowrap text-right tabular-nums">
             <div className="text-base font-extrabold tracking-tight text-[#191919]">
               {realPrice.toLocaleString()}원
             </div>
@@ -68,7 +69,7 @@ export default function ProductCard({
 
         <div className="flex-1 space-y-3.5 px-4 pb-4 pt-3.5">
           {/* 신뢰 지표 */}
-          <div className="space-y-1.5 border-t border-[#f0f2f4] pt-3 text-[11px] text-[#606060]">
+          <div className="space-y-1.5 border-t border-[#f0f2f4] pt-3 text-[11px] tabular-nums text-[#606060]">
             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
               <span className="flex items-center gap-1">
                 <span className="text-[#f59e0b]">★</span>{p.rating}

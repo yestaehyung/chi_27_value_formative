@@ -97,7 +97,7 @@ export default function ResearchSessionPage() {
         <div className="card max-h-[40rem] space-y-3 overflow-y-auto p-4">
           {data.turns.map((t: Turn) => (
             <div key={t.id}>
-              <MessageBubble turn={t} />
+              <MessageBubble turn={t} showMeta />
               {(feedbackByTurn[t.id] ?? []).length > 0 && (
                 <div className="ml-4 mt-1 space-y-1">
                   {feedbackByTurn[t.id].map((f: any) => (

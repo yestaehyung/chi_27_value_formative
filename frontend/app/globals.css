@@ -23,12 +23,21 @@
     /* 한국어 어절 단위 줄바꿈 — 글자 중간에서 끊기지 않게 */
     word-break: keep-all;
     overflow-wrap: break-word;
+    /* macOS에서 더 선명한 텍스트 렌더링 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   /* 제목 = Display 광학 컷 (Material 3 역할별 폰트 배정 방식) */
   h1,
   h2,
   h3 {
     font-family: "Google Sans Display", var(--kr-fallback);
+    /* 제목은 줄바꿈을 균형있게 — 마지막 줄에 한 단어만 남는 것 방지 */
+    text-wrap: balance;
+  }
+  /* 본문 문단 — 고아 단어(orphan) 방지 */
+  p {
+    text-wrap: pretty;
   }
 }
 
@@ -39,10 +48,16 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#e4e8eb] bg-white px-3.5 py-2 text-sm font-medium text-[#404040] transition-colors duration-150 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#e4e8eb] bg-white px-3.5 py-2 text-sm font-medium text-[#404040] disabled:opacity-50;
+    transition-property: color, background-color, border-color, scale;
+    transition-duration: 150ms;
   }
   .btn:hover:not(:disabled) {
     @apply border-[#c9cdd2] bg-[#fafbfc];
+  }
+  /* 클릭 시 살짝 눌리는 촉각 피드백 (0.96 — 0.95 미만은 과장돼 보임) */
+  .btn:active:not(:disabled) {
+    scale: 0.96;
   }
   .btn-primary {
     @apply border-[#4f46e5] bg-[#4f46e5] font-semibold text-white;

@@ -34,7 +34,7 @@ export default function UserInputBox({
           <button
             key={s}
             onClick={() => setText(s)}
-            className="rounded-full border border-[#e4e8eb] bg-white px-3 py-1.5 text-[11px] text-[#606060] transition hover:border-[#4f46e5] hover:text-[#4f46e5]"
+            className="rounded-full border border-[#e4e8eb] bg-white px-3 py-1.5 text-[11px] text-[#606060] transition-colors duration-150 hover:border-[#4f46e5] hover:text-[#4f46e5] active:scale-[0.96]"
           >
             {s.length > 28 ? s.slice(0, 28) + "…" : s}
           </button>
@@ -59,7 +59,8 @@ export default function UserInputBox({
           onClick={submit}
           disabled={disabled || !text.trim()}
           aria-label="전송"
-          className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#4f46e5] text-white transition-colors duration-150 hover:bg-[#4338ca] disabled:bg-[#e4e8eb] disabled:text-[#b0b8c1]"
+          className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#4f46e5] text-white hover:bg-[#4338ca] disabled:bg-[#e4e8eb] disabled:text-[#b0b8c1] enabled:active:scale-[0.96]"
+          style={{ transitionProperty: "background-color, scale", transitionDuration: "150ms" }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
