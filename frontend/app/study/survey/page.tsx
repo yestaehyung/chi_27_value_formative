@@ -161,8 +161,11 @@ function Question({
               );
             })}
           </div>
-          <div className="mt-1 flex justify-between text-[10px] text-slate-400">
-            <span>{LIKERT_MIN}</span><span>{LIKERT_MID}</span><span>{LIKERT_MAX}</span>
+          {/* 버튼과 동일한 7칸 그리드 — 가운데 라벨이 4번 버튼 바로 아래 중앙에 오게 */}
+          <div className="mt-1 grid grid-cols-7 gap-1.5 text-[10px] text-slate-400">
+            <span className="col-start-1 text-left">{LIKERT_MIN}</span>
+            <span className="col-start-4 text-center">{LIKERT_MID}</span>
+            <span className="col-start-7 text-right">{LIKERT_MAX}</span>
           </div>
         </div>
       )}
