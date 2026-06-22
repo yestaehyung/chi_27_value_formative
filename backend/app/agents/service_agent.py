@@ -230,11 +230,16 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         snapshot = commit.snapshot
         # 진단적 trade-off: 가장 불확실한 가설 축을 검증할 후보를 한 슬롯 포함
         diagnostic = pick_diagnostic_anchor(snapshot, session)
-        # 검색 질의 앵커: 해명성 답변("혼자 고르고 싶어요")엔 상품어가 없어 적합도가 무너진다.
-        # 통제 시나리오의 targetCategory(session.meta["category"])를 질의에 붙여 매 턴 상품
-        # 도메인을 고정한다. custom 시나리오는 category가 없으니 발화만 사용 (자유 탐색).
+        # 검색 질의 보강: 발화 + 카테고리 + 추출된 가치(토픽).
+        # 발화("다시 추천해줘")엔 상품정보가 없어, 그동안 끌어낸 가치(내구성·브랜드 등)를
+        # 질의에 넣어야 임베딩이 그 가치 단서를 가진 상품을 찾는다. (상품 description의
+        # 객관 단서와 의미 매칭 — generate_product_descriptions가 단서를 서술해 둠.)
         scenario_category = (session.meta or {}).get("category")
-        search_query = f"{content} {scenario_category}".strip() if scenario_category else content
+        # priority 순 상위 토픽만 (너무 많으면 질의가 희석됨)
+        value_terms = " ".join((snapshot.priority_order or [])[:4]) if snapshot else ""
+        search_query = " ".join(
+            part for part in (content, scenario_category, value_terms) if part
+        ).strip()
         scored = search_products(
             db,
             query=search_query,

@@ -26,14 +26,21 @@ SEED = BACKEND_DIR / "seed_naver" / "products.json"
 OUT = BACKEND_DIR / "seed_naver" / "product_descriptions.json"
 
 SYSTEM = """너는 쇼핑몰 상품의 '검색용 서술'을 작성하는 도우미다.
-주어진 상품 정보(제목·카테고리·태그·가격)만으로 한국어 1~2문장 서술을 쓴다.
+주어진 상품 정보로 한국어 2~3문장 서술을 쓴다. 이 서술은 사용자의 가치 기준
+(내구성·신뢰·가성비·브랜드·용도 등)과 의미 매칭되도록 쓰인다.
+
+두 종류를 모두 담아라:
+(A) 용도·형태·구성: 어떤 상황에 쓰는지, 형태(오픈형/커널형 등), 주요 기능.
+(B) 객관적 신뢰 단서: 리뷰 수, 한 달 이상 사용 후기 비율, 평점, 브랜드를 자연스럽게 서술.
 
 규칙:
-1. 주어진 정보로만 작성한다. 배터리 지속시간, 방수 등급, 블루투스 버전, 음질 수치 등
-   주어지지 않은 사양은 절대 추측하거나 지어내지 마라.
-2. 용도·형태·주요 특징·가격대를 자연스럽게 녹인다. (예: "러닝·운동용 골전도 무선 이어폰, 저가형")
-3. 마케팅 과장("최고의", "혁신적인") 없이 담백하게 쓴다.
-4. 제목에 모델명·브랜드가 있으면 포함한다.
+1. 주어진 정보로만 작성한다. 배터리·방수·음질 수치 등 주어지지 않은 사양은 지어내지 마라.
+2. **가치를 단정하지 말고 '단서'만 서술한다.** ("내구성이 좋은 제품" X →
+   "한 달 이상 사용 후기가 많은 편" O). 가치 판단은 사용자 몫이다.
+3. 객관 단서는 자연어로 풀어라. 예: 리뷰 많으면 "리뷰가 많이 쌓인 편",
+   한 달 후기 비율 높으면 "오래 쓴 후기가 많은 편", 평점 높으면 "평점이 높은 편",
+   브랜드 있으면 브랜드명 언급. 수치가 낮거나 적으면 그 점도 솔직히("리뷰가 적은 편").
+4. 마케팅 과장("최고의","혁신적인") 금지. 담백하게.
 5. JSON으로만 답한다: {"description": "..."}"""
 
 
@@ -49,12 +56,39 @@ def price_band(price: int | None) -> str:
     return "고가형(10만원 이상)"
 
 
+def _review_hint(n: int | None) -> str:
+    if not n:
+        return "리뷰 정보 없음"
+    if n >= 1000:
+        return f"리뷰 {n:,}개 (매우 많음)"
+    if n >= 300:
+        return f"리뷰 {n:,}개 (많은 편)"
+    if n >= 50:
+        return f"리뷰 {n}개 (보통)"
+    return f"리뷰 {n}개 (적은 편)"
+
+
+def _ltr_hint(r: float | None) -> str:
+    pct = round((r or 0) * 100)
+    if pct >= 30:
+        return f"한 달 이상 사용 후기 비율 {pct}% (높은 편)"
+    if pct >= 15:
+        return f"한 달 이상 사용 후기 비율 {pct}% (보통)"
+    return f"한 달 이상 사용 후기 비율 {pct}% (낮은 편)"
+
+
 def build_context(p: dict) -> dict:
     return {
         "제목": p.get("title"),
         "카테고리경로": (p.get("attributes") or {}).get("categoryPath") or p.get("category"),
         "태그": p.get("tags") or [],
         "가격대": price_band(p.get("price")),
+        # 객관적 신뢰 단서 (B) — 가진 숫자만, 자연어 힌트 동반
+        "브랜드": p.get("brand") or "정보 없음",
+        "리뷰": _review_hint(p.get("reviewCount")),
+        "장기사용후기": _ltr_hint(p.get("longTermReviewRatio")),
+        "평점": f"{p.get('rating')} (높은 편)" if (p.get("rating") or 0) >= 4.6
+                else (f"{p.get('rating')}" if p.get("rating") else "정보 없음"),
     }
 
 
