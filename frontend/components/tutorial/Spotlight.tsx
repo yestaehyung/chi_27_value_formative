@@ -100,20 +100,24 @@ export default function Spotlight({
             height: box.height,
             boxShadow: "0 0 0 9999px rgba(17,17,17,0.55)",
             transitionProperty: "top, left, width, height",
+            transitionTimingFunction: "cubic-bezier(0.2, 0, 0, 1)",
           }}
         />
       ) : (
         <div className="absolute inset-0 bg-black/55" />
       )}
 
-      <div className="absolute w-[320px] rounded-2xl bg-white p-4 shadow-xl" style={tipStyle}>
-        <div className="text-[11px] font-semibold text-[#4f46e5]">
+      {/* 위치 래퍼(transform=배치) ⟂ 애니메이션 박스(transform=scale) 분리 —
+          한 엘리먼트에 둘 다 주면 transform이 충돌해 위치가 틀어진다. */}
+      <div className="absolute w-[320px]" style={tipStyle}>
+        <div key={i} className="tip-in rounded-2xl bg-white p-4 shadow-xl">
+        <div className="text-[11px] font-semibold tabular-nums text-[#4f46e5]">
           {i + 1} / {steps.length}
         </div>
         <h3 className="mt-1 text-sm font-bold text-[#191919]">{step.title}</h3>
         <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-[#404040]">{step.body}</p>
         <div className="mt-3 flex items-center justify-between">
-          <button className="text-[11px] text-[#9aa0a6] hover:text-[#606060]" onClick={skip}>
+          <button className="-ml-1.5 rounded px-1.5 py-1 text-[11px] text-[#9aa0a6] transition-colors duration-150 hover:text-[#606060] active:scale-[0.96]" onClick={skip}>
             건너뛰기
           </button>
           <div className="flex gap-2">
@@ -126,6 +130,7 @@ export default function Spotlight({
               {last ? "시작하기" : "다음"}
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>,

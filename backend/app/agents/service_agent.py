@@ -83,19 +83,24 @@ def _update_surface_intent(session: models.Session, content: str) -> None:
 
 
 def _create_impressions(
-    db: DbSession, session: models.Session, agent_turn: models.Turn, scored: list[ScoredProduct]
+    db: DbSession, session: models.Session, agent_turn: models.Turn,
+    scored: list[ScoredProduct], card_texts: dict[str, dict] | None = None,
 ) -> list[models.ProductImpression]:
     impressions = []
+    card_texts = card_texts or {}
     for rank, sp in enumerate(scored, start=1):
+        # 카드 설명은 LLM 생성(generate_card_rationales) — 사용자 가치에 연결(B1).
+        # 누락 시 폴백(빈 reason 방지). BUCKET_PHRASE/규칙 matched·weak는 더 이상 안 씀.
+        card = card_texts.get(sp.product.id) or {}
         imp = models.ProductImpression(
             id=new_id("imp"),
             session_id=session.id,
             turn_id=agent_turn.id,
             product_id=sp.product.id,
             rank=rank,
-            recommendation_reason=rg.BUCKET_PHRASE.get(sp.bucket, ""),
-            matched_intentions=sp.matched,
-            weak_intentions=sp.weak,
+            recommendation_reason=card.get("reason", ""),
+            matched_intentions=card.get("matched", []),
+            weak_intentions=card.get("weak", []),
             product_cues_shown={
                 "price": True, "rating": True, "reviewCount": True,
                 "longTermReviewRatio": True, "recentSalesCount": True,
@@ -254,16 +259,27 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         .all()
     )
     t_reply = time.perf_counter()
-    text = await rg.generate_reply(
+    state_for_llm = commit.snapshot.user_visible_summary if commit.snapshot else None
+    reply_coro = rg.generate_reply(
         provider,
         action=decision.action,
         template_text=text,
         recent_turns=recent_turns,
         products=products,
-        state_summary=(commit.snapshot.user_visible_summary if commit.snapshot else None),
+        state_summary=state_for_llm,
         conflict_explanation=conflict_explanation,
         must_ask_question=value_question,
     )
+    # 추천이면 카드 설명(reason/matched/weak)도 LLM 생성 — 챗 응답과 병렬(속도)
+    card_texts: dict[str, dict] = {}
+    if decision.action == "recommend" and scored:
+        import asyncio
+        text, card_texts = await asyncio.gather(
+            reply_coro,
+            rg.generate_card_rationales(provider, scored, state_for_llm),
+        )
+    else:
+        text = await reply_coro
     logging.info("service_agent.generate_reply_latency_sec=%.3f", time.perf_counter() - t_reply)
 
     agent_turn = models.Turn(
@@ -281,7 +297,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     if decision.action == "recommend":
         scored_by_id = {sp.product.id: sp for sp in scored}
         impressions = _create_impressions(
-            db, session, agent_turn, [scored_by_id[p.id] for p in products]
+            db, session, agent_turn, [scored_by_id[p.id] for p in products], card_texts
         )
 
     db.commit()

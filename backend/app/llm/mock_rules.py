@@ -811,6 +811,37 @@ def user_agent_reaction(ctx: dict) -> dict:
     return {"reactions": reactions}
 
 
+def card_rationale(ctx: dict) -> dict:
+    """결정론적 카드 설명 — 테스트/데모용. 상품 데이터로 간단한 가치 연결 문구를 만든다.
+    (실 provider는 prompts.card_rationale로 LLM 생성; mock은 재현성 위해 규칙.)"""
+    cards = []
+    for p in ctx.get("products", []):
+        letter = p.get("letter", "?")
+        ltr = round((p.get("longTermReviewRatio") or 0) * 100)
+        rating = p.get("rating") or 0
+        cue = p.get("cues") or {}
+        matched, weak = [], []
+        if ltr >= 30:
+            matched.append(f"한달사용 리뷰 비율이 {ltr}%로 높아 오래 써도 괜찮을 가능성이 커요")
+        if rating >= 4.5:
+            matched.append(f"평점이 {rating}로 높은 편이에요")
+        if cue.get("priceCue") in ("very_low", "low"):
+            matched.append("가격 부담이 적은 편이에요")
+        elif cue.get("priceCue") in ("high", "very_high"):
+            weak.append("가격대가 높은 편이에요")
+        if cue.get("trustCue") == "low":
+            weak.append("리뷰·신뢰 단서는 약한 편이에요")
+        if not matched:
+            matched.append("기준에 무난하게 맞는 편이에요")
+        cards.append({
+            "letter": letter,
+            "reason": matched[0],
+            "matched": matched[:2],
+            "weak": weak[:2],
+        })
+    return {"cards": cards}
+
+
 def generic_text(_prompt: str) -> str:
     return "확인했어요. 제가 이해한 기준이 맞는지 오른쪽 패널에서 확인해 주세요."
 
@@ -832,4 +863,5 @@ TASK_HANDLERS = {
     "feature_mining": feature_mining,
     "feature_clustering": feature_clustering,
     "sme_translation": sme_translation,
+    "card_rationale": card_rationale,
 }

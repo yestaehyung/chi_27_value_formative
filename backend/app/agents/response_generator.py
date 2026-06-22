@@ -116,6 +116,80 @@ async def generate_reply(
         return template_text
 
 
+LETTERS_CARD = ["A", "B", "C", "D", "E"]
+
+
+async def generate_card_rationales(
+    provider: LLMProvider,
+    scored: list[ScoredProduct],
+    state_summary: dict | None,
+) -> dict[str, dict]:
+    """상품 카드별 설명(reason/matched/weak)을 LLM이 생성 — 사용자 가치 기준에 연결.
+    BUCKET_PHRASE/hidden_intention_fit 규칙(데모 잔재)을 대체한다 (B1).
+
+    반환: {productId: {"reason":str, "matched":[str], "weak":[str]}}.
+    실패/빈응답 시 graceful 폴백(상품 사실 기반 짧은 문구) — 카드가 비지 않게.
+    """
+    if not scored:
+        return {}
+
+    products_ctx = []
+    letter_to_pid: dict[str, str] = {}
+    for i, sp in enumerate(scored):
+        letter = LETTERS_CARD[i] if i < len(LETTERS_CARD) else str(i + 1)
+        p = sp.product
+        letter_to_pid[letter] = p.id
+        products_ctx.append({
+            "letter": letter, "title": p.title, "category": p.category,
+            "price": p.price, "rating": p.rating, "reviewCount": p.review_count,
+            "longTermReviewRatio": p.long_term_review_ratio,
+            "recentSalesCount": p.recent_sales_count,
+            "cues": p.cue_summary or {},
+        })
+    context = {
+        "userValues": {
+            "summary": (state_summary or {}).get("oneSentenceSummary", ""),
+            "chips": [c.get("label") for c in (state_summary or {}).get("chips", [])],
+        },
+        "products": products_ctx,
+    }
+
+    out: dict = {}
+    try:
+        raw = await provider.generate_json(
+            [LLMMessage(role="user", content=render_user_context(context))],
+            task="card_rationale", context=context,
+        )
+        for card in (raw or {}).get("cards", []):
+            pid = letter_to_pid.get(card.get("letter"))
+            if pid:
+                out[pid] = {
+                    "reason": (card.get("reason") or "").strip(),
+                    "matched": [m for m in (card.get("matched") or []) if isinstance(m, str)][:2],
+                    "weak": [w for w in (card.get("weak") or []) if isinstance(w, str)][:2],
+                }
+    except Exception:  # noqa: BLE001 — 폴백으로 강등
+        out = {}
+
+    for sp in scored:  # 누락 상품은 사실 기반 폴백 (카드가 비지 않게)
+        if sp.product.id not in out or not out[sp.product.id]["reason"]:
+            out[sp.product.id] = _fallback_card(sp.product)
+    return out
+
+
+def _fallback_card(p: models.Product) -> dict:
+    """LLM 실패 시 상품 사실 기반 최소 설명."""
+    ltr = round((p.long_term_review_ratio or 0) * 100)
+    matched = []
+    if ltr >= 30:
+        matched.append(f"한달사용 리뷰 비율이 {ltr}%로 높은 편이에요")
+    if (p.rating or 0) >= 4.5:
+        matched.append(f"평점 {p.rating}로 만족도가 높아요")
+    if not matched:
+        matched.append("말씀하신 기준에 무난하게 맞는 편이에요")
+    return {"reason": matched[0], "matched": matched[:2], "weak": []}
+
+
 def _strip_markdown(text: str) -> str:
     """Chat bubbles render plain text — remove markdown the LLM may emit anyway."""
     import re

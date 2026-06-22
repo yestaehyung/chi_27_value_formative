@@ -459,7 +459,40 @@ coverageScore = 해당 pair 수 / 전체 pair 수.""",
 {"translations":[{"conceptLabel":"장기 사용 신뢰",
 "actions":["한달사용 리뷰를 상세페이지 상단에 노출","AS/교환 정책 강조","내구성 테스트 정보 추가"],
 "positioning":"오래 쓰는 선물로 포지셔닝"}]}""",
+    "card_rationale": """
+출력 JSON 스키마:
+{"cards":[{"letter":string,"reason":string,
+"matched":[string],"weak":[string]}]}
+
+- letter: 입력 products의 letter를 그대로 (A/B/C…). 모든 상품에 대해 출력.
+- reason: 이 상품이 사용자 가치 기준에 맞는 이유 한 문장.
+- matched: 부합 근거 1~2개 (짧게). weak: 약점·트레이드오프 0~2개.
+
+예시 — 사용자가 "오래 쓰는 신뢰 + 가성비"를 중시하고, 상품 A가
+한달리뷰비율 0.30·평점 4.8·중가일 때:
+{"cards":[{"letter":"A",
+"reason":"오래 써도 괜찮은 신뢰를 중요하게 보신 점에 맞춰 골랐어요",
+"matched":["한달사용 리뷰 비율이 높아 오래 써도 만족할 가능성이 커요","평점이 높은 편이에요"],
+"weak":["가격대가 가장 낮은 쪽은 아니에요"]}]}""",
 }
+
+
+CARD_RATIONALE_SYSTEM = """너는 쇼핑 추천 카드의 설명문을 쓰는 도우미다.
+사용자가 대화에서 드러낸 '가치 기준'과, 시스템이 고른 상품들을 받아서,
+각 상품 카드에 들어갈 짧은 한국어 설명을 만든다.
+
+핵심 원칙:
+1. 추천 이유(reason)는 **이 상품이 사용자가 드러낸 가치 기준에 어떻게 맞는지**를
+   한 문장으로 쓴다. 사용자가 중요하게 본 점과 연결하라
+   (예: "오래 쓰는 신뢰를 중시하셔서, 한달리뷰 비율이 높은 이 제품을 골랐어요").
+2. matched(맞는 점)는 이 상품이 사용자 기준에 부합하는 근거 1~2개. weak(애매한 점)은
+   기준 대비 약하거나 트레이드오프가 있는 점 0~2개. 솔직하게(약점 숨기지 말 것).
+3. **사실 기반**: 주어진 상품 데이터(가격·평점·리뷰·한달리뷰비율·단서)로만 쓴다.
+   주어지지 않은 사양(배터리·방수 등)은 절대 지어내지 마라.
+4. 카테고리에 맞는 표현을 써라. (이어폰에 "운동 기능", 노트북에 "착용감" 같은
+   엉뚱한 말 금지 — 해당 상품 종류에 맞는 말만.)
+5. 사용자에 대해 단정하지 말고 부드럽게("~을 중요하게 보신 것 같아", "~신 점에 맞춰").
+6. 모든 상품 letter에 대해 빠짐없이 출력한다."""
 
 
 def render_user_context(context: dict) -> str:
@@ -483,4 +516,5 @@ SYSTEM_BY_TASK = {
     "feature_mining": FEATURE_MINING_SYSTEM,
     "feature_clustering": FEATURE_CLUSTERING_SYSTEM,
     "sme_translation": SME_TRANSLATION_SYSTEM,
+    "card_rationale": CARD_RATIONALE_SYSTEM,
 }
