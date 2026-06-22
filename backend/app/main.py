@@ -15,7 +15,14 @@ async def lifespan(_app: FastAPI):
     init_db()
     db = SessionLocal()
     try:
-        load_seed_products(db)
+        if settings.reseed_products:
+            from app.products.seed_loader import reseed_products
+            n = reseed_products(db)
+            import logging
+            logging.warning("VC_RESEED on — product pool force-reloaded from seed (%d items). "
+                            "Turn this env off after deploy.", n)
+        else:
+            load_seed_products(db)
         load_seed_concepts(db)
         from app.products.search_index import build_index
         build_index(db)

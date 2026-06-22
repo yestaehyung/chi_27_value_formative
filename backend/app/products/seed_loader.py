@@ -9,6 +9,31 @@ from app.db import models
 from app.products.cue_extractor import build_cue_summary
 
 
+def reseed_products(db: DbSession) -> int:
+    """상품 풀을 시드로 강제 교체 (VC_RESEED=1 전용).
+
+    상품(Product)과 그에 딸린 노출(ProductImpression)만 비운다 — 참가자·세션·
+    턴·설문·피드백 같은 연구 데이터는 절대 건드리지 않는다. 임베딩 캐시도 함께
+    무효화해 새 상품 기준으로 다시 로드되게 한다.
+    배포 볼륨처럼 '이미 상품이 있어 시드를 안 읽는' DB를 갱신할 때 쓴다.
+    """
+    db.query(models.ProductImpression).delete(synchronize_session=False)
+    db.query(models.Product).delete(synchronize_session=False)
+    db.commit()
+    # 디스크 임베딩 캐시 무효화 — 다음 ensure_product_vectors가 새로 로드/생성하게
+    try:
+        cache = settings.seed_dir / "product_vectors.json"
+        # repo에 커밋된 캐시는 남기되, 상품 id가 바뀌면 ensure_product_vectors가
+        # id 집합 불일치로 알아서 재생성한다. (여기선 in-memory 플래그만 리셋)
+        from app.products import embeddings
+        embeddings._loaded = False
+        embeddings._product_vectors.clear()
+        _ = cache  # 캐시 파일 자체는 보존 (id 일치 시 재사용)
+    except Exception:  # noqa: BLE001
+        pass
+    return load_seed_products(db)
+
+
 def load_seed_products(db: DbSession) -> int:
     if db.query(models.Product).count() > 0:
         return 0

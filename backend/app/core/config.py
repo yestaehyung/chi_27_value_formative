@@ -28,6 +28,10 @@ class Settings:
         self.db_path = Path(os.environ.get("VC_DB_PATH", str(BACKEND_DIR / "valuecommit.db")))
         self.seed_dir = Path(os.environ.get("VC_SEED_DIR", str(BACKEND_DIR / "seed")))
         self.export_dir = Path(os.environ.get("VC_EXPORT_DIR", str(BACKEND_DIR / "exports")))
+        # VC_RESEED=1 → 시작 시 상품 풀만 시드에서 강제 재로드 (참가자·세션 데이터는 보존).
+        # 배포 DB(볼륨)는 상품이 이미 있으면 시드를 안 읽으므로, 상품 데이터를 바꾼 뒤
+        # 이 플래그로 한 번 켜고 재배포 → 반영되면 끈다. (기본 off — 실수 방지)
+        self.reseed_products = os.environ.get("VC_RESEED", "").strip() in ("1", "true", "yes")
         # "mock" (deterministic demo rules) | "openai" | "deepseek" | "anthropic"
         self.llm_provider = os.environ.get("VC_LLM_PROVIDER", "mock")
         self.openai_api_key = os.environ.get("OPENAI_API_KEY")
