@@ -93,7 +93,7 @@ export default function SurveyPage() {
             {excluded ? (
               <span className="font-semibold text-rose-600">참여 기준/동의에 &apos;아니오&apos;가 있어 연구 참여 대상이 아닙니다.</span>
             ) : missing.length > 0 ? (
-              <span className="text-slate-500">필수(참여기준·동의) {missing.length}개 남음</span>
+              <span className="text-slate-500">필수(참여기준·동의) <span className="tabular-nums">{missing.length}</span>개 남음</span>
             ) : (
               <span className="text-emerald-600">제출 준비 완료 — 제출 후 쇼핑 대화로 이동합니다.</span>
             )}
@@ -136,7 +136,7 @@ function Question({
   const excludedHere = q.excludeIf && value === q.excludeIf;
 
   return (
-    <div className={isMissing ? "rounded-lg bg-rose-50 p-2 -m-2" : ""}>
+    <div className={`-m-2 rounded-lg p-2 transition-colors duration-200 ${isMissing ? "bg-rose-50" : "bg-transparent"}`}>
       <label className="block text-sm font-medium text-[#191919]">
         <span className="mr-1 text-slate-400">{num}.</span>{q.label}
         {q.required && <span className="ml-1 text-rose-500">*</span>}
@@ -152,7 +152,7 @@ function Question({
                   key={n}
                   type="button"
                   onClick={() => onSingle(String(n))}
-                  className={`h-9 flex-1 rounded-md border text-sm font-semibold transition-colors ${
+                  className={`h-10 flex-1 rounded-md border text-sm font-semibold tabular-nums transition-colors duration-150 active:scale-[0.94] ${
                     on ? "border-[#4f46e5] bg-[#4f46e5] text-white" : "border-[#e4e8eb] text-slate-600 hover:border-[#4f46e5]"
                   }`}
                 >
@@ -176,7 +176,7 @@ function Question({
                 key={opt}
                 type="button"
                 onClick={() => onSingle(opt)}
-                className={`block w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                className={`block w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors duration-150 active:scale-[0.99] ${
                   on ? "border-[#4f46e5] bg-[#eef2ff] font-medium" : "border-[#e4e8eb] hover:border-[#4f46e5]"
                 }`}
               >
@@ -197,7 +197,7 @@ function Question({
                 key={opt}
                 type="button"
                 onClick={() => onMulti(opt)}
-                className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                className={`rounded-full border px-3 py-1.5 text-sm transition-colors duration-150 active:scale-[0.96] ${
                   on ? "border-[#4f46e5] bg-[#4f46e5] text-white" : "border-[#e4e8eb] text-slate-600 hover:border-[#4f46e5]"
                 }`}
               >
