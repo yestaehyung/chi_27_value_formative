@@ -102,10 +102,10 @@ export default function SurveyPage() {
             <button
               onClick={proceed}
               disabled={submitting}
-              title="테스트용 — 응답 없이 바로 대화로 이동"
+              title="응답 없이 바로 대화로 이동"
               className="rounded-lg border border-[#e4e8eb] px-3 py-2 text-xs text-slate-500 transition-colors duration-150 hover:border-[#4f46e5] hover:text-[#4f46e5] disabled:opacity-40 enabled:active:scale-[0.96]"
             >
-              건너뛰기 (테스트)
+              건너뛰기
             </button>
             <button
               onClick={submit}

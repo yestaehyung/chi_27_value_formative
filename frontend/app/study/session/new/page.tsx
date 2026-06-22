@@ -49,17 +49,17 @@ export default function NewSessionPage() {
         <button
           onClick={() =>
             enter("custom", {
-              title: "테스트 세션",
-              context: "추천 기능 테스트용 세션 — 자유롭게 상품을 물어보세요.",
+              title: "자유 대화",
+              context: "시나리오 없이 자유롭게 상품을 물어보는 세션.",
             })
           }
           disabled={creating}
           className="btn btn-primary w-full py-2.5"
         >
-          {creating ? "세션 생성 중…" : "빠른 테스트 대화 시작 (시나리오 없이)"}
+          {creating ? "세션 생성 중…" : "바로 대화 시작 (시나리오 없이)"}
         </button>
         <p className="mt-2 text-xs text-slate-500">
-          시나리오 선택 없이 바로 대화. &quot;무선 이어폰 추천해줘&quot;처럼 아무거나 입력해 추천을 테스트하세요.
+          시나리오 선택 없이 바로 대화. &quot;무선 이어폰 추천해줘&quot;처럼 찾으시는 걸 자유롭게 입력해 보세요.
         </p>
       </section>
 
