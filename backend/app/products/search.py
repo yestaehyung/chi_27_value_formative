@@ -89,13 +89,21 @@ def search_products(
     top_k: int = 3,
     diversify_by_tradeoff: bool = True,
     diagnostic_anchor: str | None = None,
+    return_pool: bool = False,
+    pool_size: int = 15,
 ) -> list[ScoredProduct]:
     # 1) retrieve — 의미 임베딩 우선, 실패/비활성(mock·테스트) 시 BM25(FTS5)로 폴백.
     #    임베딩이 의미를 보고(예: "운동용 이어폰"↔"러닝 이어버드"), BM25는 글자 trigram만 본다.
     from app.products import embeddings
 
-    ids = embeddings.retrieve(query, n=200)
-    if ids is None:  # 임베딩 비활성/미로드 → 기존 BM25 경로
+    # 임베딩 retrieve는 (id, 코사인 유사도)를 받아 유사도를 랭킹에 반영한다.
+    # 비활성/미로드(mock·테스트) 시 BM25 폴백 — 그땐 유사도 없음(sim_by_id 빈 dict).
+    sim_by_id: dict[str, float] = {}
+    scored_ids = embeddings.retrieve_scored(query, n=200)
+    if scored_ids is not None:
+        sim_by_id = {pid: sim for pid, sim in scored_ids}
+        ids = [pid for pid, _ in scored_ids]
+    else:
         ids = search_index.retrieve(db, query, n=200, category=category)
     if ids:
         pm = {p.id: p for p in db.query(models.Product).filter(models.Product.id.in_(ids)).all()}
@@ -126,10 +134,13 @@ def search_products(
     if tag_pass:
         candidates = tag_pass
 
-    # 5) 점수 = 키워드 적합도 + 태그 부합 가점 → 기존 trade-off 랭킹 (후보는 BM25가 확보)
+    # 5) 점수 = 적합도 + 태그 가점 → trade-off 랭킹.
+    #    적합도(relevance)는 **임베딩 유사도 우선**(의미 적합도) — retrieve 순위가 랭킹에 반영되어야
+    #    "RGB 게이밍" 같은 요구가 trust/popularity에 밀리지 않는다. 임베딩 없으면(mock) 키워드 적합도.
     scored = []
     for p in candidates:
-        rel = text_relevance(p, query)
+        sim = sim_by_id.get(p.id)
+        rel = sim if sim is not None else text_relevance(p, query)
         if required and p.tags:
             rel = min(1.0, rel + 0.1 * len(set(p.tags) & set(required)))
         score, matched, weak = compute_product_score(
@@ -139,6 +150,8 @@ def search_products(
                                     bucket=assign_bucket(p), relevance=rel))
     ranked = apply_diversity_rerank(sorted(scored, key=lambda x: x.score, reverse=True))
 
+    if return_pool:  # LLM rerank용: 다양성 적용 전 상위 후보 풀(점수순). 호출부가 rerank→다양성.
+        return ranked[:pool_size]
     if not diversify_by_tradeoff:
         return ranked[:top_k]
     return select_tradeoff_set(ranked, top_k, diagnostic_anchor)
@@ -189,10 +202,12 @@ def select_tradeoff_set(
     floor = max(REL_FLOOR_MIN, top_rel * REL_FLOOR_RATIO)
     pool = [sp for sp in ranked if sp.relevance >= floor] or ranked[:top_k]
 
-    # 1) 버킷 다양성 기준으로 top_k 선정
-    chosen: list[ScoredProduct] = []
-    used_buckets: set[str] = set()
-    for sp in pool:
+    # 1) 1번 슬롯 = 점수 최상위 고정 (정합성 보장 — 사용자 요구에 가장 맞는 후보가 항상 포함).
+    #    나머지 슬롯만 버킷 다양성으로 채워 trade-off를 노출한다 (정합성 ⊕ 다양성).
+    #    pool은 점수순(ranked 유래)이라 pool[0]이 최상위. 다양성이 1위를 밀어내지 않게 함.
+    chosen: list[ScoredProduct] = [pool[0]] if pool else []
+    used_buckets: set[str] = {pool[0].bucket} if pool else set()
+    for sp in pool[1:]:  # 2번 슬롯부터 다양성 (다른 버킷 우선)
         if sp.bucket not in used_buckets:
             chosen.append(sp)
             used_buckets.add(sp.bucket)
@@ -212,8 +227,10 @@ def select_tradeoff_set(
             in_set.probe_anchor = diagnostic_anchor
         else:
             probe = next((sp for sp in pool if rule(sp.product) and sp not in chosen), None)
-            if probe is not None:
-                weakest = min(chosen, key=lambda x: x.score)
+            # 1번 슬롯(점수 최상위)은 보존 — 진단 후보는 2번 이후 가장 약한 멤버와만 교체.
+            replaceable = chosen[1:] or chosen
+            if probe is not None and replaceable:
+                weakest = min(replaceable, key=lambda x: x.score)
                 chosen[chosen.index(weakest)] = probe
                 probe.probe_anchor = diagnostic_anchor
     return chosen

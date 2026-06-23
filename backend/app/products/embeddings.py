@@ -106,14 +106,21 @@ def ensure_product_vectors(products) -> None:
 def retrieve(query: str, n: int = 200) -> list[str] | None:
     """임베딩 의미 검색 — query와 코사인 상위 n개 product_id. 비활성/실패/미로드 시 None
     (→ 호출부가 BM25로 폴백). 카테고리 필터는 호출부 책임(인터페이스 단순 유지)."""
+    out = retrieve_scored(query, n)
+    return None if out is None else [pid for pid, _ in out]
+
+
+def retrieve_scored(query: str, n: int = 200) -> list[tuple[str, float]] | None:
+    """retrieve와 같되 (product_id, 코사인 유사도) 쌍을 반환 — 유사도를 랭킹에 쓰기 위함.
+    유사도(의미 적합도)는 최종 점수의 주 신호여야 한다(retrieve 순위가 버려지지 않게)."""
     if not enabled() or not _loaded:
         return None
     qv = query_vector(query)
     if qv is None:
         return None
-    scored = [(cosine(qv, v), pid) for pid, v in _product_vectors.items()]
-    scored.sort(reverse=True)
-    return [pid for _, pid in scored[:n]]
+    scored = [(pid, cosine(qv, v)) for pid, v in _product_vectors.items()]
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return scored[:n]
 
 
 def product_vector(product_id: str) -> list[float] | None:

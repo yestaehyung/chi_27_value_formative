@@ -842,6 +842,29 @@ def card_rationale(ctx: dict) -> dict:
     return {"cards": cards}
 
 
+def rerank(ctx: dict) -> dict:
+    """결정론적 rerank — 입력 후보 순서를 그대로 유지(임베딩 순서 = 폴백과 동일).
+    각 후보에 간단한 사실 기반 카드텍스트를 붙인다. (실 provider는 가치·동기로 재정렬.)"""
+    ranking = []
+    for c in ctx.get("candidates", []):
+        ltr = round((c.get("longTermReviewRatio") or 0) * 100)
+        rating = c.get("rating") or 0
+        matched = []
+        if ltr >= 30:
+            matched.append(f"한달사용 리뷰 비율이 {ltr}%로 높은 편이에요")
+        if rating >= 4.5:
+            matched.append(f"평점이 {rating}로 높은 편이에요")
+        if not matched:
+            matched.append("기준에 무난하게 맞는 편이에요")
+        ranking.append({
+            "index": c.get("index"),
+            "reason": matched[0],
+            "matched": matched[:2],
+            "weak": [],
+        })
+    return {"ranking": ranking}
+
+
 def reply_suggestion(ctx: dict) -> dict:
     """결정론적 답변 칩 — 액션별 기본값 (테스트/폴백용; 실 provider는 LLM 생성)."""
     action = ctx.get("action") or ""
@@ -879,4 +902,5 @@ TASK_HANDLERS = {
     "sme_translation": sme_translation,
     "card_rationale": card_rationale,
     "reply_suggestion": reply_suggestion,
+    "rerank": rerank,
 }

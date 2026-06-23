@@ -119,6 +119,67 @@ async def generate_reply(
 LETTERS_CARD = ["A", "B", "C", "D", "E"]
 
 
+async def rerank_by_intent(
+    provider: LLMProvider,
+    scored: list[ScoredProduct],
+    intent_context: dict,
+) -> tuple[list[ScoredProduct], dict[str, dict]]:
+    """사용자 가치·동기로 후보를 재정렬 (LLM4Rerank WWW'25식 Goal-기반 listwise rerank).
+    임베딩이 추려준 후보(scored, 임베딩 순)를, 추출된 의도(intent_context)에 맞춰 순위를 다시 매긴다.
+
+    intent_context = {scenario, recentUtterances, topics[{label,description,quotes}],
+                      values(TCV5 raw), motivations(raw)}  — 점수→자연어 하드코딩 변환 안 함.
+    반환: (재정렬된 scored, {productId: {reason,matched,weak}}) — 카드텍스트 흡수(card_rationale 대체).
+    mock/실패 시 입력 순서 그대로 + 사실기반 폴백 카드 (재현성).
+    """
+    if not scored:
+        return scored, {}
+
+    by_index = {i: sp for i, sp in enumerate(scored)}
+    candidates = []
+    for i, sp in enumerate(scored):
+        p = sp.product
+        candidates.append({
+            "index": i, "title": p.title, "category": p.category,
+            "price": p.price, "rating": p.rating, "reviewCount": p.review_count,
+            "longTermReviewRatio": p.long_term_review_ratio,
+            "description": p.description, "priceCue": (p.cue_summary or {}).get("priceCue"),
+        })
+    context = {**intent_context, "candidates": candidates}
+
+    order: list[int] = []
+    card_texts: dict[str, dict] = {}
+    try:
+        raw = await provider.generate_json(
+            [LLMMessage(role="user", content=render_user_context(context))],
+            task="rerank", context=context,
+        )
+        for item in (raw or {}).get("ranking", []):
+            idx = item.get("index")
+            if idx in by_index and idx not in order:
+                order.append(idx)
+                pid = by_index[idx].product.id
+                card_texts[pid] = {
+                    "reason": (item.get("reason") or "").strip(),
+                    "matched": [m for m in (item.get("matched") or []) if isinstance(m, str)][:2],
+                    "weak": [w for w in (item.get("weak") or []) if isinstance(w, str)][:2],
+                }
+    except Exception:  # noqa: BLE001 — 폴백: 입력 순서 유지
+        order = []
+
+    # 누락된 후보는 원래(임베딩) 순서로 뒤에 붙임 (재현성·완전성)
+    for i in range(len(scored)):
+        if i not in order:
+            order.append(i)
+    reranked = [by_index[i] for i in order]
+
+    # 카드텍스트 누락분은 사실기반 폴백 (카드가 비지 않게)
+    for sp in reranked:
+        if sp.product.id not in card_texts or not card_texts[sp.product.id]["reason"]:
+            card_texts[sp.product.id] = _fallback_card(sp.product)
+    return reranked, card_texts
+
+
 async def generate_card_rationales(
     provider: LLMProvider,
     scored: list[ScoredProduct],

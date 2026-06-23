@@ -161,21 +161,18 @@ def compute_product_score(product: models.Product, query: str, hard_constraints:
     text_rel: 외부에서 계산한 적합도(키워드+임베딩 하이브리드)를 주입한다.
     None이면 키워드 적합도만 사용(기존 동작 — mock/테스트 경로).
     """
+    # 랭킹 = 사용자 의도(가치) 매칭 위주. 2026-06-23 정리:
+    #   - 예산(hard_constraint)은 search.py에서 이미 '필터'로 처리(비보완적 스크리닝,
+    #     Payne/Bettman/Johnson) → 점수항으로 중복 계산 안 함(통과품은 다 1.0이라 죽은 항).
+    #   - trust/popularity 제거: TCV5 가치·동기 어디에도 근거 없는 일반 커머스 상수였음
+    #     (이론 기반 원칙 위배). '신뢰' 가치가 필요하면 anchor(Functional/Emotional) 경로로
+    #     반영되고, 리뷰·평점은 카드에 정보로 노출(사용자 판단). 순위엔 안 씀.
+    # 남는 항은 모두 의도-매칭: 의미 적합도(임베딩 우선) + soft/fit(topic↔상품 가치 매칭).
     tr = text_rel if text_rel is not None else text_relevance(product, query)
-    hc = hard_constraint_match(product, hard_constraints)
     fit, matched, weak = hidden_intention_fit(product, topic_labels, avoidances)
     soft = 0.5
     if soft_preferences:
         soft_fit, _, _ = hidden_intention_fit(product, soft_preferences, [])
         soft = soft_fit
-    # diversityScore(0.05)는 단일 상품으로 계산 불가 — search.apply_diversity_rerank가
-    # 결과 집합 수준에서 같은 브랜드/버킷 중복에 패널티를 주는 방식으로 반영한다 (MMR식).
-    score = (
-        0.30 * tr
-        + 0.20 * hc
-        + 0.15 * soft
-        + 0.15 * fit
-        + 0.10 * trust_score(product)
-        + 0.05 * popularity_score(product)
-    )
+    score = 0.6 * tr + 0.2 * soft + 0.2 * fit
     return score, matched, weak

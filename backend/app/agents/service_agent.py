@@ -116,6 +116,20 @@ def _create_impressions(
     return impressions
 
 
+def _build_intent_context(session: models.Session, snapshot, recent_turns) -> dict:
+    """LLM rerank의 'Goal' — 추출된 사용자 의도(시나리오+토픽+가치·동기). 점수→자연어
+    하드코딩 변환 없이, 토픽 라벨·설명·사용자 발화 원본을 주고 LLM이 판단하게 한다."""
+    meta = session.meta or {}
+    return {
+        "scenario": meta.get("shoppingGoal") or meta.get("category") or "",
+        "recentUtterances": [t.content for t in recent_turns[-4:] if t.role in ("user", "user_agent")],
+        "intentTopics": (snapshot.priority_order or []) if snapshot else [],
+        "values_TCV5": {k: v for k, v in (snapshot.anchor_scores or {}).items() if v > 0} if snapshot else {},
+        "motivations": {k: v for k, v in (snapshot.motivation_scores or {}).items() if v >= 0.4} if snapshot else {},
+        "hierarchyNote": "동기가 가치를 조건짓는다 — 이 쇼핑 동기 맥락에서 가치 기준에 맞게 정렬.",
+    }
+
+
 async def _classify_dialogue_acts(provider, content: str) -> list[str]:
     """화행(dialogue act) 분류 — 발화로 뭘 하는가(reveal/inquire/accept…). PSCon taxonomy.
     ※ IntentionTopic(가치 의도)과 다름. 실패 시 라벨 없음으로 강등.
@@ -242,7 +256,8 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         search_query = " ".join(
             part for part in (content, scenario_category, value_terms) if part
         ).strip()
-        scored = search_products(
+        # 후보 풀(임베딩+필터, 상위 15)을 받아 → LLM rerank(가치·동기) → 다양성으로 3개.
+        pool = search_products(
             db,
             query=search_query,
             category=category,
@@ -250,14 +265,12 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             soft_preferences=snapshot.soft_preferences if snapshot else [],
             topic_labels=snapshot.priority_order if snapshot else [],
             avoidances=snapshot.avoidances if snapshot else [],
-            top_k=3,
-            diversify_by_tradeoff=True,
             diagnostic_anchor=diagnostic,
+            return_pool=True,
+            pool_size=15,
         )
-        text = rg.recommend_text(scored)
+        text = rg.recommend_text(pool[:3])  # 챗 초안(개수만 사용; 실제 순위는 rerank 후)
         session.current_stage = "recommendation"
-        products = [sp.product for sp in scored]
-        related_ids = [p.id for p in products]
 
     # real LLM providers rewrite the template grounded on context (mock returns it as-is)
     recent_turns = (
@@ -268,26 +281,31 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     )
     t_reply = time.perf_counter()
     state_for_llm = commit.snapshot.user_visible_summary if commit.snapshot else None
-    reply_coro = rg.generate_reply(
-        provider,
-        action=decision.action,
-        template_text=text,
-        recent_turns=recent_turns,
-        products=products,
-        state_summary=state_for_llm,
-        conflict_explanation=conflict_explanation,
-        must_ask_question=value_question,
-    )
-    # 추천이면 카드 설명(reason/matched/weak)도 LLM 생성 — 챗 응답과 병렬(속도)
+    # 추천이면: LLM rerank(가치·동기로 후보 재정렬 + 카드텍스트) → 다양성 3개. 챗과 병렬.
     card_texts: dict[str, dict] = {}
-    if decision.action == "recommend" and scored:
+    scored: list[ScoredProduct] = []
+    if decision.action == "recommend":
         import asyncio
-        text, card_texts = await asyncio.gather(
-            reply_coro,
-            rg.generate_card_rationales(provider, scored, state_for_llm),
+        from app.products.search import select_tradeoff_set
+        intent_context = _build_intent_context(session, commit.snapshot, recent_turns)
+        reply_coro = rg.generate_reply(
+            provider, action=decision.action, template_text=text, recent_turns=recent_turns,
+            products=[sp.product for sp in pool[:3]], state_summary=state_for_llm,
+            conflict_explanation=conflict_explanation, must_ask_question=value_question,
         )
+        text, (reranked, card_texts) = await asyncio.gather(
+            reply_coro,
+            rg.rerank_by_intent(provider, pool, intent_context),
+        )
+        scored = select_tradeoff_set(reranked, top_k=3, diagnostic_anchor=diagnostic)
+        products = [sp.product for sp in scored]
+        related_ids = [p.id for p in products]
     else:
-        text = await reply_coro
+        text = await rg.generate_reply(
+            provider, action=decision.action, template_text=text, recent_turns=recent_turns,
+            products=products, state_summary=state_for_llm,
+            conflict_explanation=conflict_explanation, must_ask_question=value_question,
+        )
     logging.info("service_agent.generate_reply_latency_sec=%.3f", time.perf_counter() - t_reply)
 
     # 입력창 위 답변 칩 — 방금 에이전트 말(text)에 이어지는 사용자 후보 (맥락 의존 → reply 후 생성)
