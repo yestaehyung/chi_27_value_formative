@@ -283,7 +283,7 @@ export default function ResearchSessionPage() {
             </div>
           </div>
 
-          {/* A. 이론 단계 전이 (세션 횡단 집계) */}
+          {/* A. 이론 단계 전이 (세션 간 집계) */}
           <div className="card p-4">
             <h2 className="text-sm font-bold">이론 단계 전이 <span className="font-normal text-[#9aa0a6]">(전체 {transitions?.sessionCount ?? 0}개 세션 집계)</span></h2>
             <p className="mt-1 text-xs text-[#9aa0a6]">대화가 진행되며 dominant 가치가 어떤 이론에서 어떤 이론으로 넘어가는지.</p>

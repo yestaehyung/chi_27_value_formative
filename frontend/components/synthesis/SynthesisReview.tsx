@@ -305,11 +305,11 @@ export default function SynthesisReview() {
               </div>
             </div>
 
-            {/* 상단 — 세션 횡단 기록 (participant로 묶인 멀티 세션, 서술 비교, 판정 없음) */}
+            {/* 상단 — 여러 세션 비교 (participant로 묶인 멀티 세션, 서술 비교, 판정 없음) */}
             {cross && (
               <div className="card p-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-[#191919]">세션 횡단 기록 — 같은 사람, 다른 상황</h3>
+                  <h3 className="text-sm font-bold text-[#191919]">여러 세션 비교 — 같은 사람, 다른 상황</h3>
                   {cross.specVersion != null && (
                     <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-[10px] font-medium text-[#4338ca]">
                       participant spec v{cross.specVersion}

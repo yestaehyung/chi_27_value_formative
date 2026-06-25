@@ -95,7 +95,7 @@ export default function SimulatePage() {
         <h1 className="text-xl font-bold text-balance">합성 데이터 생성 시뮬레이션</h1>
         <p className="mt-1 text-sm text-slate-500">
           합성 사용자(User Agent)와 Service Agent가 자동으로 대화해 합성 대화·온톨로지 데이터를 생성합니다.
-          User Agent는 숨은 의도(ground truth)를 갖고 반응하고, Service Agent의 추론 품질은 evaluation으로 측정됩니다.
+          User Agent는 숨은 의도(ground truth)를 갖고 반응하고, Service Agent가 그 의도를 얼마나 잘 추론하는지를 evaluation으로 평가합니다.
         </p>
       </div>
 
