@@ -91,8 +91,8 @@ export default function SimulatePage() {
   return (
     <>
       <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">합성 데이터 생성 시뮬레이션</h1>
+      <div className="msg-in">
+        <h1 className="text-xl font-bold text-balance">합성 데이터 생성 시뮬레이션</h1>
         <p className="mt-1 text-sm text-slate-500">
           합성 사용자(User Agent)와 Service Agent가 자동으로 대화해 합성 대화·온톨로지 데이터를 생성합니다.
           User Agent는 숨은 의도(ground truth)를 갖고 반응하고, Service Agent의 추론 품질은 evaluation으로 측정됩니다.
@@ -100,7 +100,7 @@ export default function SimulatePage() {
       </div>
 
       {/* 모드 전환: 직접 실행(온디맨드) ↔ 합성 대화 배치 검수 */}
-      <div className="inline-flex rounded-xl border border-[#e4e8eb] bg-white p-1 text-sm">
+      <div className="msg-in inline-flex rounded-xl border border-[#e4e8eb] bg-white p-1 text-sm" style={{ animationDelay: "60ms" }}>
         {([["run", "▶ 직접 실행"], ["synth", "🧪 합성 대화 보기"]] as const).map(([k, label]) => (
           <button
             key={k}
@@ -118,7 +118,7 @@ export default function SimulatePage() {
       <>
 
       {/* 실행 설정 + 선택된 페르소나 */}
-      <div className="card p-5">
+      <div className="msg-in card p-5" style={{ animationDelay: "120ms" }}>
         <div className="flex flex-wrap items-end gap-4">
           <div className="min-w-[220px] flex-1">
             <label className="text-xs font-medium text-slate-500">시나리오</label>
@@ -141,7 +141,7 @@ export default function SimulatePage() {
 
         {persona && (
           <div className="mt-4 flex items-center gap-3 border-t border-[#eef0f2] pt-4">
-            <img src={avatarUrl(persona.id)} alt="" className="h-11 w-11 shrink-0 rounded-full bg-[#eef2ff]" />
+            <img src={avatarUrl(persona.id)} alt="" className="h-11 w-11 shrink-0 rounded-full bg-[#eef2ff] outline outline-1 -outline-offset-1 outline-black/10" />
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold text-[#191919]">
                 {persona.name}
@@ -158,7 +158,7 @@ export default function SimulatePage() {
       </div>
 
       {/* 페르소나 선택 그리드 (Nemotron-Personas-Korea) */}
-      <div className="card p-5">
+      <div className="msg-in card p-5" style={{ animationDelay: "180ms" }}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-semibold">
             페르소나 선택{" "}
@@ -187,7 +187,7 @@ export default function SimulatePage() {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <img src={avatarUrl(p.id)} alt="" className="h-10 w-10 shrink-0 rounded-full bg-[#eef2ff]" />
+                    <img src={avatarUrl(p.id)} alt="" className="h-10 w-10 shrink-0 rounded-full bg-[#eef2ff] outline outline-1 -outline-offset-1 outline-black/10" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-1.5">
                         <span className="truncate font-semibold text-[#191919]">{p.name}</span>
@@ -287,7 +287,7 @@ export default function SimulatePage() {
               {/* 왼쪽 — 정체성 */}
               <div className="flex flex-col gap-3 border-b border-[#e4e8eb] p-5 sm:border-b-0 sm:border-r">
                 <img src={avatarUrl(persona.id)} alt=""
-                     className="h-24 w-24 rounded-2xl bg-[#eef2ff]" />
+                     className="h-24 w-24 rounded-2xl bg-[#eef2ff] outline outline-1 -outline-offset-1 outline-black/10" />
                 <div>
                   <div className="text-lg font-bold text-[#191919]">{persona.name}</div>
                   <div className="text-sm text-[#606060]">

@@ -26,15 +26,15 @@ export default function PsconListPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">PSCon 대화 시각화</h1>
+      <div className="msg-in">
+        <h1 className="text-xl font-bold text-balance">PSCon 대화 시각화</h1>
         <p className="mt-1 text-sm text-slate-500">
           PSCon 실제 쇼핑 대화 데이터셋(영어, fully-rated, 648건). 발화·명료화·추천·좋아요/싫어요가
           주석돼 있습니다 — 읽기 전용으로 그대로 시각화합니다.
         </p>
       </div>
 
-      <div className="card flex items-center justify-between gap-3 p-4">
+      <div className="msg-in card flex items-center justify-between gap-3 p-4" style={{ animationDelay: "60ms" }}>
         <span className="text-sm font-semibold">
           대화 <span className="font-normal text-[#b0b8c1]">· {filtered.length}/{convs.length} · 분석됨 {convs.filter((c) => c.analyzed).length} · <span className="text-[#4f46e5]">분석 풍부순 ↓</span></span>
         </span>
@@ -52,7 +52,7 @@ export default function PsconListPage() {
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="msg-in grid gap-3 sm:grid-cols-2 lg:grid-cols-3" style={{ animationDelay: "120ms" }}>
         {filtered.map((c) => (
           <Link
             key={c.convId}
