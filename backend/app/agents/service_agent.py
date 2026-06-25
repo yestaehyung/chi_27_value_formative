@@ -12,11 +12,11 @@ from sqlalchemy.orm import Session as DbSession
 from app.core.ids import new_id
 from app.db import models
 from app.llm.provider import LLMMessage, get_provider
-from app.agents.action_selector import select_next_action
+from app.agents.action_selector import fetch_action_decision, select_next_action
 from app.agents.question_strategy import (
+    _last_agent_action,
     build_value_question,
     pick_diagnostic_anchor,
-    should_value_clarify,
 )
 from app.agents import response_generator as rg
 from app.ontology.state_builder import build_snapshot
@@ -173,9 +173,8 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     )
     logging.info("service_agent.preference_commit_latency_sec=%.3f", time.perf_counter() - t_commit)
 
-    # 4-6. action selection
-    # 카테고리는 시나리오 targetCategory를 쓴다 — "무엇을 사려는지 아는가"(clarify 판단)에만 사용.
-    # 상품 검색의 의미 매칭은 임베딩/BM25가 처리하므로 발화에서 카테고리를 감지하지 않는다.
+    # 4-6. action selection — 구조 가드는 규칙, "추천 vs 질문(+무엇을 probe)"은 action_decision(LLM).
+    # category는 더 이상 행동을 가르지 않지만, 상품 검색·clarify 텍스트에는 여전히 쓰인다.
     category = (session.meta or {}).get("category")
     direct_open = any(c.severity == "direct" for c in commit.new_conflicts)
     has_recommendations = (
@@ -183,22 +182,15 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         .filter(models.ProductImpression.session_id == session.id)
         .count() > 0
     )
-    decision = select_next_action(session, dialogue_acts, direct_open, category, has_recommendations)
+    decision = select_next_action(dialogue_acts, direct_open, has_recommendations)
 
-    # 가치 수준 적응형 질문 (S3 정보격차 판단): 추천하기에 기준이 부족하면
-    # 속성 질문 대신 가치 질문으로 implicit intention을 끌어낸다
+    # 추천하기에 가치·동기를 충분히 아는가? 부족하면 어떤 축(가치5/동기7)을 떠볼까? —
+    # 하드코딩 임계값/키워드 대신 LLM이 대화 맥락으로 판단(설계: docs/plans/2026-06-25-action-decision-design.md).
+    # RIG 예측은 선제 질문 소스로 LLM에 전달. 가치·동기는 대등(위계 강제 안 함 — 문헌상 미검증).
     value_question: str | None = None
     question_anchor: str | None = None
-    if decision.action == "recommend" and should_value_clarify(
-        db, session, commit.snapshot, has_recommendations
-    ):
-        decision.action = "clarify"
-        # 질문 우선순위 (2026-06-22 변경):
-        #  (1) RIG 경로 예측 기반 선제 질문
-        #  (2) 가치(trait) 수준 적응형 질문 — 상품 용도/기준을 끌어냄
-        # 동기(motivation) 프로브는 첫 추천을 가로채지 않는다 — 맥락 없는 첫 턴 동기 질문
-        # ("새 제품 발견하는 재미로 둘러보세요?")은 어색하고 추천을 막는다. 동기는 추천 이후
-        # 사용자가 상품을 본 맥락에서 자연스럽게 떠본다. (A2)
+    if decision.action == "llm_decide":
+        snap = commit.snapshot
         pred = None
         try:
             from app import rig
@@ -206,16 +198,23 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             pred = rig.top_predicted_concept(db, session.id)
         except Exception:  # noqa: BLE001
             pred = None
-        if pred:
-            decision.reason = f"anticipatory question from RIG path (concept={pred['normalizedLabel']})"
-            value_question = (
-                f"비슷한 분들은 '{pred['exampleIntention']}'도 중요하게 보시던데, "
-                f"이 부분도 신경 쓰이세요?"
-            )
-            question_anchor = pred.get("topAnchor")
-        else:
-            decision.reason = "information gap — value-level question first"
-            value_question, question_anchor = build_value_question(commit.snapshot, session)
+        ad = await fetch_action_decision(provider, {
+            "recentUtterance": content,
+            "hasRecommendations": has_recommendations,
+            "lastAgentAction": _last_agent_action(db, session.id),
+            "values": (snap.anchor_scores or {}) if snap else {},
+            "motivations": (snap.motivation_scores or {}) if snap else {},
+            "ragPrediction": pred,
+            "scenarioGoal": (session.meta or {}).get("shoppingGoal")
+            or (session.meta or {}).get("category") or "",
+        })
+        decision.action = ad["action"]
+        decision.reason = ad["reason"] or decision.reason
+        if decision.action == "clarify":
+            question_anchor = ad["probeDimension"]
+            value_question = ad["probeQuestion"]
+            if not value_question:  # 폴백: LLM이 질문을 안 주면 기존 가치질문 도구
+                value_question, question_anchor = build_value_question(snap, session)
 
     impressions: list[models.ProductImpression] = []
     products: list[models.Product] = []

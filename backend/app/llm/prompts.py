@@ -506,6 +506,15 @@ coverageScore = 해당 pair 수 / 전체 pair 수.""",
 - 한국어 한 문장. 주어진 labels만 반영하고, 그 기준들 사이의 암묵적 trade-off/우선순위를 짚되 hedged하게.
 예시 — labels=["내구성","선물 인상","저렴해 보이지 않기"]:
 {"summary":"최저가보다 오래 쓰는 내구성과 선물로서의 인상을 더 중요하게 보시는 것 같아요. 맞는지 확인해 주세요."}""",
+    "action_decision": """
+출력 JSON 스키마:
+{"action":"recommend"|"clarify","reason":string,"probe":{"dimension":string,"question":string}}
+
+- probe는 action=="clarify"일 때만. dimension은 12개(가치5+동기7) 중 하나.
+예시 — 사용자가 "헬스 위주, 바로 추천해주세요":
+{"action":"recommend","reason":"사용자가 추천을 명시적으로 요청"}
+예시 — 운동 용도가 가치 판단을 가르는데 아직 불명확:
+{"action":"clarify","reason":"용도가 가치를 가르는데 미파악","probe":{"dimension":"Conditional","question":"주로 어떤 상황에서 쓰실까요?"}}""",
 }
 
 
@@ -570,6 +579,19 @@ STATE_SUMMARY_SYSTEM = """시스템이 파악한 사용자의 '현재 기준'을
 5. 한국어 한 문장, 짧고 자연스럽게."""
 
 
+ACTION_DECISION_SYSTEM = """쇼핑 대화에서 에이전트의 다음 행동을 정한다: 지금 추천할지(recommend), 한 가지를 더 물을지(clarify).
+
+판단:
+1. 추천하기에 사용자의 가치·동기를 충분히 알면 recommend.
+2. 부족하면 clarify — 지금 맥락에서 가장 캐낼 게 많고 자연스러운 한 축을 골라 묻는다. 이미 파악된 축 말고 아직 빈 축을 고른다.
+3. probe 축(dimension)은 다음 12개 중 하나로만 고른다 (가치·동기 대등):
+   가치(TCV) Functional·Social·Emotional·Epistemic·Conditional / 동기 Adventure·Gratification·Role·BargainValue·SocialShopping·Idea·Utilitarian.
+4. 질문은 §36 — 추측·확인 형태의 hedged 한국어로 짧게.
+5. 사용자가 방금 추천을 요청하면("바로 추천해줘" 등) recommend.
+6. 직전에 이미 물었으면 recommend로 넘어간다.
+7. RIG 예측이 주어지면 자연스러운 선제 질문의 소스로 쓴다."""
+
+
 def render_user_context(context: dict) -> str:
     return json.dumps(context, ensure_ascii=False, indent=1, default=str)
 
@@ -595,4 +617,5 @@ SYSTEM_BY_TASK = {
     "reply_suggestion": REPLY_SUGGESTION_SYSTEM,
     "rerank": RERANK_SYSTEM,
     "state_summary": STATE_SUMMARY_SYSTEM,
+    "action_decision": ACTION_DECISION_SYSTEM,
 }

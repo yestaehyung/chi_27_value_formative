@@ -901,6 +901,56 @@ def state_summary(ctx: dict) -> dict:
     return {"summary": f"지금은 '{head}'을(를) 더 중요하게 보시는 것 같아요. 맞는지 확인해 주세요."}
 
 
+_PROBE_Q = {
+    "Functional": "성능·가격·오래 쓰는 신뢰 중 무엇을 가장 포기하기 어려우세요?",
+    "Social": "받는 분이나 주변에서 이 선택을 어떻게 느끼면 좋겠어요?",
+    "Emotional": "고르실 때 꼭 피하고 싶은 상황이 있을까요?",
+    "Epistemic": "비교하실 때 어떤 점이 가장 헷갈리세요?",
+    "Conditional": "주로 어떤 상황에서 쓰게 될까요?",
+    "Adventure": "새로운 걸 발견하는 재미로 둘러보고 싶으세요?",
+    "Gratification": "이번 구매가 자신을 위한 선물 같은 의미도 있을까요?",
+    "Role": "받는 분이 좋아할 만한 걸 고르는 과정이 즐거우세요?",
+    "BargainValue": "좋은 가격에 잘 샀다는 '득템' 느낌이 중요하세요?",
+    "SocialShopping": "주변 사람과 함께 고르거나 의견을 듣고 싶으세요?",
+    "Idea": "요즘 인기나 트렌드를 살펴보는 것도 목적인가요?",
+    "Utilitarian": "빠르게 딱 맞는 걸 정하고 끝내고 싶으세요?",
+}
+
+
+def _probe_target(values: dict, motivations: dict) -> tuple[str, str]:
+    """가장 비어있는 축(가치5+동기7) 선택. 전부 0이면 기본 가치축(Functional)."""
+    from app.ontology.anchor_mapper import MOTIVATION_DIMS, TRAIT_ANCHORS
+
+    cand = [(a, values.get(a, 0.0)) for a in TRAIT_ANCHORS] \
+        + [(m, motivations.get(m, 0.0)) for m in MOTIVATION_DIMS]
+    dim = min(cand, key=lambda x: x[1])[0] if cand else "Functional"
+    return dim, _PROBE_Q.get(dim, "이번 쇼핑에서 가장 중요하게 보는 기준이 무엇일까요?")
+
+
+def action_decision(ctx: dict) -> dict:
+    """결정론 행동 판단 (mock 계약·폴백). 실 provider는 LLM이 대화 맥락으로 판단.
+    규칙: 명시적 추천요구→recommend / 추천이력 있음→recommend / 직전 clarify→recommend
+    (연속 금지) / 가치·동기 신호 빈약→clarify + 가장 빈 축 probe / 그 외→recommend."""
+    utt = ctx.get("recentUtterance") or ""
+    has_rec = bool(ctx.get("hasRecommendations"))
+    last = ctx.get("lastAgentAction")
+    values = ctx.get("values") or {}
+    motivations = ctx.get("motivations") or {}
+
+    if any(k in utt for k in ("추천", "바로", "보여줘", "골라줘", "정해줘")):
+        return {"action": "recommend", "reason": "user explicitly asked to recommend"}
+    if has_rec:
+        return {"action": "recommend", "reason": "recommendations exist — re-recommend with updated state"}
+    if last == "clarify":
+        return {"action": "recommend", "reason": "already clarified once — recommend (PSCon pattern)"}
+    value_count = sum(1 for v in values.values() if isinstance(v, (int, float)) and v >= 0.1)
+    if value_count < 2:
+        dim, q = _probe_target(values, motivations)
+        return {"action": "clarify", "reason": "value/motivation signals sparse — probe",
+                "probe": {"dimension": dim, "question": q}}
+    return {"action": "recommend", "reason": "enough understanding to recommend"}
+
+
 def generic_text(_prompt: str) -> str:
     return "확인했어요. 제가 이해한 기준이 맞는지 오른쪽 패널에서 확인해 주세요."
 
@@ -926,4 +976,5 @@ TASK_HANDLERS = {
     "reply_suggestion": reply_suggestion,
     "rerank": rerank,
     "state_summary": state_summary,
+    "action_decision": action_decision,
 }
