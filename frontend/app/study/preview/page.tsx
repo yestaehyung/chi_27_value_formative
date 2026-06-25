@@ -43,6 +43,29 @@ export default function ChatPreviewPage() {
     setTimeout(() => setToast(null), 3500);
   };
 
+  // 대화 + 추천 상품을 플레인 텍스트로 클립보드에 복사 (session 페이지와 동일 로직)
+  const copyConversation = useCallback(async () => {
+    const label = (r: string) => (r === "user" ? "나" : "에이전트");
+    const lines: string[] = [];
+    if (scenarioTitle) lines.push(`# ${scenarioTitle}`, "");
+    for (const t of turns) {
+      if (t.id.startsWith("optimistic_")) continue; // 전송 중 임시 메시지 제외
+      lines.push(`${label(t.role)}: ${t.content}`);
+      for (const imp of impressionsByTurn[t.id] ?? []) {
+        const p = imp.product;
+        if (p) lines.push(`  · ${p.title}${p.price != null ? ` (${p.price.toLocaleString()}원)` : ""}`);
+      }
+      lines.push("");
+    }
+    const text = lines.join("\n").trim();
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast("대화를 클립보드에 복사했어요.");
+    } catch {
+      showToast("복사 실패 — 브라우저 권한을 확인해 주세요.");
+    }
+  }, [turns, impressionsByTurn, scenarioTitle]);
+
   // 1단계: 시나리오 목록 로드 (실제 session/new와 동일)
   useEffect(() => {
     api.scenarios().then((d) => setScenarios(d.scenarios)).catch(console.error);
@@ -242,6 +265,14 @@ export default function ChatPreviewPage() {
       <div className="card flex min-h-0 flex-col">
         <div className="flex items-center justify-between border-b border-[#f0f2f4] px-5 py-3">
           <div className="text-sm font-bold text-[#191919]">쇼핑 대화 {scenarioTitle && <span className="ml-1 text-xs font-normal text-[#9aa0a6]">— {scenarioTitle}</span>}</div>
+          <button
+            onClick={copyConversation}
+            disabled={turns.length === 0}
+            title="대화 내용을 클립보드에 복사"
+            className="rounded-lg border border-[#e4e8eb] px-2.5 py-1 text-xs text-[#5f6368] transition-colors duration-150 hover:border-[#4f46e5] hover:text-[#4f46e5] active:scale-[0.96] disabled:opacity-40"
+          >
+            📋 대화 복사
+          </button>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">

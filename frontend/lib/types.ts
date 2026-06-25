@@ -237,6 +237,7 @@ export type SessionInfo = {
   pairCount?: number;
   conflictCount?: number;
   topicCount?: number;
+  participantId?: string;
 };
 
 export type Scenario = {

@@ -68,6 +68,9 @@ export default function ResearchSessionPage() {
 
   const productById: Record<string, any> = {};
   for (const imp of data.impressions) if (imp.product) productById[imp.product.id] = imp.product;
+  // 추천 노출(impression)을 turn별로 — replay에서 각 에이전트 발화 밑에 추천 카드로 표시
+  const impressionsByTurn: Record<string, any[]> = {};
+  for (const imp of data.impressions) (impressionsByTurn[imp.turnId] ??= []).push(imp);
 
   return (
     <div className="space-y-4">
@@ -98,6 +101,31 @@ export default function ResearchSessionPage() {
           {data.turns.map((t: Turn) => (
             <div key={t.id}>
               <MessageBubble turn={t} showMeta />
+              {(impressionsByTurn[t.id] ?? []).length > 0 && (
+                <div className="ml-4 mt-2 flex gap-2 overflow-x-auto pb-1">
+                  {impressionsByTurn[t.id].map((imp: any) => (
+                    <div key={imp.id} className="w-[230px] shrink-0 rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="shrink-0 rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-white">#{imp.rank}</span>
+                        <span className="truncate text-xs font-semibold text-[#191919]">{imp.product?.title ?? imp.productId}</span>
+                      </div>
+                      {imp.product?.price != null && (
+                        <div className="mt-0.5 text-[11px] tabular-nums text-emerald-700">{imp.product.price.toLocaleString()}원</div>
+                      )}
+                      {imp.recommendationReason && (
+                        <div className="mt-1 line-clamp-2 text-[10px] text-[#606060]">{imp.recommendationReason}</div>
+                      )}
+                      {(imp.matchedIntentions ?? []).length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-0.5">
+                          {imp.matchedIntentions.slice(0, 3).map((m: string, i: number) => (
+                            <span key={i} className="rounded bg-white px-1 py-0.5 text-[9px] text-emerald-700">✓{m}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               {(feedbackByTurn[t.id] ?? []).length > 0 && (
                 <div className="ml-4 mt-1 space-y-1">
                   {feedbackByTurn[t.id].map((f: any) => (
