@@ -35,7 +35,8 @@ def _has(text: str, *kws: str) -> bool:
 
 
 def _topic(label, description, explicitness, confidence, priority, evidence,
-           kind="preference", implied_hard_constraint=None, implied_avoidance=None):
+           kind="preference", implied_hard_constraint=None, implied_avoidance=None,
+           price_min=None, price_max=None):
     # M1: 계약상 원본은 confidenceLevel 범주 — 기존 숫자 인자에서 레벨을 파생해
     # 양쪽 다 내보낸다 (merge는 레벨 우선, 숫자는 폴백).
     level = ("directly_stated" if confidence >= 0.8
@@ -50,6 +51,8 @@ def _topic(label, description, explicitness, confidence, priority, evidence,
         "kind": kind,  # preference | constraint | avoidance | context
         "impliedHardConstraint": implied_hard_constraint,
         "impliedAvoidance": implied_avoidance,
+        "priceMin": price_min,
+        "priceMax": price_max,
         "sourceEvidence": evidence,
     }
 
@@ -117,16 +120,25 @@ def _topics_from_turn(turn: dict) -> list[dict]:
             "explicit", 0.7, "medium", ev,
         ))
 
-    from app.products.scoring import parse_budget_won
+    from app.products.scoring import parse_price_range
 
-    budget_won = parse_budget_won(text)
-    if budget_won and _has(text, "이하", "이내", "안에", "안으로", "넘지", "까지", "예산", "아래"):
-        budget = budget_won // 10000
+    lo, hi = parse_price_range(text)
+    if (lo is not None or hi is not None) and _has(
+        text, "이하", "이내", "안에", "안으로", "넘지", "까지", "예산", "아래",
+        "이상", "사이", "에서", "부터", "원대",
+    ):
+        # mock은 LLM 대역: 발화를 숫자로 풀어 priceMin/priceMax로 방출(문자열 아님).
+        if lo and hi:
+            label = f"가격 {lo // 10000}~{hi // 10000}만원"
+        elif hi:
+            label = f"가격 {hi // 10000}만원 이하"
+        else:
+            label = f"가격 {lo // 10000}만원 이상"
         out.append(_topic(
-            f"예산 {budget}만원 이하",
-            f"예산 상한이 약 {budget}만원이다.",
+            label,
+            "사용자가 가격대를 제시했다.",
             "explicit", 0.9, "must_have", ev, kind="constraint",
-            implied_hard_constraint=f"예산 {budget}만원 이하",
+            price_min=lo, price_max=hi,
         ))
 
     if _has(text, "오래 쓰", "오래 써", "한달사용", "한 달 사용", "장기", "오래 사용"):
@@ -879,6 +891,16 @@ def reply_suggestion(ctx: dict) -> dict:
     return {"suggestions": sug}
 
 
+def state_summary(ctx: dict) -> dict:
+    """결정론 요약 — 칩 라벨 조합(B1). 실 provider는 LLM이 trade-off 문장을 생성한다.
+    이 mock이 곧 §36 hedged 계약이자 LLM 실패 시의 폴백 형태."""
+    labels = [l for l in (ctx.get("labels") or []) if l][:3]
+    if not labels:
+        return {"summary": "아직 기준을 파악하는 중이에요. 원하시는 조건을 자유롭게 말씀해 주세요."}
+    head = ", ".join(labels)
+    return {"summary": f"지금은 '{head}'을(를) 더 중요하게 보시는 것 같아요. 맞는지 확인해 주세요."}
+
+
 def generic_text(_prompt: str) -> str:
     return "확인했어요. 제가 이해한 기준이 맞는지 오른쪽 패널에서 확인해 주세요."
 
@@ -903,4 +925,5 @@ TASK_HANDLERS = {
     "card_rationale": card_rationale,
     "reply_suggestion": reply_suggestion,
     "rerank": rerank,
+    "state_summary": state_summary,
 }

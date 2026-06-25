@@ -314,6 +314,7 @@ FORMAT_BY_TASK = {
 "priority":"low"|"medium"|"high"|"must_have",
 "kind":"preference"|"constraint"|"avoidance"|"context",
 "impliedHardConstraint":string|null,"impliedAvoidance":string|null,
+"priceMin":number|null,"priceMax":number|null,
 "sourceEvidence":[{"type":"turn"|"feedback"|"product_cue","id":string,"quoteOrSummary":string}]}]}
 
 confidenceLevel 기준: directly_stated(기준이 발화에 그대로 등장) /
@@ -328,11 +329,10 @@ strong_inference(인용 스팬에서 맥락상 명확히 추론) / weak_inferenc
 예시 — kind=avoidance: 피드백(id=fb_y1)이 dislike + "선물인데 너무 저렴해 보이면 좀 그래요."일 때:
 {"topics":[{"label":"선물로 너무 저렴해 보이지 않기","description":"선물 맥락에서 너무 저렴해 보이는 상품을 피하려 한다.","explicitness":"implicit","confidenceLevel":"strong_inference","priority":"high","kind":"avoidance","impliedHardConstraint":null,"impliedAvoidance":"초저가로 보이는 상품","sourceEvidence":[{"type":"feedback","id":"fb_y1","quoteOrSummary":"너무 저렴해 보이면 좀 그래요"}]}]}
 
-예시 — kind=constraint: turn(id=turn_x3)이 "예산은 20만원 이하면 좋겠어요."일 때:
-{"topics":[{"label":"예산 20만원 이하","description":"가격 상한을 직접 제시했다.","explicitness":"explicit","confidenceLevel":"directly_stated","priority":"must_have","kind":"constraint","impliedHardConstraint":"가격 ≤ 200000","impliedAvoidance":null,"sourceEvidence":[{"type":"turn","id":"turn_x3","quoteOrSummary":"예산은 20만원 이하"}]}]}
-
 규칙:
 - label은 위 예시처럼 이번 입력 내용에서 추출한 구체적인 한국어 구절이어야 한다. 스키마 설명 문구를 그대로 복사하지 말라.
+- 가격/예산 제약은 priceMin/priceMax에 원화 정수를 넣는다(없으면 null). 예: "20만원 이하"→priceMin:null,priceMax:200000 /
+  "10~20만원"→priceMin:100000,priceMax:200000 / "10만원 이상"→priceMin:100000,priceMax:null. 이때 impliedHardConstraint는 null로 둔다.
 - 입력의 turns/feedback에 실제로 존재하는 evidence만 근거로 사용하라. id는 입력에 주어진 것을 그대로 쓴다.
 - topic을 지지하는 evidence id는 빠짐없이 전부 넣어라. sourceEvidence가 비는 topic은 내지 말라.
 - 입력에 없는 내용을 상상해서 topic을 만들지 말라. 새 evidence에서 추론되는 topic이 없으면 {"topics":[]}.
@@ -499,6 +499,13 @@ coverageScore = 해당 pair 수 / 전체 pair 수.""",
 {"ranking":[
 {"index":2,"reason":"가성비를 중시하셔서 가격 부담이 적고 평점도 괜찮은 이 제품을 위로 골랐어요","matched":["가격이 낮은 편","평점이 무난함"],"weak":["리뷰 수는 적은 편"]},
 {"index":5,"reason":"품질은 좋지만 가격이 높아 가성비 기준엔 덜 맞아 아래로","matched":["브랜드 인지도 높음"],"weak":["가격대가 높음"]}]}""",
+    "state_summary": """
+출력 JSON 스키마:
+{"summary": string}
+
+- 한국어 한 문장. 주어진 labels만 반영하고, 그 기준들 사이의 암묵적 trade-off/우선순위를 짚되 hedged하게.
+예시 — labels=["내구성","선물 인상","저렴해 보이지 않기"]:
+{"summary":"최저가보다 오래 쓰는 내구성과 선물로서의 인상을 더 중요하게 보시는 것 같아요. 맞는지 확인해 주세요."}""",
 }
 
 
@@ -552,6 +559,17 @@ REPLY_SUGGESTION_SYSTEM = """너는 쇼핑 대화에서 '사용자가 다음에 
 6. 정확히 3개. 사용자가 실제로 할 법한 말만."""
 
 
+STATE_SUMMARY_SYSTEM = """시스템이 파악한 사용자의 '현재 기준'을 한 문장으로 요약한다.
+참가자에게 보이며, 자신의 숨은 결정 기준을 확인·수정하도록 돕는 문장이다.
+
+원칙:
+1. 주어진 기준(labels) 안에서만 쓴다.
+2. 기준들 사이의 trade-off·우선순위를 한 문장으로 짚는다 ("A보다 B를 더 중요하게").
+3. 추측·확인 형태로 쓴다(§36): "~을 더 중요하게 보시는 것 같아요"로 적고 끝에 "맞는지 확인해 주세요".
+4. 해당 상품 종류에 맞는 기준어로 쓴다.
+5. 한국어 한 문장, 짧고 자연스럽게."""
+
+
 def render_user_context(context: dict) -> str:
     return json.dumps(context, ensure_ascii=False, indent=1, default=str)
 
@@ -576,4 +594,5 @@ SYSTEM_BY_TASK = {
     "card_rationale": CARD_RATIONALE_SYSTEM,
     "reply_suggestion": REPLY_SUGGESTION_SYSTEM,
     "rerank": RERANK_SYSTEM,
+    "state_summary": STATE_SUMMARY_SYSTEM,
 }

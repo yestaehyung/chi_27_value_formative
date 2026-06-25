@@ -95,9 +95,23 @@ def compute_anchor_scores(
     return scores, breakdown
 
 
-def build_snapshot(db: DbSession, session: models.Session) -> models.PreferenceStateSnapshot:
+def build_snapshot(
+    db: DbSession, session: models.Session, llm_summary: str | None = None,
+) -> models.PreferenceStateSnapshot:
     topics = get_active_topics(db, session.id)
     meta = session.meta or {}
+    # 한 줄 요약(state_summary)은 칩이 바뀐 commit에서만 새로 생성된다. 새 문장이 안
+    # 넘어오면(칩 미변경·칩 편집·충돌 해소 등) 직전 스냅샷 문장을 이어받아 — B1로 강등돼
+    # 깜빡이지 않게 한다. 직전도 없으면 build_user_visible_summary가 B1로 폴백.
+    if not (llm_summary and llm_summary.strip()):
+        prev = (
+            db.query(models.PreferenceStateSnapshot)
+            .filter(models.PreferenceStateSnapshot.session_id == session.id)
+            .order_by(models.PreferenceStateSnapshot.created_at.desc())
+            .first()
+        )
+        if prev and prev.user_visible_summary:
+            llm_summary = prev.user_visible_summary.get("oneSentenceSummary")
     last_turn = (
         db.query(models.Turn)
         .filter(models.Turn.session_id == session.id)
@@ -112,9 +126,16 @@ def build_snapshot(db: DbSession, session: models.Session) -> models.PreferenceS
     hard_constraints: list[str] = list(meta.get("extraHardConstraints", []))
     soft_preferences: list[str] = []
     avoidances: list[str] = list(meta.get("extraAvoidances", []))
+    price_min: int | None = None
+    price_max: int | None = None
 
     for t in ordered:
         hints = t.hints or {}
+        # 구조화 예산 — LLM/mock이 추출한 숫자 그대로(문자열 파싱 없음). 여러 토픽이면 뒤가 우선.
+        if hints.get("priceMin") is not None:
+            price_min = hints["priceMin"]
+        if hints.get("priceMax") is not None:
+            price_max = hints["priceMax"]
         constraint = hints.get("impliedHardConstraint")
         avoid = hints.get("impliedAvoidance")
         if constraint and constraint not in hard_constraints:
@@ -155,6 +176,8 @@ def build_snapshot(db: DbSession, session: models.Session) -> models.PreferenceS
         anchor_breakdown=anchor_breakdown,
         motivation_scores=(session.meta or {}).get("motivationScores", {}),
         hard_constraints=hard_constraints,
+        price_min=price_min,
+        price_max=price_max,
         soft_preferences=soft_preferences,
         avoidances=avoidances,
         priority_order=[t.label for t in ordered],
@@ -163,7 +186,9 @@ def build_snapshot(db: DbSession, session: models.Session) -> models.PreferenceS
             "ambiguousTopics": [t.label for t in topics if t.status == "candidate"],
             "conflictIds": [c.id for c in open_conflicts],
         },
-        user_visible_summary=build_user_visible_summary(ordered, bool(open_conflicts)),
+        user_visible_summary=build_user_visible_summary(
+            ordered, bool(open_conflicts), llm_sentence=llm_summary
+        ),
     )
     db.add(snapshot)
     db.flush()

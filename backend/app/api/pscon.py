@@ -21,13 +21,18 @@ from app.preference_commit.commit_engine import run_preference_commit
 
 router = APIRouter(prefix="/api/pscon", tags=["pscon"])
 
-# Safe default: handle environments where repo siblings aren't available (Railway)
+# PSCon 원본 데이터셋은 repo 형제가 아니라 한 단계 위(naver_value_evaluation/PSCon)에 있다
+# (CLAUDE.md: "../PSCon/"). 환경마다 위치가 달라(로컬 vs Railway) 여러 후보를 탐색하고,
+# 없으면 sentinel(존재하지 않는 경로)로 둬 _load()가 빈 리스트로 graceful 폴백한다.
+# (주의: /dev/null은 '존재하는' 파일이라 sentinel로 쓰면 빈 내용 read→JSONDecodeError가 났었음.)
 _FILE_DIR = Path(__file__).resolve().parents[2]  # backend/
-_DEFAULT_PSCON = _FILE_DIR.parent / "PSCon" / "dataset" / "conversation_en_fully_rated.json"
-if _DEFAULT_PSCON.exists():
-    DEFAULT_PATH = _DEFAULT_PSCON
-else:
-    DEFAULT_PATH = Path("/dev/null")  # Sentinel for "not available"
+_PSCON_REL = ("PSCon", "dataset", "conversation_en_fully_rated.json")
+_PSCON_CANDIDATES = [
+    _FILE_DIR.parent.parent.joinpath(*_PSCON_REL),  # naver_value_evaluation/PSCon (로컬)
+    _FILE_DIR.parent.joinpath(*_PSCON_REL),         # valuecommit/PSCon (혹시 동봉된 경우)
+]
+DEFAULT_PATH = next((p for p in _PSCON_CANDIDATES if p.exists()),
+                    _FILE_DIR / "_pscon_not_available")  # 존재하지 않는 sentinel
 
 PSCON_PATH = Path(os.environ.get("VC_PSCON_PATH", str(DEFAULT_PATH)))
 _RESULTS_DEFAULT = _FILE_DIR / "data" / "pscon_analysis.json"

@@ -21,7 +21,7 @@ from app.agents.question_strategy import (
 from app.agents import response_generator as rg
 from app.ontology.state_builder import build_snapshot
 from app.preference_commit.commit_engine import run_preference_commit
-from app.products.search import ScoredProduct, detect_category, search_products
+from app.products.search import ScoredProduct, search_products
 from app.wimhf.pair_builder import build_pairs_for_feedback
 
 
@@ -73,11 +73,10 @@ def _last_recommended_products(db: DbSession, session_id: str) -> list[models.Pr
 
 
 def _update_surface_intent(session: models.Session, content: str) -> None:
+    # 카테고리는 더 이상 키워드로 감지하지 않는다(하드코딩 제거, 2026-06-23).
+    # 발화 원문만 보관 — 상품 카테고리는 임베딩/BM25 의미검색이 처리한다.
     meta = dict(session.meta or {})
     surface = dict(meta.get("surfaceIntent", {}))
-    category = detect_category(content)
-    if category:
-        surface["productCategory"] = category
     surface["explicitQuery"] = content
     meta["surfaceIntent"] = surface
     session.meta = meta
@@ -175,10 +174,9 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     logging.info("service_agent.preference_commit_latency_sec=%.3f", time.perf_counter() - t_commit)
 
     # 4-6. action selection
-    # detect_category가 모르는 카테고리(니트·원피스 등)는 시나리오 targetCategory로 폴백한다.
-    # 폴백이 없으면 category=None → select_next_action이 영영 clarify에 갇혀 추천을 못 한다.
-    surface = (session.meta or {}).get("surfaceIntent", {})
-    category = surface.get("productCategory") or (session.meta or {}).get("category")
+    # 카테고리는 시나리오 targetCategory를 쓴다 — "무엇을 사려는지 아는가"(clarify 판단)에만 사용.
+    # 상품 검색의 의미 매칭은 임베딩/BM25가 처리하므로 발화에서 카테고리를 감지하지 않는다.
+    category = (session.meta or {}).get("category")
     direct_open = any(c.severity == "direct" for c in commit.new_conflicts)
     has_recommendations = (
         db.query(models.ProductImpression)
@@ -265,6 +263,8 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             soft_preferences=snapshot.soft_preferences if snapshot else [],
             topic_labels=snapshot.priority_order if snapshot else [],
             avoidances=snapshot.avoidances if snapshot else [],
+            price_min=snapshot.price_min if snapshot else None,
+            price_max=snapshot.price_max if snapshot else None,
             diagnostic_anchor=diagnostic,
             return_pool=True,
             pool_size=15,

@@ -47,26 +47,7 @@ async def extract_topics(
     out = await provider.generate_json(messages, task="topic_extraction", context=context)
     topics = out.get("topics") or []
 
-    # 하이브리드 가드: 예산처럼 결정적으로 파싱 가능한 제약은 LLM이 놓쳐도 규칙으로 보장
-    # (algorithm-audit.md — LLM 추출의 비결정성에 대한 안전망)
-    from app.products.scoring import parse_budget_won
-
-    has_budget = any("예산" in (t.get("impliedHardConstraint") or "") for t in topics if isinstance(t, dict))
-    if not has_budget:
-        for t in turns:
-            if t is None:
-                continue
-            text = t.content
-            budget = parse_budget_won(text)
-            if budget and any(k in text for k in ("이하", "이내", "안에", "안으로", "넘지", "까지", "예산", "아래")):
-                man = budget // 10000
-                topics.append({
-                    "label": f"예산 {man}만원 이하",
-                    "description": f"예산 상한이 약 {man}만원이다.",
-                    "explicitness": "explicit", "confidence": 0.9, "priority": "must_have",
-                    "kind": "constraint",
-                    "impliedHardConstraint": f"예산 {man}만원 이하",
-                    "sourceEvidence": [{"type": "turn", "id": t.id, "quoteOrSummary": text[:60]}],
-                })
-                break
+    # 예산/가격 제약도 LLM(topic_extraction)이 kind=constraint로 추출한다 — 키워드 가드 없음.
+    # (실제 경로 하드코딩 제거, 2026-06-24. 프롬프트가 canonical "가격 {min}~{max}원"을 지시;
+    #  mock은 LLM이 없으므로 mock_rules가 자체 결정론 규칙으로 동등 출력을 만든다.)
     return topics

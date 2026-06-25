@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from app.db import models
 from app.products import search_index
-from app.products.scoring import compute_product_score, hard_constraint_match, text_relevance
+from app.products.scoring import compute_product_score, hard_constraint_match, price_in_range, text_relevance
 from app.products.tag_filter import required_tags, tag_constraint_ok
 
 
@@ -41,24 +41,6 @@ PROBE_RULES = {
 }
 
 
-CATEGORY_KEYWORDS = {
-    "스마트워치": ["스마트워치", "워치", "스마트 워치", "스마트밴드"],
-    "러닝화": ["러닝화", "운동화", "런닝화", "신발"],
-    "노트북": ["노트북", "랩탑", "laptop"],
-    "무선이어폰": ["이어폰", "무선이어폰", "이어버드", "버즈"],
-    "여행용 캐리어": ["캐리어", "여행가방", "수트케이스", "여행 가방"],
-    "사무용 의자": ["의자", "오피스체어", "오피스 체어", "사무용의자"],
-    "향수": ["향수", "퍼퓸", "오드퍼퓸", "오드뚜왈렛"],
-}
-
-
-def detect_category(text: str) -> str | None:
-    for category, kws in CATEGORY_KEYWORDS.items():
-        if any(k in text for k in kws):
-            return category
-    return None
-
-
 def assign_bucket(p: models.Product) -> str:
     """TradeoffBucket per spec §14.3. Order matters: it spreads the seed catalog
     across distinct buckets so the recommendation set surfaces real trade-offs
@@ -86,6 +68,8 @@ def search_products(
     soft_preferences: list[str],
     topic_labels: list[str],
     avoidances: list[str],
+    price_min: int | None = None,
+    price_max: int | None = None,
     top_k: int = 3,
     diversify_by_tradeoff: bool = True,
     diagnostic_anchor: str | None = None,
@@ -104,27 +88,27 @@ def search_products(
         sim_by_id = {pid: sim for pid, sim in scored_ids}
         ids = [pid for pid, _ in scored_ids]
     else:
-        ids = search_index.retrieve(db, query, n=200, category=category)
+        ids = search_index.retrieve(db, query, n=200)
     if ids:
         pm = {p.id: p for p in db.query(models.Product).filter(models.Product.id.in_(ids)).all()}
         candidates = [pm[i] for i in ids if i in pm]
-        # 임베딩은 카테고리 필터를 안 하므로(인터페이스 단순), 여기서 적용 — 단 비면 전체 유지
-        if category:
-            in_cat = [p for p in candidates if p.category == category]
-            candidates = in_cat or candidates
+        if not candidates:  # retrieve id가 DB와 불일치(재시드/스테일 캐시) → 빈 추천 방지, 전체 폴백
+            candidates = db.query(models.Product).all()
+        # 카테고리 하드필터 제거(2026-06-23): detect_category가 발화 속 동반 언급
+        # (예: "노트북이랑 같이 쓸 모니터")을 잘못 집어, 의미검색이 올린 정답을 지웠다.
+        # 카테고리는 임베딩/BM25 의미 적합도 + LLM rerank가 자연히 처리한다.
     else:
-        q = db.query(models.Product)
-        if category:
-            q = q.filter(models.Product.category == category)
-        candidates = q.all() or db.query(models.Product).all()
+        candidates = db.query(models.Product).all()
 
     # 2) 이미지 있는 상품 우선 (없으면 전체 유지 — 데모/테스트 동작 보존)
     with_image = [p for p in candidates if p.image_url]
     if with_image:
         candidates = with_image
 
-    # 3) 하드 제약(예산 가격·데모 속성) 유지 — 가격 숫자비교 보존
-    passing = [p for p in candidates if hard_constraint_match(p, hard_constraints) > 0]
+    # 3) 하드 제약 — 데모 속성(hard_constraint_match) + 구조화 예산(price_in_range, 산수)
+    passing = [p for p in candidates
+               if hard_constraint_match(p, hard_constraints) > 0
+               and price_in_range(p, price_min, price_max)]
     if passing:
         candidates = passing
 

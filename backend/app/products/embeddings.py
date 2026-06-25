@@ -69,36 +69,43 @@ def _product_text(p) -> str:
 
 
 def ensure_product_vectors(products) -> None:
-    """상품 임베딩을 1회 계산해 캐시 (id → 정규화 벡터). 실패 시 다음 호출에서 재시도.
-    디스크 캐시(seed_dir/product_vectors.json)가 있으면 로드 — 매 시작 재임베딩/비용 방지."""
+    """상품 임베딩을 계산해 캐시 (id → 정규화 벡터). 실패 시 다음 호출에서 재시도.
+
+    디스크 캐시(seed_dir/product_vectors.json)는 **증분**이다 — 캐시에 있는 id는 재사용하고
+    캐시에 없는 id(새로 추가된 상품)만 임베딩한다. 그래서 풀에 N개를 추가해도 기존 수백 개를
+    재임베딩하지 않는다(비파괴 upsert와 짝). 캐시는 현재 상품 id 집합으로 prune해 다시 쓴다."""
     global _loaded
     if _loaded or not enabled():
         return
+    import json
     items = [(p.id, _product_text(p)) for p in products]
 
-    # 디스크 캐시 — 같은 id 집합이면 재사용
     cache = settings.seed_dir / "product_vectors.json"
+    cached: dict[str, list[float]] = {}
     if cache.exists():
         try:
-            import json
             cached = json.loads(cache.read_text(encoding="utf-8"))
-            if set(cached.keys()) == {pid for pid, _ in items}:
-                _product_vectors.update(cached)
-                _loaded = True
-                _log.info("product vectors loaded from disk cache (%d)", len(cached))
-                return
         except Exception as e:  # noqa: BLE001
             _log.warning("vector cache read failed: %s", e)
-
-    vecs = _embed([t for _, t in items])
-    if vecs is None:
-        return
-    _product_vectors.update({pid: v for (pid, _), v in zip(items, vecs)})
+    # 캐시에 있는 현재 상품 벡터는 그대로 재사용
+    _product_vectors.update({pid: cached[pid] for pid, _ in items if pid in cached})
+    # 캐시에 없는 id만 임베딩 (증분 — 새 상품만)
+    missing = [(pid, txt) for pid, txt in items if pid not in cached]
+    if missing:
+        vecs = _embed([t for _, t in missing])
+        if vecs is None:
+            return  # 실패 — _loaded 유지 안 함, 다음 호출에서 재시도
+        _product_vectors.update({pid: v for (pid, _), v in zip(missing, vecs)})
+        _log.info("embedded %d new product vectors (%d reused from cache)",
+                  len(missing), len(items) - len(missing))
+    else:
+        _log.info("product vectors loaded from disk cache (%d)", len(items))
     _loaded = True
+    # 디스크 캐시를 현재 상품 id 집합으로 갱신 (삭제된 id prune, 새 id 포함)
     try:
-        import json
-        cache.write_text(json.dumps(_product_vectors), encoding="utf-8")
-        _log.info("product vectors cached to disk (%d)", len(_product_vectors))
+        cache.write_text(
+            json.dumps({pid: _product_vectors[pid] for pid, _ in items if pid in _product_vectors}),
+            encoding="utf-8")
     except Exception as e:  # noqa: BLE001
         _log.warning("vector cache write failed: %s", e)
 

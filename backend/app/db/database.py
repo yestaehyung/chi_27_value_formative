@@ -46,6 +46,8 @@ def _migrate() -> None:
             ("stage", "TEXT"),
             ("anchor_breakdown", "TEXT DEFAULT '{}'"),
             ("motivation_scores", "TEXT DEFAULT '{}'"),
+            ("price_min", "INTEGER"),
+            ("price_max", "INTEGER"),
         ],
         "participants": [
             ("spec_markdown", "TEXT"),

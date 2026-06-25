@@ -95,23 +95,36 @@ async def run_preference_commit(
     concepts_by_label: dict = {}
     raw_relations: list = []
     raw_conflicts: list = []
+    # 한 줄 요약은 칩이 바뀐 commit(pending_new 있음)에서만 새로 생성한다. 안 바뀌면
+    # None → build_snapshot이 직전 문장을 이어받는다(깜빡임 방지).
+    state_summary_text: str | None = None
     if pending_new:
+        from app.preference_commit.summary_builder import fetch_state_summary
+
         all_labels = [t.label for t in pre_existing] + [p["label"] for p in pending_new]
         existing_ctx = [
             {"id": t.id, "label": t.label, "priority": t.priority, "status": t.status}
             for t in pre_existing
         ]
-        # Stages 2-4 + 6 fetched concurrently — one network round-trip instead of four
+        # 요약용 provisional 칩 라벨 (context 토픽 제외). 병합 전이라 라벨은 최종과 동일.
+        prov_labels = (
+            [t.label for t in pre_existing if (t.hints or {}).get("kind") != "context"]
+            + [p["label"] for p in pending_new if p.get("kind") != "context"]
+        )[:6]
+        scenario = (session.meta or {}).get("shoppingGoal") or (session.meta or {}).get("category") or ""
+        # Stages 2-4 + 6 + 요약 fetched concurrently — one network round-trip
         t3 = time.perf_counter()
-        anchors_by_label, concepts_by_label, raw_relations, raw_conflicts = await asyncio.gather(
+        (anchors_by_label, concepts_by_label, raw_relations, raw_conflicts,
+         state_summary_text) = await asyncio.gather(
             _safe(fetch_anchor_mappings(provider, pending_new), {}, "anchor_mapping"),
             _safe(fetch_concepts(provider, pending_new), {}, "conceptualization"),
             _safe(fetch_relations(provider, all_labels), [], "relation_classification"),
             _safe(fetch_conflicts(provider, existing_ctx, [p["label"] for p in pending_new]),
                   [], "conflict_detection"),
+            _safe(fetch_state_summary(provider, prov_labels, scenario), None, "state_summary"),
         )
         t4 = time.perf_counter()
-        logger.info("commit_engine.stage2_4_6_latency_sec=%.3f (anchors+concepts+relations+conflicts)", t4 - t3)
+        logger.info("commit_engine.stage2_4_6_latency_sec=%.3f (anchors+concepts+relations+conflicts+summary)", t4 - t3)
     else:
         logger.info("commit_engine.stage2_4_6_skipped=no_pending_new")
 
@@ -141,7 +154,7 @@ async def run_preference_commit(
         existing_topics=[t for t in pre_existing if t.id not in created_ids],
         new_topics=created,
     )
-    snapshot = build_snapshot(db, session)                                  # Stage 7-8
+    snapshot = build_snapshot(db, session, llm_summary=state_summary_text)  # Stage 7-8
     db.commit()
     t_write_end = time.perf_counter()
     logger.info("commit_engine.write_latency_sec=%.4f", t_write_end - t_write)

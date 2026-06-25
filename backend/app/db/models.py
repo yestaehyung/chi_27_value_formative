@@ -275,6 +275,9 @@ class PreferenceStateSnapshot(Base):
     active_concept_ids: Mapped[list] = mapped_column(JSON, default=list)
     anchor_scores: Mapped[dict] = mapped_column(JSON, default=dict)
     hard_constraints: Mapped[list] = mapped_column(JSON, default=list)
+    # 구조화 예산 — LLM이 추출한 숫자 그대로(원). 문자열 파싱 없이 산수로 필터. 없으면 null.
+    price_min: Mapped[int | None] = mapped_column(Integer)
+    price_max: Mapped[int | None] = mapped_column(Integer)
     soft_preferences: Mapped[list] = mapped_column(JSON, default=list)
     avoidances: Mapped[list] = mapped_column(JSON, default=list)
     priority_order: Mapped[list] = mapped_column(JSON, default=list)

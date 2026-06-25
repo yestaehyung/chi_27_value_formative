@@ -40,6 +40,54 @@ def parse_budget_won(text: str) -> int | None:
     return None
 
 
+def parse_price_range(text: str) -> tuple[int | None, int | None]:
+    """가격 표현 → (min_won, max_won). 한쪽은 None(무제한) 가능.
+
+    실제 경로는 LLM이 범위를 canonical '가격 {min}~{max}원'으로 추출하고, 이 함수는
+    그 정규형(및 일부 자연어)을 숫자로 되읽는다. 자연어 파싱은 mock·LLM 누락 시 폴백 —
+    한국어 표현을 전부 커버하려 들지 않는다(그건 LLM 몫). 산수 적용은 호출부에서.
+    """
+    import re
+
+    t = text.replace(",", "")
+    # 1) canonical bare-won range: '100000~200000' / '~200000' / '100000~'
+    m = re.search(r"(\d{4,})\s*~\s*(\d{4,})", t)
+    if m:
+        a, b = int(m.group(1)), int(m.group(2))
+        return (min(a, b), max(a, b))
+    m = re.search(r"~\s*(\d{4,})", t)
+    if m:
+        return (None, int(m.group(1)))
+    m = re.search(r"(\d{4,})\s*~", t)
+    if m:
+        return (int(m.group(1)), None)
+    # 2) 자연어 폴백 (만원/십만원)
+    won = [int(float(v) * 100000) for v in re.findall(r"(\d+(?:\.\d+)?)\s*십\s*만\s*원", t)]
+    if not won:
+        won = [int(float(v) * 10000) for v in re.findall(r"(\d+(?:\.\d+)?)\s*만\s*원", t)]
+    if not won:
+        won = [int(v) for v in re.findall(r"(\d{4,})\s*원", t)]
+    if not won:
+        return (None, None)
+    if len(won) >= 2:
+        return (min(won), max(won))
+    n = won[0]
+    if any(k in t for k in ("이상", "초과", "넘")):
+        return (n, None)
+    return (None, n)
+
+
+def price_in_range(product: models.Product, price_min: int | None, price_max: int | None) -> bool:
+    """구조화 예산 필터 — 산수만(문자열 파싱 없음). 가격 미상 상품은 통과(데이터 없음으로 배제 안 함)."""
+    if product.price is None:
+        return True
+    if price_min is not None and product.price < price_min:
+        return False
+    if price_max is not None and product.price > price_max:
+        return False
+    return True
+
+
 def hard_constraint_match(product: models.Product, hard_constraints: list[str]) -> float:
     """1.0 if all known constraints pass, 0.0 if a known constraint fails."""
     attrs = product.attributes or {}
@@ -48,9 +96,12 @@ def hard_constraint_match(product: models.Product, hard_constraints: list[str]) 
             return 0.0
         if "방수" in c and not attrs.get("waterproof"):
             return 0.0
-        if "예산" in c:
-            budget = parse_budget_won(c)
-            if budget and product.price and product.price > budget:
+        # 예산/가격 — 범위(min~max) 둘 다 적용. 언어→숫자는 LLM/parse_price_range가, 여기선 산수만.
+        if ("예산" in c or "가격" in c) and product.price is not None:
+            lo, hi = parse_price_range(c)
+            if lo is not None and product.price < lo:
+                return 0.0
+            if hi is not None and product.price > hi:
                 return 0.0
     return 1.0
 

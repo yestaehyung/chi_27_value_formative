@@ -227,6 +227,8 @@ def merge_topics(
                     "confidenceLevel": ext.get("confidenceLevel"),  # M1 범주 원본 (숫자는 캐시)
                     "impliedHardConstraint": ext.get("impliedHardConstraint"),
                     "impliedAvoidance": ext.get("impliedAvoidance"),
+                    "priceMin": ext.get("priceMin"),
+                    "priceMax": ext.get("priceMax"),
                     "evidence": evidence,
                 },
             )
