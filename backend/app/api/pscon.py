@@ -30,12 +30,18 @@ _PSCON_REL = ("PSCon", "dataset", "conversation_en_fully_rated.json")
 _PSCON_CANDIDATES = [
     _FILE_DIR.parent.parent.joinpath(*_PSCON_REL),  # naver_value_evaluation/PSCon (로컬)
     _FILE_DIR.parent.joinpath(*_PSCON_REL),         # valuecommit/PSCon (혹시 동봉된 경우)
+    _FILE_DIR.joinpath("pscon", "conversation_en_fully_rated.json"),  # backend/pscon (배포 동봉)
 ]
 DEFAULT_PATH = next((p for p in _PSCON_CANDIDATES if p.exists()),
                     _FILE_DIR / "_pscon_not_available")  # 존재하지 않는 sentinel
 
 PSCON_PATH = Path(os.environ.get("VC_PSCON_PATH", str(DEFAULT_PATH)))
-_RESULTS_DEFAULT = _FILE_DIR / "data" / "pscon_analysis.json"
+_RESULTS_DEFAULT = next(
+    (p for p in [_FILE_DIR / "data" / "pscon_analysis.json",      # 로컬 (analyze_pscon 출력)
+                 _FILE_DIR / "pscon" / "pscon_analysis.json"]     # backend/pscon (배포 동봉)
+     if p.exists()),
+    _FILE_DIR / "data" / "pscon_analysis.json",
+)
 RESULTS_PATH = Path(
     os.environ.get("VC_PSCON_ANALYSIS", str(_RESULTS_DEFAULT))
 )
