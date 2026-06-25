@@ -67,7 +67,7 @@ export default function ProductCard({
           </div>
         </div>
 
-        <div className="flex-1 space-y-3.5 px-4 pb-4 pt-3.5">
+        <div className="flex-1 space-y-3.5 px-4 pb-4 pt-3.5" data-tutorial={index === 0 ? "card-info" : undefined}>
           {/* 신뢰 지표 */}
           <div className="space-y-1.5 border-t border-[#f0f2f4] pt-3 text-[11px] tabular-nums text-[#606060]">
             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
@@ -109,12 +109,14 @@ export default function ProductCard({
       </div>
 
       {/* 피드백 버튼 — 박스 바깥 좌측 하단 */}
-      <ProductFeedbackButtons
-        given={givenFeedback}
-        disabled={disabled}
-        onFeedback={(payload) => onFeedback(p.id, payload)}
-        productTitle={p.title}
-      />
+      <div data-tutorial={index === 0 ? "card-feedback" : undefined}>
+        <ProductFeedbackButtons
+          given={givenFeedback}
+          disabled={disabled}
+          onFeedback={(payload) => onFeedback(p.id, payload)}
+          productTitle={p.title}
+        />
+      </div>
     </div>
   );
 }

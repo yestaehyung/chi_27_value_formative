@@ -94,6 +94,10 @@
 }
 .msg-in { animation: fadeUp 0.22s ease-out both; }
 
+/* 정적 데모(튜토리얼)에선 자식들의 등장 애니메이션을 끈다 —
+   이미 완성된 화면을 한 번에 보여주므로, 다 같이 떠오르면 '쏟아지듯' 어색함. */
+.no-enter-anim .msg-in { animation: none; }
+
 /* coachmark tooltip entrance — 단계 전환 시 부드럽게 등장 (opacity+scale+blur).
    큰 패널이라 scale은 0.96에서 시작 (작은 아이콘용 0.25가 아님). */
 @keyframes tipIn {
@@ -113,3 +117,14 @@
 }
 .thinking-dot:nth-child(2) { animation-delay: 0.15s; }
 .thinking-dot:nth-child(3) { animation-delay: 0.3s; }
+
+/* skeleton shimmer — 로딩 스켈레톤 바 (네이버 AI 스타일 "생각 중" 표시) */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-bar {
+  background: linear-gradient(90deg, #eef0f2 25%, #f6f7f9 37%, #eef0f2 63%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}

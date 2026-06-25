@@ -14,16 +14,21 @@ export default function Spotlight({
   steps,
   onDone,
   onSkip,
+  onStepChange,
 }: {
   steps: SpotStep[];
   onDone: () => void;
   onSkip?: () => void;
+  onStepChange?: (index: number) => void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
   useEffect(() => setMounted(true), []);
+
+  // 현재 단계를 부모에 알림 (화면 전환형 튜토리얼: 단계에 따라 보여줄 화면 변경)
+  useEffect(() => { onStepChange?.(i); }, [i, onStepChange]);
 
   const remeasure = useCallback(() => {
     const el = steps[i] ? document.querySelector(steps[i].selector) : null;

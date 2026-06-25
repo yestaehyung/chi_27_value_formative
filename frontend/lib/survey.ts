@@ -26,7 +26,7 @@ export const LIKERT_MAX = "매우 그렇다";
 
 export const SURVEY_INTRO =
   "본 설문은 대화형 쇼핑 에이전트가 사용자의 구매 기준과 숨은 의도를 어떻게 이해하는지 알아보기 위한 사전 설문입니다. " +
-  "정답은 없으며, 평소 쇼핑 방식에 가장 가까운 답을 선택해 주세요. 소요 시간 약 8–12분.";
+  "정답은 없으며, 평소 쇼핑 방식에 가장 가까운 답을 선택해 주세요. 소요 시간은 약 8분 - 12분 입니다.";
 
 const lk = (id: string, label: string): SurveyQuestion => ({ id, label, type: "likert" });
 

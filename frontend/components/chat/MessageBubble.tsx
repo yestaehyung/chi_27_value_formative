@@ -10,6 +10,23 @@ const ROLE_LABEL: Record<string, string> = {
 
 // showMeta: 연구용 라벨(dialogueActs·agentAction) 노출 여부.
 // 기본 false → 참가자 화면(§36: 추론·내부 코드 비노출). 연구자 replay에서만 true.
+// 에이전트 답변 렌더 — 가독성 향상.
+//  · 빈 줄(\n\n)로 문단 분리 → 문단 간 간격
+//  · 추천 항목("A. … B. … C. …")이 한 줄로 붙어 나오면 항목 앞에서 줄바꿈
+//  · 단일 줄바꿈(\n)은 보존
+function AgentText({ content }: { content: string }) {
+  // "A. " "B. " 같은 항목 표식 앞에 줄바꿈 삽입 (문장 끝 뒤에 올 때만 — 오검출 방지)
+  const withItemBreaks = content.replace(/([.!?…)\]]\s)([A-E]\.\s)/g, "$1\n$2");
+  const paragraphs = withItemBreaks.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  return (
+    <div className="space-y-2.5">
+      {paragraphs.map((para, i) => (
+        <p key={i} className="whitespace-pre-wrap">{para}</p>
+      ))}
+    </div>
+  );
+}
+
 export default function MessageBubble({ turn, showMeta = false }: { turn: Turn; showMeta?: boolean }) {
   const isUser = turn.role === "user" || turn.role === "user_agent";
 
@@ -26,7 +43,10 @@ export default function MessageBubble({ turn, showMeta = false }: { turn: Turn; 
             )}
             <span>{ROLE_LABEL[turn.role] ?? turn.role}</span>
           </div>
-          <div className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-[#4f46e5] px-4 py-2.5 text-sm leading-relaxed text-white">
+          <div
+            className="whitespace-pre-wrap rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed text-white"
+            style={{ backgroundColor: "var(--brand, #4f46e5)" }}
+          >
             {turn.content}
           </div>
         </div>
@@ -47,8 +67,8 @@ export default function MessageBubble({ turn, showMeta = false }: { turn: Turn; 
             </span>
           )}
         </div>
-        <div className="whitespace-pre-wrap rounded-2xl rounded-tl-md border border-[#e4e8eb] bg-white px-4 py-2.5 text-sm leading-relaxed text-[#191919]">
-          {turn.content}
+        <div className="rounded-2xl rounded-tl-md border border-[#e4e8eb] bg-white px-4 py-3 text-sm leading-[1.7] text-[#191919]">
+          <AgentText content={turn.content} />
         </div>
       </div>
     </div>
