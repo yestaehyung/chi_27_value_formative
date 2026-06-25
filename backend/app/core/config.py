@@ -32,6 +32,9 @@ class Settings:
         # 배포 DB(볼륨)는 상품이 이미 있으면 시드를 안 읽으므로, 상품 데이터를 바꾼 뒤
         # 이 플래그로 한 번 켜고 재배포 → 반영되면 끈다. (기본 off — 실수 방지)
         self.reseed_products = os.environ.get("VC_RESEED", "").strip() in ("1", "true", "yes")
+        # VC_SEED_UPSERT=1 → 시작 시 시드의 *새 상품만* INSERT (기존 상품/노출/피드백 보존, 삭제 0건).
+        # reseed의 비파괴 대안 — 풀에 N개만 추가할 때. 반영 후 끈다. (기본 off)
+        self.seed_upsert = os.environ.get("VC_SEED_UPSERT", "").strip() in ("1", "true", "yes")
         # "mock" (deterministic demo rules) | "openai" | "deepseek" | "anthropic"
         self.llm_provider = os.environ.get("VC_LLM_PROVIDER", "mock")
         self.openai_api_key = os.environ.get("OPENAI_API_KEY")

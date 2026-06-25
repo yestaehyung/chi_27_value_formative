@@ -74,6 +74,43 @@ def load_seed_products(db: DbSession) -> int:
     return len(raw)
 
 
+def upsert_seed_products(db: DbSession) -> int:
+    """[비파괴] 시드에 있는데 DB엔 없는 상품만 INSERT한다 (삭제·기존변경 0건).
+
+    reseed_products는 Product+ProductImpression을 통째로 비우므로 추천노출·피드백 같은
+    연구 데이터가 날아간다. 풀에 N개만 *추가*할 땐 이 함수를 써서 기존 상품과 그에 딸린
+    노출·피드백을 그대로 보존한다. 멱등 — 이미 있는 id는 건너뛴다.
+    임베딩은 ensure_product_vectors가 증분으로 새 id만 계산한다."""
+    raw = json.loads((settings.seed_dir / "products.json").read_text(encoding="utf-8"))
+    have = {pid for (pid,) in db.query(models.Product.id).all()}
+    new = [item for item in raw if item["id"] not in have]
+    if not new:
+        return 0
+    # cue는 전체 풀 가격분포 기준(카테고리 상대 분위수) — raw 전체로 계산
+    prices_by_category: dict[str, list[int]] = {}
+    for item in raw:
+        if item.get("price"):
+            prices_by_category.setdefault(item.get("category", ""), []).append(item["price"])
+    for item in new:
+        cue = item.get("cueSummary") or build_cue_summary(
+            item, prices_by_category.get(item.get("category", ""))
+        )
+        db.add(models.Product(
+            id=item["id"], title=item["title"], category=item.get("category"),
+            brand=item.get("brand"), price=item.get("price"), list_price=item.get("listPrice"),
+            discount_rate=item.get("discountRate"), delivery_fee=item.get("deliveryFee"),
+            rating=item.get("rating"), review_count=item.get("reviewCount"),
+            long_term_review_ratio=item.get("longTermReviewRatio"),
+            recent_sales_count=item.get("recentSalesCount"),
+            seller_name=item.get("sellerName"), seller_grade=item.get("sellerGrade"),
+            seller_years=item.get("sellerYears"), image_url=item.get("imageUrl"),
+            product_url=item.get("productUrl"), attributes=item.get("attributes") or {},
+            tags=item.get("tags") or [], description=item.get("description"), cue_summary=cue,
+        ))
+    db.commit()
+    return len(new)
+
+
 def load_seed_concepts(db: DbSession) -> int:
     """Top-down seed concepts (이론모듈 §5.3, §11.4) — status='seed', origin=['top_down_seed']."""
     from app.core.ids import new_id

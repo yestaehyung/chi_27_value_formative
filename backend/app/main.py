@@ -21,6 +21,12 @@ async def lifespan(_app: FastAPI):
             import logging
             logging.warning("VC_RESEED on — product pool force-reloaded from seed (%d items). "
                             "Turn this env off after deploy.", n)
+        elif settings.seed_upsert:
+            from app.products.seed_loader import upsert_seed_products
+            n = upsert_seed_products(db)
+            import logging
+            logging.warning("VC_SEED_UPSERT on — %d new products added; existing products + "
+                            "impressions/feedback preserved. Turn this env off after.", n)
         else:
             load_seed_products(db)
         load_seed_concepts(db)
