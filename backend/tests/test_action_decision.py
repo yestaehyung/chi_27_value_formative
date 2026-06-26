@@ -52,6 +52,29 @@ def test_recommends_after_already_clarified_once():
     assert out["action"] == "recommend", out
 
 
+def test_context_keeps_recent_turns_so_domain_persists():
+    # belt-and-suspenders: 구조화 상태 옆에 최근 원문 턴을 둔다 → 이전 턴의 도메인(원피스)이
+    # 최신 발화에 없어도 컨텍스트에 살아있어, 모델이 도메인을 잃지 않는다.
+    from app.agents.action_selector import build_action_decision_context
+
+    class _T:
+        def __init__(self, role, content):
+            self.role, self.content = role, content
+
+    turns = [
+        _T("user", "남들과 잘 안 겹치는 원피스를 찾고 있어요."),
+        _T("service_agent", "어떤 느낌을 원하시는지 여쭤봐도 될까요?"),
+        _T("user", "나 독특한거 좋아"),
+    ]
+    ctx = build_action_decision_context(
+        turns, snapshot=None, has_recommendations=False,
+        last_agent_action="clarify", rag_prediction=None, scenario_goal="자유 대화",
+    )
+    blob = " ".join(m["content"] for m in ctx["recentTurns"])
+    assert "원피스" in blob, ctx["recentTurns"]                       # 도메인 유지
+    assert ctx["recentTurns"][-1]["content"] == "나 독특한거 좋아"      # 최신 발화 포함
+
+
 def test_free_chat_honors_explicit_recommend_no_infinite_clarify():
     # 원래 버그 회귀 가드: 자유대화(custom, category=None)에서 "바로 추천해주세요"를 줘도
     # 예전엔 무한 clarify. 이제 추천이 나와야 한다(end-to-end).

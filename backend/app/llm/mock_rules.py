@@ -931,7 +931,12 @@ def action_decision(ctx: dict) -> dict:
     """결정론 행동 판단 (mock 계약·폴백). 실 provider는 LLM이 대화 맥락으로 판단.
     규칙: 명시적 추천요구→recommend / 추천이력 있음→recommend / 직전 clarify→recommend
     (연속 금지) / 가치·동기 신호 빈약→clarify + 가장 빈 축 probe / 그 외→recommend."""
-    utt = ctx.get("recentUtterance") or ""
+    turns = ctx.get("recentTurns") or []
+    latest_user = next(
+        (m.get("content", "") for m in reversed(turns) if m.get("role") in ("user", "user_agent")),
+        "",
+    )
+    utt = latest_user or ctx.get("recentUtterance") or ""
     has_rec = bool(ctx.get("hasRecommendations"))
     last = ctx.get("lastAgentAction")
     values = ctx.get("values") or {}

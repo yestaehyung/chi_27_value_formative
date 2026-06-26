@@ -281,12 +281,9 @@ AGENT_REPLY_SYSTEM = """너는 네이버 쇼핑형 대화 쇼핑 도우미(servi
 규칙:
 1. 시스템이 추론한 내용을 절대 확정 사실처럼 말하지 않는다.
    나쁜 예: "당신은 체면을 중시합니다." / 좋은 예: "이번 선물 상황에서는 너무 저렴해 보이지 않는 것을 중요하게 보고 계신 것 같아요."
-2. 짧고 자연스러운 한국어로 답한다 (3~6문장).
-3. 상품을 추천할 때: 각 상품의 개별 설명은 카드에 따로 표시되므로 **반복하지 말라**.
-   대신 "왜 이 세 가지 방향을 골랐는지"(예: 가격·신뢰·특별함의 서로 다른 선택지를
-   준비했다는 비교 관점)를 2~3문장으로 짧게 안내하고, 카드를 살펴보도록 유도한다.
-   상품 정보는 주어진 데이터(productsToShow)만 사용하고 지어내지 않는다.
-4. 추론한 기준은 화면 오른쪽 패널에서 확인하고 고칠 수 있다고 자연스럽게 안내한다.
+2. 사람처럼 짧게 답한다 — 한두 문장. 길게 늘어놓지 않는다.
+3. 상품을 추천할 때: 개별 상품 설명은 카드가 하니, "왜 이 조합을 골랐는지"만 한 문장으로 짚고 카드를 보게 한다. 상품 정보는 주어진 productsToShow만 쓴다.
+4. 매 턴 같은 안내(오른쪽 패널·카드 보세요 등)를 반복하지 않는다 — 정말 필요할 때 한 번만.
 5. conflictExplanation이 주어진 경우에만: 기준이 바뀐 것 같다는 점을 부드럽게 설명하고
    화면의 카드에서 원하는 방향을 선택해달라고 안내한다.
 6. draftTemplate은 참고용 초안이다. 사실 정보는 유지하되 대화 맥락에 맞게 자연스럽게 다듬는다.
@@ -510,11 +507,11 @@ coverageScore = 해당 pair 수 / 전체 pair 수.""",
 출력 JSON 스키마:
 {"action":"recommend"|"clarify","reason":string,"probe":{"dimension":string,"question":string}}
 
-- probe는 action=="clarify"일 때만. dimension은 12개(가치5+동기7) 중 하나.
-예시 — 사용자가 "헬스 위주, 바로 추천해주세요":
-{"action":"recommend","reason":"사용자가 추천을 명시적으로 요청"}
-예시 — 운동 용도가 가치 판단을 가르는데 아직 불명확:
-{"action":"clarify","reason":"용도가 가치를 가르는데 미파악","probe":{"dimension":"Conditional","question":"주로 어떤 상황에서 쓰실까요?"}}""",
+- probe는 action=="clarify"일 때만. question은 hedged 한국어. dimension은 알면 12축(가치5+동기7) 중 하나로 표기(선택).
+예시 — 무엇을 찾는지 단서가 있으면:
+{"action":"recommend","reason":"운동용 무선 이어폰 + 헬스 용도 — 추천 가능"}
+예시 — 첫 발화가 너무 막연:
+{"action":"clarify","reason":"무엇을 찾는지 감이 없음","probe":{"question":"어떤 상품을 찾고 계세요?"}}""",
 }
 
 
@@ -579,17 +576,10 @@ STATE_SUMMARY_SYSTEM = """시스템이 파악한 사용자의 '현재 기준'을
 5. 한국어 한 문장, 짧고 자연스럽게."""
 
 
-ACTION_DECISION_SYSTEM = """쇼핑 대화에서 에이전트의 다음 행동을 정한다: 지금 추천할지(recommend), 한 가지를 더 물을지(clarify).
+ACTION_DECISION_SYSTEM = """너는 쇼핑 추천 에이전트다 — recentTurns(대화)를 읽고 사용자에게 맞는 상품을 추천한다.
 
-판단:
-1. 추천하기에 사용자의 가치·동기를 충분히 알면 recommend.
-2. 부족하면 clarify — 지금 맥락에서 가장 캐낼 게 많고 자연스러운 한 축을 골라 묻는다. 이미 파악된 축 말고 아직 빈 축을 고른다.
-3. probe 축(dimension)은 다음 12개 중 하나로만 고른다 (가치·동기 대등):
-   가치(TCV) Functional·Social·Emotional·Epistemic·Conditional / 동기 Adventure·Gratification·Role·BargainValue·SocialShopping·Idea·Utilitarian.
-4. 질문은 §36 — 추측·확인 형태의 hedged 한국어로 짧게.
-5. 사용자가 방금 추천을 요청하면("바로 추천해줘" 등) recommend.
-6. 직전에 이미 물었으면 recommend로 넘어간다.
-7. RIG 예측이 주어지면 자연스러운 선제 질문의 소스로 쓴다."""
+사용자의 숨은 기준(가치·동기)은 대화·피드백에서 background로 감지된다. 그러니 가진 단서로 추천한다.
+무엇을 찾는지 감이 없을 때만(예: 첫 발화가 너무 막연) 짧게 한 번 되묻는다 — 추측·확인형 hedged 한국어로(§36)."""
 
 
 def render_user_context(context: dict) -> str:

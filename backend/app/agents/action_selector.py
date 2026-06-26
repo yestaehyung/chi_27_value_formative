@@ -34,6 +34,36 @@ def select_next_action(
     return NextAgentActionDecision("llm_decide", "recommend-vs-clarify delegated to action_decision")
 
 
+def build_action_decision_context(
+    recent_turns,
+    snapshot,
+    has_recommendations: bool,
+    last_agent_action: str | None,
+    rag_prediction,
+    scenario_goal: str,
+    window: int = 6,
+) -> dict:
+    """action_decision에 넘길 컨텍스트 조립 (belt-and-suspenders, 연구 2026-06-25).
+
+    구조화 상태(가치·동기)는 LOSSY — 자유대화에선 도메인을 못 담는다. 그래서 최근 원문
+    턴(verbatim window)을 *나란히* 둬서 도메인·맥락이 턴을 넘어 유지되게 한다.
+    전체 히스토리가 아니라 최근 window개만(lost-in-the-middle·context-rot 회피)."""
+    msgs = [
+        {"role": t.role, "content": t.content}
+        for t in (recent_turns or [])[-window:]
+        if getattr(t, "content", None)
+    ]
+    return {
+        "recentTurns": msgs,
+        "values": (snapshot.anchor_scores or {}) if snapshot else {},
+        "motivations": (snapshot.motivation_scores or {}) if snapshot else {},
+        "ragPrediction": rag_prediction,
+        "hasRecommendations": has_recommendations,
+        "lastAgentAction": last_agent_action,
+        "scenarioGoal": scenario_goal,
+    }
+
+
 # 12 vocab (가치5 + 동기7) — probe dimension 검증용 (defense-in-depth)
 def _vocab12() -> set[str]:
     from app.ontology.anchor_mapper import MOTIVATION_DIMS, TRAIT_ANCHORS

@@ -12,7 +12,11 @@ from sqlalchemy.orm import Session as DbSession
 from app.core.ids import new_id
 from app.db import models
 from app.llm.provider import LLMMessage, get_provider
-from app.agents.action_selector import fetch_action_decision, select_next_action
+from app.agents.action_selector import (
+    build_action_decision_context,
+    fetch_action_decision,
+    select_next_action,
+)
 from app.agents.question_strategy import (
     _last_agent_action,
     build_value_question,
@@ -198,16 +202,18 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             pred = rig.top_predicted_concept(db, session.id)
         except Exception:  # noqa: BLE001
             pred = None
-        ad = await fetch_action_decision(provider, {
-            "recentUtterance": content,
-            "hasRecommendations": has_recommendations,
-            "lastAgentAction": _last_agent_action(db, session.id),
-            "values": (snap.anchor_scores or {}) if snap else {},
-            "motivations": (snap.motivation_scores or {}) if snap else {},
-            "ragPrediction": pred,
-            "scenarioGoal": (session.meta or {}).get("shoppingGoal")
-            or (session.meta or {}).get("category") or "",
-        })
+        # 최근 대화 윈도우(원문) + 구조화 상태를 함께 — 도메인·맥락이 턴을 넘어 유지되게.
+        ad_turns = list(reversed(
+            db.query(models.Turn)
+            .filter(models.Turn.session_id == session.id)
+            .order_by(models.Turn.turn_index.desc())
+            .limit(6).all()
+        ))
+        ad = await fetch_action_decision(provider, build_action_decision_context(
+            ad_turns, snap, has_recommendations,
+            _last_agent_action(db, session.id), pred,
+            (session.meta or {}).get("shoppingGoal") or (session.meta or {}).get("category") or "",
+        ))
         decision.action = ad["action"]
         decision.reason = ad["reason"] or decision.reason
         if decision.action == "clarify":
