@@ -12,6 +12,6 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 export VC_SEED_DIR="$PWD/seed_amazon"      # Amazon 상품/시나리오 시드 (영어, 600개)
-export VC_DB_PATH="$PWD/amazon_study.db"   # Amazon 전용 영속 DB (NAVER와 분리)
+export VC_DB_PATH="$PWD/amazon_ko.db"      # Amazon(한국어) 전용 DB — 영어 amazon_study.db와 분리
 
 exec .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
