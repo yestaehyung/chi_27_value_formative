@@ -1,0 +1,74 @@
+[
+  {
+    "label": "선물의 사회적 적절성",
+    "normalizedLabel": "gift_social_appropriateness",
+    "definition": "선물 상황에서 가격, 디자인, 브랜드, 포장 등이 수신자에게 성의 있고 적절하게 보이는지에 대한 기준",
+    "aliases": ["선물의 체면", "너무 싸 보이지 않기", "관계 적절성"],
+    "scenarioScope": ["gift_for_other"],
+    "userVisibleLabel": "선물로 가벼워 보이지 않기",
+    "smeTranslation": ["적정 가격대 포지셔닝", "선물 패키지 강조", "리뷰/AS 신뢰 정보 노출"]
+  },
+  {
+    "label": "장기 사용 신뢰",
+    "normalizedLabel": "long_term_trust",
+    "definition": "오래 써도 문제없다는 근거(한달사용 리뷰, 내구성)에 대한 신뢰 기준",
+    "aliases": ["내구성 신뢰", "오래 쓰는 신뢰"],
+    "scenarioScope": ["gift_for_other", "high_involvement", "replacement_upgrade"],
+    "userVisibleLabel": "오래 써도 믿을 수 있음",
+    "smeTranslation": ["한달사용 리뷰 상단 노출", "AS/교환 정책 강조", "오래 쓰는 선물 포지셔닝"]
+  },
+  {
+    "label": "실패 회피",
+    "normalizedLabel": "failure_avoidance",
+    "definition": "구매 실패, 후회, 반품, AS 문제를 피하려는 기준",
+    "aliases": ["리스크 회피", "안심 구매"],
+    "scenarioScope": [],
+    "userVisibleLabel": "실패하지 않는 선택",
+    "smeTranslation": ["교환/환불 정책 명시", "배송 안정성 강조", "셀러 신뢰 노출"]
+  },
+  {
+    "label": "수령자 생활양식 적합",
+    "normalizedLabel": "recipient_lifestyle_fit",
+    "definition": "선물 수령자의 생활 방식과 용도에 맞는지에 대한 기준",
+    "aliases": ["수신자 적합성", "용도 적합성"],
+    "scenarioScope": ["gift_for_other", "specific_context"],
+    "userVisibleLabel": "받는 사람에게 잘 맞기",
+    "smeTranslation": ["사용 장면 기반 상세페이지 구성", "용도별 추천 가이드"]
+  },
+  {
+    "label": "차별성",
+    "normalizedLabel": "anti_mainstream",
+    "definition": "흔한 상품을 피하고 특별함과 개성을 추구하는 기준",
+    "aliases": ["특별함", "anti-mainstream"],
+    "scenarioScope": ["gift_for_other", "taste_identity"],
+    "userVisibleLabel": "흔하지 않은 특별함",
+    "smeTranslation": ["희소성/디자인 차별점 강조", "기프트 큐레이션 구성"]
+  },
+  {
+    "label": "가격 민감도",
+    "normalizedLabel": "price_sensitivity",
+    "definition": "지출을 줄이거나 가격 대비 효용을 극대화하려는 기준",
+    "aliases": ["가성비", "예산 제약"],
+    "scenarioScope": ["budget_value"],
+    "userVisibleLabel": "합리적인 가격",
+    "smeTranslation": ["value-for-money 설명", "배송비 포함 총액 표시"]
+  },
+  {
+    "label": "탐색 지원 필요",
+    "normalizedLabel": "guidance_need",
+    "definition": "상품/브랜드 지식이 부족해 비교 기준과 설명이 필요한 상태",
+    "aliases": ["기준 학습", "초보 가이드"],
+    "scenarioScope": ["first_time_exploration"],
+    "userVisibleLabel": "기준을 함께 잡아가기",
+    "smeTranslation": ["비교 가이드 콘텐츠 제공", "스펙 용어 풀어쓰기"]
+  },
+  {
+    "label": "취향 적합",
+    "normalizedLabel": "taste_fit",
+    "definition": "디자인, 스타일, 미감이 자신/수령자의 취향에 맞는지에 대한 기준",
+    "aliases": ["디자인 취향", "미감"],
+    "scenarioScope": ["taste_identity"],
+    "userVisibleLabel": "취향에 맞는 디자인",
+    "smeTranslation": ["스타일별 컬렉션 구성", "착용/사용 이미지 다양화"]
+  }
+]

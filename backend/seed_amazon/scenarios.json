@@ -1,0 +1,57 @@
+[
+ {
+  "id": "first_time_tablet",
+  "title": "First tablet",
+  "targetCategory": "Tablet",
+  "recipient": "self",
+  "context": "first-time purchase (criteria not yet formed)",
+  "offered": true,
+  "studyOrder": 1,
+  "initialUserNeed": "I'm buying a tablet for the first time and not sure what to look for.",
+  "groundTruthHiddenIntentions": []
+ },
+ {
+  "id": "taste_dress",
+  "title": "Taste/identity dress",
+  "targetCategory": "Dress",
+  "recipient": "self",
+  "context": "taste / self-expression",
+  "offered": true,
+  "studyOrder": 2,
+  "initialUserNeed": "I'm looking for a dress that doesn't look too common.",
+  "groundTruthHiddenIntentions": []
+ },
+ {
+  "id": "travel_laptop",
+  "title": "Travel/business laptop",
+  "targetCategory": "Laptop",
+  "recipient": "self",
+  "context": "specific situation (business trip / travel)",
+  "offered": true,
+  "studyOrder": 3,
+  "initialUserNeed": "I need a laptop I can carry around for business trips and travel.",
+  "groundTruthHiddenIntentions": []
+ },
+ {
+  "id": "gift_earphones",
+  "title": "Gift earphones",
+  "targetCategory": "Wireless Earphones",
+  "recipient": "a friend who likes working out",
+  "context": "gift",
+  "offered": true,
+  "studyOrder": 4,
+  "initialUserNeed": "I'm looking for wireless earphones as a gift for a friend who works out. I don't know brands well.",
+  "groundTruthHiddenIntentions": []
+ },
+ {
+  "id": "high_involvement_coat",
+  "title": "High-involvement coat",
+  "targetCategory": "Coat",
+  "recipient": "self",
+  "context": "high involvement",
+  "offered": true,
+  "studyOrder": 5,
+  "initialUserNeed": "I want to carefully choose a winter coat I can wear for years.",
+  "groundTruthHiddenIntentions": []
+ }
+]
