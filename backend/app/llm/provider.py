@@ -6,6 +6,7 @@ Pipeline stages call `generate_json(messages, schema=..., task=..., context=...)
 - AnthropicProvider: sends the rendered messages and parses JSON from the reply.
 """
 import json
+from contextvars import ContextVar
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
@@ -14,6 +15,11 @@ from app.core.config import settings
 from app.llm import mock_rules
 from app.llm.json_parser import extract_json
 from app.llm.retry import with_retries
+
+# 특정 요청(asyncio Task)에만 모델/추론을 덮어쓰는 task-local override — 합성 직접 실행에서
+# 빠른 모델(flash)을 쓰되 동시 스터디 요청은 전역 설정 유지. asyncio Task는 context가 격리됨.
+MODEL_OVERRIDE: ContextVar[Optional[str]] = ContextVar("vc_model_override", default=None)
+THINKING_OVERRIDE: ContextVar[Optional[str]] = ContextVar("vc_thinking_override", default=None)
 
 
 class LLMMessage(BaseModel):
@@ -104,13 +110,14 @@ class OpenAIProvider(LLMProvider):
                     temperature: float = 0.2) -> str:
         import httpx
 
+        model = MODEL_OVERRIDE.get() or self.model     # task-local override(합성 등) 우선
         payload: Dict[str, Any] = {
-            "model": self.model,
+            "model": model,
             "messages": msgs,
             # reasoning tokens come out of this budget — keep it generous
             self.max_tokens_param: max(max_tokens * 3, 4000),
         }
-        if self.model.startswith("gpt-5"):
+        if model.startswith("gpt-5"):
             # gpt-5 family: fixed temperature, tunable reasoning effort
             payload["reasoning_effort"] = settings.openai_reasoning_effort
         else:
@@ -175,9 +182,10 @@ class DeepSeekProvider(OpenAIProvider):
         """DeepSeek V4 thinking 토글 (config). off면 reasoning 토큰 생성을 끈다 (4~8배 빠름).
         on이면 reasoning_effort를 함께 보내고, thinking 모드가 무시하는 sampling 파라미터를 제거한다
         (docs: thinking 시 temperature/top_p/presence_penalty/frequency_penalty 무효). 미지정이면 API 기본값."""
-        if settings.deepseek_thinking == "off":
+        thinking = THINKING_OVERRIDE.get() or settings.deepseek_thinking   # task-local override 우선
+        if thinking == "off":
             payload["thinking"] = {"type": "disabled"}
-        elif settings.deepseek_thinking == "on":
+        elif thinking == "on":
             payload["thinking"] = {"type": "enabled"}
             payload["reasoning_effort"] = settings.deepseek_reasoning_effort
             for k in ("temperature", "top_p", "presence_penalty", "frequency_penalty"):

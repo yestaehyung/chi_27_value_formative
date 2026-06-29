@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { Persona, Scenario, Turn } from "@/lib/types";
+import { Impression, Persona, Scenario, Turn } from "@/lib/types";
 import MessageBubble from "@/components/chat/MessageBubble";
+import ProductCard from "@/components/products/ProductCard";
 import SynthesisReview from "@/components/synthesis/SynthesisReview";
 
 const avatarUrl = (seed: string) =>
@@ -31,6 +32,8 @@ export default function SimulatePage() {
   const [personaId, setPersonaId] = useState("");
   const [query, setQuery] = useState("");
   const [maxTurns, setMaxTurns] = useState(6);
+  const [synthModel, setSynthModel] = useState("deepseek-v4-flash");   // 합성 기본 = 빠른 flash
+  const [synthThinking, setSynthThinking] = useState("off");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [live, setLive] = useState<any>(null);                       // 진행 중 세션(turns) — 실시간 채팅
@@ -72,7 +75,7 @@ export default function SimulatePage() {
     try {
       // persona × 시나리오 합성을 시작. 세션이 생기는 대로 그 세션의 turns를 폴링해 채팅 UI로
       // 실시간 렌더링한다(전용 채팅 화면으로 전환 — 스피너 대신 턴이 하나씩 뜨게).
-      await api.runSynthesis(personaId, scenarioId, maxTurns);
+      await api.runSynthesis(personaId, scenarioId, maxTurns, synthModel, synthThinking);
       for (let i = 0; i < 240; i++) {            // 상한 ~8분 (2s × 240)
         await new Promise((r) => setTimeout(r, 2000));
         if (cancelRef.current) break;            // 사용자가 중지
@@ -122,6 +125,20 @@ export default function SimulatePage() {
         .some((s) => String(s || "").toLowerCase().includes(q));
     });
   }, [personas, query]);
+
+  // 합성 채팅 카드용 — impressions를 턴별로, 피드백을 상품별로 그룹
+  const impsByTurn = useMemo(() => {
+    const m: Record<string, Impression[]> = {};
+    for (const imp of (live?.impressions || []) as Impression[]) (m[imp.turnId] ??= []).push(imp);
+    return m;
+  }, [live]);
+  const fbByProduct = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    for (const f of (live?.feedback || []) as { productId?: string; type: string }[]) {
+      if (f.productId) (m[f.productId] ??= []).push(f.type);
+    }
+    return m;
+  }, [live]);
 
   return (
     <>
@@ -177,7 +194,20 @@ export default function SimulatePage() {
           </button>
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto p-5">
-          {(live?.turns || []).map((t: Turn) => <MessageBubble key={t.id} turn={t} showMeta />)}
+          {(live?.turns || []).map((t: Turn) => (
+            <div key={t.id} className="space-y-2">
+              <MessageBubble turn={t} showMeta />
+              {(impsByTurn[t.id]?.length ?? 0) > 0 && (
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {impsByTurn[t.id].map((imp, i) => (
+                    <ProductCard key={imp.id} impression={imp} index={i}
+                                 givenFeedback={fbByProduct[imp.productId] || []}
+                                 onFeedback={() => {}} disabled />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
           {(!live || (live.turns || []).length === 0) && (
             <p className="py-10 text-center text-sm text-[#9aa0a6]">
               합성 세션을 시작하는 중…<br />첫 발화 생성에 잠시 걸립니다.
@@ -209,9 +239,25 @@ export default function SimulatePage() {
                    onChange={(e) => setMaxTurns(Number(e.target.value))}
                    className="mt-1 w-full rounded-lg border border-[#e4e8eb] px-3 py-2 text-sm focus:border-[#4f46e5] focus:outline-none" />
           </div>
+          <div className="w-36">
+            <label className="text-xs font-medium text-slate-500">합성 모델</label>
+            <select value={synthModel} onChange={(e) => setSynthModel(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-[#e4e8eb] px-3 py-2 text-sm focus:border-[#4f46e5] focus:outline-none">
+              <option value="deepseek-v4-flash">flash (빠름)</option>
+              <option value="deepseek-v4-pro">pro (정확)</option>
+            </select>
+          </div>
+          <div className="w-24">
+            <label className="text-xs font-medium text-slate-500">추론</label>
+            <select value={synthThinking} onChange={(e) => setSynthThinking(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-[#e4e8eb] px-3 py-2 text-sm focus:border-[#4f46e5] focus:outline-none">
+              <option value="off">off (빠름)</option>
+              <option value="on">on</option>
+            </select>
+          </div>
           <button onClick={run} disabled={running || !personaId}
                   className="btn btn-primary h-[38px] px-5 disabled:opacity-50">
-            {running ? "합성 중… (수 분)" : "▶ 시뮬레이션 실행"}
+            {running ? "합성 중…" : "▶ 시뮬레이션 실행"}
           </button>
         </div>
 

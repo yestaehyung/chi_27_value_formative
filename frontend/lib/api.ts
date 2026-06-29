@@ -136,10 +136,11 @@ export const api = {
   synthesisRun: (personaId: string) => request<any>(`/api/synthesis/runs/${personaId}`),
 
   // 온디맨드 직접 실행 — 선택한 persona로 LLM 합성을 백그라운드 시작 + 진행 폴링
-  runSynthesis: (personaId: string, scenarioId: string, maxTurns = 6) =>
+  runSynthesis: (personaId: string, scenarioId: string, maxTurns = 6,
+                 model = "deepseek-v4-flash", thinking = "off") =>
     request<any>("/api/synthesis/run", {
       method: "POST",
-      body: JSON.stringify({ personaId, scenarioId, maxTurns }),
+      body: JSON.stringify({ personaId, scenarioId, maxTurns, model, thinking }),
     }),
   synthesisRunStatus: (personaId: string) =>
     request<{ running: boolean; sessionId: string | null }>(

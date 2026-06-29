@@ -22,6 +22,7 @@ from sqlalchemy import func
 
 from app.db import models, serializers
 from app.db.database import SessionLocal
+from app.core.config import settings
 from app.products.seed_loader import get_persona, get_scenario
 from app.llm.prompts import SYSTEM_BY_TASK, render_user_context
 from app.llm.provider import LLMMessage, get_provider
@@ -453,9 +454,16 @@ async def _derive_gt(provider, persona: dict, scenario: dict) -> dict | None:
 
 
 async def _run_synthesis_bg(persona: dict, scenario: dict, pre_gt: dict | None,
-                            speech_style: str | None, max_turns: int, pid: str) -> None:
+                            speech_style: str | None, max_turns: int, pid: str,
+                            model: str = "deepseek-v4-flash", thinking: str = "off") -> None:
     from app.agents.judge import judge_causal_relations
     from app.agents.llm_user_agent import run_llm_simulation
+    from app.llm.provider import MODEL_OVERRIDE, THINKING_OVERRIDE
+
+    # 이 합성 Task에만 모델/추론 override (deepseek일 때) — 스터디 전역 설정엔 영향 없음(asyncio context 격리).
+    if settings.llm_provider == "deepseek":
+        MODEL_OVERRIDE.set(model)
+        THINKING_OVERRIDE.set(thinking)
 
     db = SessionLocal()
     try:
@@ -505,12 +513,15 @@ async def run_synthesis(req: dict):
     if pid in _RUNNING_SYNTH:
         return {"status": "already_running", "personaId": pid, "scenarioId": sid}
     max_turns = max(2, min(12, int(req.get("maxTurns") or 6)))
+    model = req.get("model") or "deepseek-v4-flash"     # 합성 기본 = 가장 빠른 flash
+    thinking = (req.get("thinking") or "off").lower()
     task = asyncio.create_task(
-        _run_synthesis_bg(persona, scenario, pre_gt, entry.get("speechStyle"), max_turns, pid)
+        _run_synthesis_bg(persona, scenario, pre_gt, entry.get("speechStyle"),
+                          max_turns, pid, model, thinking)
     )
     _RUNNING_SYNTH[pid] = {"since": datetime.utcnow(), "task": task}
-    return {"status": "started", "personaId": pid, "scenarioId": sid,
-            "maxTurns": max_turns, "gtSource": "pre-derived" if pre_gt else "on-the-fly"}
+    return {"status": "started", "personaId": pid, "scenarioId": sid, "maxTurns": max_turns,
+            "model": model, "thinking": thinking, "gtSource": "pre-derived" if pre_gt else "on-the-fly"}
 
 
 @router.get("/run-status")
