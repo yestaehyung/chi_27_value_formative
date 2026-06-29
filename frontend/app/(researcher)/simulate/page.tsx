@@ -35,7 +35,6 @@ export default function SimulatePage() {
   const [synthModel, setSynthModel] = useState("deepseek-v4-flash");   // 합성 기본 = 빠른 flash
   const [synthThinking, setSynthThinking] = useState("off");
   const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<any>(null);
   const [live, setLive] = useState<any>(null);                       // 진행 중 세션(turns) — 실시간 채팅
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -66,7 +65,6 @@ export default function SimulatePage() {
   const run = async () => {
     if (!personaId) return;
     setRunning(true);
-    setResult(null);
     setDetailOpen(false);
     setLive(null);
     setLiveSessionId(null);
