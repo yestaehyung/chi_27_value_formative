@@ -31,7 +31,7 @@ export default function SimulatePage() {
   const [scenarioId, setScenarioId] = useState("gift_for_other");
   const [personaId, setPersonaId] = useState("");
   const [query, setQuery] = useState("");
-  const [maxTurns, setMaxTurns] = useState(8);
+  const [maxTurns, setMaxTurns] = useState(6);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -52,15 +52,23 @@ export default function SimulatePage() {
   }, []);
 
   const run = async () => {
+    if (!personaId) return;
     setRunning(true);
     setResult(null);
+    setDetailOpen(false);
     try {
-      const res = await api.runSimulation(scenarioId, personaId, maxTurns);
-      setResult(res);
-      setDetailOpen(false);
+      // 선택한 persona로 LLM 합성(숨은 의도 GT 주입)을 백그라운드 시작 → 끝날 때까지 폴링.
+      // 실 LLM이라 수 분 소요 — 한 번에 전체 배치를 돌리지 않고 이 페르소나 한 명만.
+      await api.runSynthesis(personaId, scenarioId, maxTurns);
+      for (let i = 0; i < 160; i++) {            // 상한 ~8분 (3s × 160)
+        await new Promise((r) => setTimeout(r, 3000));
+        const st = await api.synthesisRunStatus(personaId);
+        if (!st.running) break;
+      }
+      setView("synth");                          // 결과는 '합성 대화 보기'에서 (DB에서 로드 — 주입 GT ↔ 복원)
     } catch (e) {
       console.error(e);
-      alert("시뮬레이션 실행 실패");
+      alert("합성 실행 실패: " + (e as Error).message);
     } finally {
       setRunning(false);
     }
@@ -135,7 +143,7 @@ export default function SimulatePage() {
           </div>
           <button onClick={run} disabled={running || !personaId}
                   className="btn btn-primary h-[38px] px-5 disabled:opacity-50">
-            {running ? "실행 중…" : "▶ 시뮬레이션 실행"}
+            {running ? "합성 중… (수 분)" : "▶ 시뮬레이션 실행"}
           </button>
         </div>
 
@@ -302,7 +310,7 @@ export default function SimulatePage() {
                 <p className="text-xs leading-relaxed text-[#868b94]">{persona.personaNarrative}</p>
                 <button onClick={run} disabled={running || !personaId}
                         className="btn btn-primary mt-auto w-full disabled:opacity-50">
-                  {running ? "실행 중…" : "▶ 이 페르소나로 실행"}
+                  {running ? "합성 중… (수 분)" : "▶ 이 페르소나로 실행"}
                 </button>
               </div>
 

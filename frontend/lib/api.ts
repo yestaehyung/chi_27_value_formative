@@ -135,6 +135,15 @@ export const api = {
   synthesisRuns: () => request<any>("/api/synthesis/runs"),
   synthesisRun: (personaId: string) => request<any>(`/api/synthesis/runs/${personaId}`),
 
+  // 온디맨드 직접 실행 — 선택한 persona로 LLM 합성을 백그라운드 시작 + 진행 폴링
+  runSynthesis: (personaId: string, scenarioId: string, maxTurns = 6) =>
+    request<any>("/api/synthesis/run", {
+      method: "POST",
+      body: JSON.stringify({ personaId, scenarioId, maxTurns }),
+    }),
+  synthesisRunStatus: (personaId: string) =>
+    request<{ running: boolean }>(`/api/synthesis/run-status?personaId=${encodeURIComponent(personaId)}`),
+
   // PSCon CRS 실대화 데이터셋 (읽기 전용 시각화)
   psconConversations: () => request<any>("/api/pscon/conversations"),
   psconConversation: (convId: string | number) => request<any>(`/api/pscon/conversations/${convId}`),

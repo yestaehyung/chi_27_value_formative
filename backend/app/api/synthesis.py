@@ -16,7 +16,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sqlalchemy import func
 
 from app.db import models, serializers
@@ -397,3 +397,63 @@ def get_run(persona_id: str):
         }
     finally:
         db.close()
+
+
+# ── 온디맨드 직접 실행 (LLM user agent 합성) — /simulate "직접 실행" 탭 ──
+# run_llm_simulations_v2.py를 웹에서 persona 단위로. 실 LLM이라 수 분 → 백그라운드+폴링.
+# (단일 worker 가정의 in-memory 상태 — Railway nixpacks 기본 1 worker.)
+_RUNNING_SYNTH: set[str] = set()
+
+
+async def _run_synthesis_bg(persona: dict, profile: dict, scenario: dict, max_turns: int, pid: str) -> None:
+    from app.agents.judge import judge_causal_relations
+    from app.agents.llm_user_agent import run_llm_simulation
+
+    db = SessionLocal()
+    try:
+        res = await run_llm_simulation(db, persona, profile, scenario, max_turns, gt_version="v2")
+        await judge_causal_relations(res["sessionId"])
+    except Exception:  # noqa: BLE001 — 백그라운드: 실패해도 서버는 계속
+        import logging
+        logging.exception("synthesis on-demand run failed (persona=%s)", pid)
+    finally:
+        db.close()
+        _RUNNING_SYNTH.discard(pid)
+
+
+@router.post("/run")
+async def run_synthesis(req: dict, background_tasks: BackgroundTasks):
+    """선택한 persona 한 명으로 LLM 합성 대화를 즉시 시작(백그라운드). v2 GT 주입.
+    body: {personaId, scenarioId?(기본=matchedScenarioId), maxTurns?}. 진행은 /run-status로 폴링."""
+    pid = (req or {}).get("personaId")
+    if not pid:
+        raise HTTPException(400, "personaId required")
+    entry = _load_json(PROFILES_V2_PATH).get(pid)
+    if not entry:
+        raise HTTPException(404, "no v2 GT profile for this persona (run scripts/derive_persona_profiles_v2.py)")
+    sid = req.get("scenarioId") or entry.get("matchedScenarioId")
+    gt = (entry.get("scenarios") or {}).get(sid)
+    if not gt:  # v2 GT는 persona×scenario — 요청 시나리오에 GT 없으면 매칭 시나리오로 폴백
+        sid = entry.get("matchedScenarioId")
+        gt = (entry.get("scenarios") or {}).get(sid)
+    persona = get_persona(pid)
+    scenario = get_scenario(sid)
+    if not (persona and scenario and gt):
+        raise HTTPException(
+            400,
+            f"합성 불가 (scenario={sid}, gtInProfile={bool(gt)}, scenarioInSeed={bool(scenario)}). "
+            "직접 실행은 데모 시드(VC_SEED_DIR=seed)에서 동작합니다 — v2 GT가 데모 시나리오 id에 묶여 있습니다.",
+        )
+    if pid in _RUNNING_SYNTH:
+        return {"status": "already_running", "personaId": pid, "scenarioId": sid}
+    max_turns = max(2, min(12, int(req.get("maxTurns") or 6)))
+    _RUNNING_SYNTH.add(pid)
+    profile = {**gt, "speechStyle": entry.get("speechStyle")}
+    background_tasks.add_task(_run_synthesis_bg, persona, profile, scenario, max_turns, pid)
+    return {"status": "started", "personaId": pid, "scenarioId": sid, "maxTurns": max_turns}
+
+
+@router.get("/run-status")
+def run_synthesis_status(personaId: str):
+    """폴링용 — 해당 persona가 현재 합성 중인지. 끝나면 프론트가 /runs/{pid}로 결과를 읽는다."""
+    return {"running": personaId in _RUNNING_SYNTH}
