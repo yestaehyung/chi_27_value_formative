@@ -38,7 +38,14 @@ export default function SimulatePage() {
   const [view, setView] = useState<"run" | "synth">("run");
 
   useEffect(() => {
-    api.scenarios().then((d) => setScenarios(d.scenarios)).catch(console.error);
+    api.scenarios().then((d) => {
+      setScenarios(d.scenarios);
+      // 기본 시나리오를 현재 seed의 offered 목록으로 맞춘다 — 옛 기본값 'gift_for_other'가
+      // seed_naver엔 없어 "scenario not resolvable" 400 나던 것 방지.
+      setScenarioId((cur) =>
+        d.scenarios?.some((s: Scenario) => s.id === cur) ? cur : (d.scenarios?.[0]?.id || cur)
+      );
+    }).catch(console.error);
     api.personas().then((d) => {
       setPersonas(d.personas);
       if (d.personas?.length) setPersonaId((cur) => cur || d.personas[0].id);
