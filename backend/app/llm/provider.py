@@ -96,10 +96,10 @@ class OpenAIProvider(LLMProvider):
             msgs[-1] = {**msgs[-1], "content": msgs[-1]["content"] + "\n" + fmt + "\n\n반드시 유효한 JSON 객체로만 응답하라."}
         return msgs
 
-    @with_retries(times=2)
     def _augment_payload(self, payload: Dict[str, Any]) -> None:
         """Subclass hook: mutate the request payload before send. No-op by default."""
 
+    @with_retries(times=2)
     async def _call(self, msgs: list[dict], max_tokens: int, json_mode: bool,
                     temperature: float = 0.2) -> str:
         import httpx
@@ -173,11 +173,15 @@ class DeepSeekProvider(OpenAIProvider):
 
     def _augment_payload(self, payload: Dict[str, Any]) -> None:
         """DeepSeek V4 thinking 토글 (config). off면 reasoning 토큰 생성을 끈다 (4~8배 빠름).
-        기본값(미지정)은 API상 enabled이므로, off일 때만 명시적으로 disabled를 보낸다."""
+        on이면 reasoning_effort를 함께 보내고, thinking 모드가 무시하는 sampling 파라미터를 제거한다
+        (docs: thinking 시 temperature/top_p/presence_penalty/frequency_penalty 무효). 미지정이면 API 기본값."""
         if settings.deepseek_thinking == "off":
             payload["thinking"] = {"type": "disabled"}
         elif settings.deepseek_thinking == "on":
             payload["thinking"] = {"type": "enabled"}
+            payload["reasoning_effort"] = settings.deepseek_reasoning_effort
+            for k in ("temperature", "top_p", "presence_penalty", "frequency_penalty"):
+                payload.pop(k, None)
 
     async def embed(self, texts: List[str]) -> List[List[float]]:
         raise NotImplementedError("DeepSeek has no embeddings API; MVP does not need it.")

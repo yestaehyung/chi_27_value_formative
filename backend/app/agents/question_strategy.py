@@ -84,28 +84,6 @@ def _last_agent_action(db: DbSession, session_id: str) -> str | None:
     return last.agent_action if last else None
 
 
-def should_value_clarify(
-    db: DbSession,
-    session: models.Session,
-    snapshot: models.PreferenceStateSnapshot | None,
-    has_recommendations: bool,
-) -> bool:
-    """정보 격차 판단: 추천하기에 기준이 부족한가? (연속 질문은 1회로 제한)"""
-    if has_recommendations:
-        return False
-    if _last_agent_action(db, session.id) == "clarify":
-        return False  # PSCon 패턴: clarify 후에는 응답이 짧아도 일단 추천으로 전환
-    if snapshot is None:
-        return True
-    active = (
-        db.query(models.IntentionTopic)
-        .filter(models.IntentionTopic.id.in_(snapshot.active_topic_ids or []))
-        .all()
-    )
-    non_context = [t for t in active if (t.hints or {}).get("kind") != "context"]
-    return len(non_context) < 2
-
-
 def build_value_question(
     snapshot: models.PreferenceStateSnapshot | None,
     session: models.Session,

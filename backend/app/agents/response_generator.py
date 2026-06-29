@@ -9,18 +9,6 @@ from app.llm.prompts import AGENT_REPLY_SYSTEM, render_user_context
 from app.llm.provider import LLMMessage, LLMProvider
 from app.products.search import ScoredProduct
 
-BUCKET_PHRASE = {
-    "low_price_popular": "가격이 낮고 최근 판매가 많지만, 셀러 등급과 장기 사용 리뷰는 약한 편이에요",
-    "high_trust_long_term": "가격은 조금 높지만 운동 기능이 분명하고 한달사용 리뷰 비율이 높아요",
-    "seller_reliable": "셀러 등급이 높고 배송비가 없어 믿고 사기 좋은 쪽이에요",
-    "design_or_identity": "디자인/선물 패키지 같은 인상 요소가 강한 쪽이에요",
-    "novel_or_distinctive": "흔하지 않은 모델이라 특별한 느낌을 줄 수 있어요",
-    "balanced": "가격과 신뢰의 균형이 잡힌 쪽이에요",
-}
-
-LETTERS = ["A", "B", "C", "D", "E"]
-
-
 def clarify_text(category: str | None) -> str:
     if category is None:
         return (
@@ -32,7 +20,7 @@ def clarify_text(category: str | None) -> str:
 
 def recommend_text(scored: list[ScoredProduct]) -> str:
     """챗 버블 초안 — 상품 개별 설명은 카드가 하므로(③ 역할 분리), 여기선 '왜 이 조합인지'
-    비교 관점만 안내한다. 상품별 나열·BUCKET_PHRASE 반복은 제거(카드와 중복 방지)."""
+    비교 관점만 안내한다. 상품별 나열은 카드가 하므로 중복하지 않는다."""
     n = len(scored)
     return (
         f"말씀해주신 기준에 맞춰 서로 다른 방향의 상품 {n}가지를 골라봤어요. "
@@ -116,9 +104,6 @@ async def generate_reply(
         return template_text
 
 
-LETTERS_CARD = ["A", "B", "C", "D", "E"]
-
-
 async def rerank_by_intent(
     provider: LLMProvider,
     scored: list[ScoredProduct],
@@ -178,64 +163,6 @@ async def rerank_by_intent(
         if sp.product.id not in card_texts or not card_texts[sp.product.id]["reason"]:
             card_texts[sp.product.id] = _fallback_card(sp.product)
     return reranked, card_texts
-
-
-async def generate_card_rationales(
-    provider: LLMProvider,
-    scored: list[ScoredProduct],
-    state_summary: dict | None,
-) -> dict[str, dict]:
-    """상품 카드별 설명(reason/matched/weak)을 LLM이 생성 — 사용자 가치 기준에 연결.
-    BUCKET_PHRASE/hidden_intention_fit 규칙(데모 잔재)을 대체한다 (B1).
-
-    반환: {productId: {"reason":str, "matched":[str], "weak":[str]}}.
-    실패/빈응답 시 graceful 폴백(상품 사실 기반 짧은 문구) — 카드가 비지 않게.
-    """
-    if not scored:
-        return {}
-
-    products_ctx = []
-    letter_to_pid: dict[str, str] = {}
-    for i, sp in enumerate(scored):
-        letter = LETTERS_CARD[i] if i < len(LETTERS_CARD) else str(i + 1)
-        p = sp.product
-        letter_to_pid[letter] = p.id
-        products_ctx.append({
-            "letter": letter, "title": p.title, "category": p.category,
-            "price": p.price, "rating": p.rating, "reviewCount": p.review_count,
-            "longTermReviewRatio": p.long_term_review_ratio,
-            "recentSalesCount": p.recent_sales_count,
-            "cues": p.cue_summary or {},
-        })
-    context = {
-        "userValues": {
-            "summary": (state_summary or {}).get("oneSentenceSummary", ""),
-            "chips": [c.get("label") for c in (state_summary or {}).get("chips", [])],
-        },
-        "products": products_ctx,
-    }
-
-    out: dict = {}
-    try:
-        raw = await provider.generate_json(
-            [LLMMessage(role="user", content=render_user_context(context))],
-            task="card_rationale", context=context,
-        )
-        for card in (raw or {}).get("cards", []):
-            pid = letter_to_pid.get(card.get("letter"))
-            if pid:
-                out[pid] = {
-                    "reason": (card.get("reason") or "").strip(),
-                    "matched": [m for m in (card.get("matched") or []) if isinstance(m, str)][:2],
-                    "weak": [w for w in (card.get("weak") or []) if isinstance(w, str)][:2],
-                }
-    except Exception:  # noqa: BLE001 — 폴백으로 강등
-        out = {}
-
-    for sp in scored:  # 누락 상품은 사실 기반 폴백 (카드가 비지 않게)
-        if sp.product.id not in out or not out[sp.product.id]["reason"]:
-            out[sp.product.id] = _fallback_card(sp.product)
-    return out
 
 
 _FALLBACK_SUGGESTIONS = {

@@ -45,11 +45,16 @@ class Settings:
         self.embedding_model = os.environ.get("VC_EMBEDDING_MODEL", "text-embedding-3-small")
         # DeepSeek — OpenAI-compatible API (https://api.deepseek.com)
         self.deepseek_api_key = os.environ.get("DEEPSEEK_API_KEY")
-        self.deepseek_model = os.environ.get("VC_DEEPSEEK_MODEL", "deepseek-chat")
+        # 모델: "deepseek-v4-flash"(284B/13B) | "deepseek-v4-pro"(1.6T/49B), 둘 다 1M ctx.
+        # (legacy "deepseek-chat"/"deepseek-reasoner"는 2026-07-24 폐기 예정 alias → flash 비추론/추론.)
+        self.deepseek_model = os.environ.get("VC_DEEPSEEK_MODEL", "deepseek-v4-flash")
         # DeepSeek V4 thinking(추론) 토글 — "on" | "off" (기본 off = 속도 우선).
-        # off면 thinking={"type":"disabled"}를 보내 reasoning 토큰 생성을 막아 4~8배 빠르다.
-        # 추출 품질이 떨어지면 on으로 되돌려 A/B 비교할 것. (실측: flash 1.4s↔6.3s, pro 2s↔16s)
+        # off → thinking={"type":"disabled"}로 reasoning 토큰 생성을 막아 4~8배 빠르다.
+        # on  → thinking={"type":"enabled"} + reasoning_effort; sampling 파라미터(temperature 등)는 무시됨.
+        # (실측: flash 1.4s↔6.3s, pro 2s↔16s) 추출 품질 비교는 intention eval로.
         self.deepseek_thinking = os.environ.get("VC_DEEPSEEK_THINKING", "off").lower()
+        # thinking on일 때 추론 강도 — "high" | "max" (docs 기준).
+        self.deepseek_reasoning_effort = os.environ.get("VC_DEEPSEEK_REASONING_EFFORT", "high")
         self.anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
         self.anthropic_model = os.environ.get("VC_ANTHROPIC_MODEL", "claude-sonnet-4-6")
         # Judge 전용 provider (M5 — 검증 독립성: service agent와 다른 모델 권장).

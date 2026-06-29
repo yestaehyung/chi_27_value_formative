@@ -17,12 +17,32 @@ STATUS_BY_ACTION = {
     "ask_clarification": "shown_to_user",
 }
 
-MESSAGE_BY_ACTION = {
-    "accept_new": "알겠어요. 앞으로는 최저가보다 선물로 적절한 가격대와 신뢰도를 더 우선해서 추천할게요.",
-    "keep_old": "네, 기존 기준을 그대로 유지할게요.",
-    "merge": "앞으로는 예산 상한은 유지하되, 너무 저렴해 보이는 상품은 제외해서 추천할게요.",
-    "manual_edit": "수정해주신 기준을 반영했어요.",
-}
+def build_resolution_message(
+    action: str,
+    old_label: str | None = None,
+    new_label: str | None = None,
+    avoidance_label: str | None = None,
+) -> str:
+    """해결 확인 메시지를 시나리오 중립으로, 사용자의 실제 기준(토픽 라벨)에 근거해 만든다.
+    데모 도메인(선물/최저가) 문자열을 박지 않는다 — §36 hedged·결정론 폴백.
+    (풀 LLM 저작은 후속: 엔드포인트 async + 전용 task. 여기선 도메인 누수 제거가 목적.)
+    """
+    if action == "accept_new" and new_label:
+        return f"알겠어요. 앞으로는 ‘{new_label}’을(를) 더 우선해서 추천할게요."
+    if action == "keep_old":
+        tail = f"(‘{old_label}’)" if old_label else ""
+        return f"네, 기존 기준{tail}을 그대로 유지할게요."
+    if action == "merge":
+        if avoidance_label:
+            return f"앞으로는 기존 기준은 유지하되, ‘{avoidance_label}’ 조건을 더해 추천할게요."
+        return "두 기준을 함께 반영해서 추천할게요."
+    if action == "manual_edit":
+        return "수정해주신 기준을 반영했어요."
+    if action == "downgrade_priority" and old_label:
+        return f"‘{old_label}’의 우선순위를 낮춰서 반영할게요."
+    if action == "delete_old_topic" and old_label:
+        return f"‘{old_label}’ 기준은 더 이상 반영하지 않을게요."
+    return "기준을 업데이트했어요."
 
 
 def resolve_conflict(
@@ -40,6 +60,7 @@ def resolve_conflict(
     session = db.get(models.Session, conflict.session_id)
     old_topic = db.get(models.IntentionTopic, conflict.old_topic_id) if conflict.old_topic_id else None
     new_topic = db.get(models.IntentionTopic, conflict.new_topic_id) if conflict.new_topic_id else None
+    avoidance_label: str | None = None
 
     if action == "accept_new":
         if old_topic:
@@ -69,6 +90,7 @@ def resolve_conflict(
                 meta = dict(session.meta or {})
                 extra = list(meta.get("extraAvoidances", []))
                 label = f"{avoid} 제외"
+                avoidance_label = label
                 if label not in extra:
                     extra.append(label)
                 meta["extraAvoidances"] = extra
@@ -108,5 +130,10 @@ def resolve_conflict(
     db.add(event)
     db.commit()
 
-    message = MESSAGE_BY_ACTION.get(action, "기준을 업데이트했어요.")
+    message = build_resolution_message(
+        action,
+        old_label=old_topic.label if old_topic else None,
+        new_label=new_topic.label if new_topic else None,
+        avoidance_label=avoidance_label,
+    )
     return event, snapshot, message

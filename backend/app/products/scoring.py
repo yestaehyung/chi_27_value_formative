@@ -106,20 +106,6 @@ def hard_constraint_match(product: models.Product, hard_constraints: list[str]) 
     return 1.0
 
 
-def trust_score(product: models.Product) -> float:
-    cue = product.cue_summary or {}
-    s = {"low": 0.2, "medium": 0.5, "high": 0.9}.get(cue.get("trustCue", "medium"), 0.5)
-    if cue.get("sellerCue") == "trusted":
-        s = min(1.0, s + 0.1)
-    return s
-
-
-def popularity_score(product: models.Product) -> float:
-    return {"niche": 0.3, "moderate": 0.5, "popular": 0.7, "very_popular": 0.9}.get(
-        (product.cue_summary or {}).get("popularityCue", "moderate"), 0.5
-    )
-
-
 def hidden_intention_fit(product: models.Product, topic_labels: list[str], avoidances: list[str]) -> tuple[float, list[str], list[str]]:
     """Returns (fit score 0-1, matched rationale strings, weak rationale strings). Spec §14.2 rules."""
     cue = product.cue_summary or {}

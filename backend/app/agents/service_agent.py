@@ -3,6 +3,7 @@
 Performance: each LLM-bound stage is timed; logs show "service_agent.stage_latency_sec"
 to diagnose turn-level latency bottlenecks.
 """
+import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
@@ -154,28 +155,31 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
 
     # 1-2. save user turn + dialogue-act classification.
     # 동기 층(M8) 감지는 commit engine으로 이동 — 라이브·시뮬·PSCon이 같은 경로로 12축.
-    t_da = time.perf_counter()
-    dialogue_acts = await _classify_dialogue_acts(provider, content)
-    logging.info("service_agent.dialogue_act_latency_sec=%.3f", time.perf_counter() - t_da)
     user_turn = models.Turn(
         id=new_id("turn"),
         session_id=session.id,
         turn_index=_next_turn_index(db, session.id),
         role=role,
         content=content,
-        dialogue_acts=dialogue_acts,
+        dialogue_acts=[],  # 화행은 아래 병렬 분류 후 채운다
     )
     db.add(user_turn)
     _update_surface_intent(session, content)
     # commit immediately so the write lock is NOT held during the LLM pipeline
     db.commit()
 
-    # 3. preference commit on the new utterance
-    t_commit = time.perf_counter()
-    commit = await run_preference_commit(
-        db, provider, session, turn_ids=[user_turn.id], feedback_ids=[], source="user_utterance",
+    # 2-3. 화행 분류와 preference commit는 서로 의존이 없다(둘 다 발화만 읽음) → 병렬로 1 RT 절약.
+    #      _classify_dialogue_acts는 DB를 만지지 않으므로 commit과 같은 session을 동시 사용해도 안전.
+    t_pipe = time.perf_counter()
+    dialogue_acts, commit = await asyncio.gather(
+        _classify_dialogue_acts(provider, content),
+        run_preference_commit(
+            db, provider, session, turn_ids=[user_turn.id], feedback_ids=[], source="user_utterance",
+        ),
     )
-    logging.info("service_agent.preference_commit_latency_sec=%.3f", time.perf_counter() - t_commit)
+    user_turn.dialogue_acts = dialogue_acts
+    db.commit()
+    logging.info("service_agent.turn_pipeline_latency_sec=%.3f", time.perf_counter() - t_pipe)
 
     # 4-6. action selection — 구조 가드는 규칙, "추천 vs 질문(+무엇을 probe)"은 action_decision(LLM).
     # category는 더 이상 행동을 가르지 않지만, 상품 검색·clarify 텍스트에는 여전히 쓰인다.
@@ -274,7 +278,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             return_pool=True,
             pool_size=15,
         )
-        text = rg.recommend_text(pool[:3])  # 챗 초안(개수만 사용; 실제 순위는 rerank 후)
+        # 답변 초안·순위는 rerank 후 확정한다(아래 recommend 블록). 여기선 후보 풀만 확보.
         session.current_stage = "recommendation"
 
     # real LLM providers rewrite the template grounded on context (mock returns it as-is)
@@ -290,21 +294,19 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     card_texts: dict[str, dict] = {}
     scored: list[ScoredProduct] = []
     if decision.action == "recommend":
-        import asyncio
         from app.products.search import select_tradeoff_set
         intent_context = _build_intent_context(session, commit.snapshot, recent_turns)
-        reply_coro = rg.generate_reply(
-            provider, action=decision.action, template_text=text, recent_turns=recent_turns,
-            products=[sp.product for sp in pool[:3]], state_summary=state_for_llm,
-            conflict_explanation=conflict_explanation, must_ask_question=value_question,
-        )
-        text, (reranked, card_texts) = await asyncio.gather(
-            reply_coro,
-            rg.rerank_by_intent(provider, pool, intent_context),
-        )
+        # 가치·동기로 rerank → 다양성 3개를 먼저 확정한 뒤, 그 "실제 노출 셋"에 근거해 답변을 만든다.
+        # (이전엔 reply가 pool[:3], 카드가 reranked에 근거해 서로 다른 셋을 가리켰다 — A 수정.)
+        reranked, card_texts = await rg.rerank_by_intent(provider, pool, intent_context)
         scored = select_tradeoff_set(reranked, top_k=3, diagnostic_anchor=diagnostic)
         products = [sp.product for sp in scored]
         related_ids = [p.id for p in products]
+        text = await rg.generate_reply(
+            provider, action=decision.action, template_text=rg.recommend_text(products),
+            recent_turns=recent_turns, products=products, state_summary=state_for_llm,
+            conflict_explanation=conflict_explanation, must_ask_question=value_question,
+        )
     else:
         text = await rg.generate_reply(
             provider, action=decision.action, template_text=text, recent_turns=recent_turns,
