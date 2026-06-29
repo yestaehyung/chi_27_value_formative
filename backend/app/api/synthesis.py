@@ -12,11 +12,12 @@ GT 버전 (meta.gtVersion으로 구분):
   GT가 주입되었으므로, 상세에서 GT 블록이 세션을 따라간다.
 은닉 원칙상 GT는 DB에 없다 (llm_user_agent.py 참조) — 파일과 버전 스탬프로 연결한다.
 """
+import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import func
 
 from app.db import models, serializers
@@ -410,7 +411,7 @@ def get_run(persona_id: str):
 # 선택한 persona × 시나리오로 합성. 실 LLM이라 수 분 → 백그라운드+폴링.
 # 미리 만든 v2 GT가 없으면(라이브 seed_naver 등) 그 자리에서 GT를 도출해 주입한다.
 # (단일 worker 가정의 in-memory 상태 — Railway nixpacks 기본 1 worker.)
-_RUNNING_SYNTH: dict[str, datetime] = {}   # personaId → 실행 시작시각 (이번 실행 세션 식별용)
+_RUNNING_SYNTH: dict[str, dict] = {}   # personaId → {"since": datetime, "task": asyncio.Task} (취소용)
 _VALUE_LEVELS = ("dominant", "present", "trace")
 _MOT_LEVELS = ("high", "medium", "low")
 
@@ -473,6 +474,9 @@ async def _run_synthesis_bg(persona: dict, scenario: dict, pre_gt: dict | None,
                 sess.meta = {**(sess.meta or {}), "ondemandGt": {**gt, "gtVersion": "v2-ondemand"}}
                 db.commit()
         await judge_causal_relations(res["sessionId"])
+    except asyncio.CancelledError:           # 사용자 중지 — 부분 세션은 그대로 둔다
+        import logging
+        logging.info("synthesis cancelled (persona=%s)", pid)
     except Exception:  # noqa: BLE001 — 백그라운드: 실패해도 서버는 계속
         import logging
         logging.exception("synthesis on-demand run failed (persona=%s)", pid)
@@ -482,10 +486,10 @@ async def _run_synthesis_bg(persona: dict, scenario: dict, pre_gt: dict | None,
 
 
 @router.post("/run")
-async def run_synthesis(req: dict, background_tasks: BackgroundTasks):
-    """선택한 persona × 시나리오로 LLM 합성을 즉시 시작(백그라운드). 미리 만든 v2 GT가 있으면 쓰고,
-    없으면 그 자리에서 GT를 도출해 주입(라이브 seed_naver에서도 동작). 진행은 /run-status로 폴링.
-    body: {personaId, scenarioId, maxTurns?}."""
+async def run_synthesis(req: dict):
+    """선택한 persona × 시나리오로 LLM 합성을 즉시 시작(취소 가능한 asyncio Task). 미리 만든 v2 GT가
+    있으면 쓰고, 없으면 그 자리에서 GT를 도출해 주입(라이브 seed_naver에서도 동작). 진행은 /run-status로
+    폴링, 중지는 /stop. body: {personaId, scenarioId, maxTurns?}."""
     pid = (req or {}).get("personaId")
     if not pid:
         raise HTTPException(400, "personaId required")
@@ -501,9 +505,10 @@ async def run_synthesis(req: dict, background_tasks: BackgroundTasks):
     if pid in _RUNNING_SYNTH:
         return {"status": "already_running", "personaId": pid, "scenarioId": sid}
     max_turns = max(2, min(12, int(req.get("maxTurns") or 6)))
-    _RUNNING_SYNTH[pid] = datetime.utcnow()
-    background_tasks.add_task(_run_synthesis_bg, persona, scenario, pre_gt,
-                             entry.get("speechStyle"), max_turns, pid)
+    task = asyncio.create_task(
+        _run_synthesis_bg(persona, scenario, pre_gt, entry.get("speechStyle"), max_turns, pid)
+    )
+    _RUNNING_SYNTH[pid] = {"since": datetime.utcnow(), "task": task}
     return {"status": "started", "personaId": pid, "scenarioId": sid,
             "maxTurns": max_turns, "gtSource": "pre-derived" if pre_gt else "on-the-fly"}
 
@@ -512,7 +517,8 @@ async def run_synthesis(req: dict, background_tasks: BackgroundTasks):
 def run_synthesis_status(personaId: str):
     """폴링용 — 진행 여부 + 이번 실행으로 생성된 세션 id(생기는 대로). 프론트가 그 세션의 turns를
     채팅 UI로 실시간 렌더링한다(스피너 대신 턴이 하나씩 뜨게)."""
-    since = _RUNNING_SYNTH.get(personaId)
+    info = _RUNNING_SYNTH.get(personaId)
+    since = info.get("since") if info else None
     sid = None
     if since is not None:
         db = SessionLocal()
@@ -533,3 +539,23 @@ def run_synthesis_status(personaId: str):
         finally:
             db.close()
     return {"running": personaId in _RUNNING_SYNTH, "sessionId": sid}
+
+
+@router.post("/stop")
+def stop_synthesis(req: dict):
+    """진행 중인 합성 취소. body: {personaId} 또는 {all: true}. asyncio Task를 cancel()."""
+    req = req or {}
+    if req.get("all"):
+        targets = list(_RUNNING_SYNTH)
+    elif req.get("personaId"):
+        targets = [req["personaId"]]
+    else:
+        targets = []
+    cancelled = 0
+    for p in targets:
+        info = _RUNNING_SYNTH.get(p)
+        task = info.get("task") if info else None
+        if task is not None and not task.done():
+            task.cancel()
+            cancelled += 1
+    return {"cancelled": cancelled, "targets": targets}

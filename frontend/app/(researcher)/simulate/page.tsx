@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { Persona, Scenario, Turn } from "@/lib/types";
@@ -37,6 +37,7 @@ export default function SimulatePage() {
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [view, setView] = useState<"run" | "synth">("run");
+  const cancelRef = useRef(false);                   // 폴링 루프 취소 신호
 
   useEffect(() => {
     api.scenarios().then((d) => {
@@ -66,13 +67,15 @@ export default function SimulatePage() {
     setDetailOpen(false);
     setLive(null);
     setLiveSessionId(null);
+    cancelRef.current = false;
     let sid: string | null = null;
     try {
-      // persona × 시나리오 합성을 백그라운드 시작. 세션이 생기는 대로 그 세션의 turns를 폴링해
-      // 채팅 UI로 실시간 렌더링한다(스피너 대신 턴이 하나씩 뜨게 — 실제 채팅처럼).
+      // persona × 시나리오 합성을 시작. 세션이 생기는 대로 그 세션의 turns를 폴링해 채팅 UI로
+      // 실시간 렌더링한다(전용 채팅 화면으로 전환 — 스피너 대신 턴이 하나씩 뜨게).
       await api.runSynthesis(personaId, scenarioId, maxTurns);
       for (let i = 0; i < 240; i++) {            // 상한 ~8분 (2s × 240)
         await new Promise((r) => setTimeout(r, 2000));
+        if (cancelRef.current) break;            // 사용자가 중지
         const st = await api.synthesisRunStatus(personaId);
         if (st.sessionId) {
           sid = st.sessionId;
@@ -81,13 +84,22 @@ export default function SimulatePage() {
         }
         if (!st.running) break;
       }
-      if (sid) { try { setLive(await api.getSession(sid)); } catch { /* noop */ } }   // 최종 렌더
+      if (sid && !cancelRef.current) { try { setLive(await api.getSession(sid)); } catch { /* noop */ } }
     } catch (e) {
       console.error(e);
       alert("합성 실행 실패: " + (e as Error).message);
     } finally {
       setRunning(false);
     }
+  };
+
+  // 진행 중 합성 중지 + 선택 화면으로 복귀
+  const stopAndBack = async () => {
+    cancelRef.current = true;
+    if (running) { try { await api.stopSynthesis(personaId); } catch { /* noop */ } }
+    setRunning(false);
+    setLive(null);
+    setLiveSessionId(null);
   };
 
   const persona = personas.find((p) => p.id === personaId);
@@ -138,6 +150,47 @@ export default function SimulatePage() {
       </div>
 
       {view === "run" ? (
+      (running || live) ? (
+      /* 합성 채팅 화면 — 실행 중/완료엔 컨트롤·그리드 대신 전용 채팅으로 전환 */
+      <div className="msg-in card flex h-[calc(100vh-13rem)] flex-col p-0">
+        <div className="flex items-center justify-between gap-3 border-b border-[#e4e8eb] px-5 py-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <span className="truncate">{persona?.name || "합성"} 대화</span>
+              {running ? (
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#4f46e5]">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4f46e5]" />생성 중…
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-full bg-[#ecfdf5] px-2 py-0.5 text-xs font-medium text-[#047857]">완료</span>
+              )}
+            </div>
+            <div className="truncate text-xs text-[#868b94]">
+              {scenarios.find((s) => s.id === scenarioId)?.title}
+              {liveSessionId && (
+                <> · <Link href={`/research/session/${liveSessionId}`} className="text-emerald-600 hover:underline">연구자 뷰 →</Link></>
+              )}
+            </div>
+          </div>
+          <button onClick={stopAndBack} className="btn h-[34px] shrink-0 px-3 text-xs">
+            {running ? "■ 중지하고 돌아가기" : "← 돌아가기"}
+          </button>
+        </div>
+        <div className="flex-1 space-y-3 overflow-y-auto p-5">
+          {(live?.turns || []).map((t: Turn) => <MessageBubble key={t.id} turn={t} showMeta />)}
+          {(!live || (live.turns || []).length === 0) && (
+            <p className="py-10 text-center text-sm text-[#9aa0a6]">
+              합성 세션을 시작하는 중…<br />첫 발화 생성에 잠시 걸립니다.
+            </p>
+          )}
+          {running && (live?.turns || []).length > 0 && (
+            <div className="flex items-center gap-1.5 px-1 py-1 text-xs text-[#9aa0a6]">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#c0c6cc]" />다음 턴 생성 중…
+            </div>
+          )}
+        </div>
+      </div>
+      ) : (
       <>
 
       {/* 실행 설정 + 선택된 페르소나 */}
@@ -237,42 +290,8 @@ export default function SimulatePage() {
         </div>
       </div>
 
-      {live && (
-        <div className="msg-in card p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-semibold">
-              합성 대화
-              {running ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#4f46e5]">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4f46e5]" />생성 중…
-                </span>
-              ) : (
-                <span className="rounded-full bg-[#ecfdf5] px-2 py-0.5 text-xs font-medium text-[#047857]">완료</span>
-              )}
-            </h2>
-            {liveSessionId && (
-              <Link href={`/research/session/${liveSessionId}`}
-                    className="text-xs text-emerald-600 hover:underline">
-                연구자 뷰에서 자세히 보기 →
-              </Link>
-            )}
-          </div>
-          <div className="max-h-[36rem] space-y-3 overflow-y-auto">
-            {(live.turns || []).map((t: Turn) => <MessageBubble key={t.id} turn={t} showMeta />)}
-            {(live.turns || []).length === 0 && (
-              <p className="py-8 text-center text-sm text-[#9aa0a6]">합성 세션을 시작하는 중…</p>
-            )}
-            {running && (live.turns || []).length > 0 && (
-              <div className="flex items-center gap-1.5 px-1 py-1 text-xs text-[#9aa0a6]">
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#c0c6cc]" />
-                다음 턴 생성 중…
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       </>
+      )
       ) : (
         <SynthesisReview />
       )}

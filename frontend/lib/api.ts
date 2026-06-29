@@ -145,6 +145,8 @@ export const api = {
     request<{ running: boolean; sessionId: string | null }>(
       `/api/synthesis/run-status?personaId=${encodeURIComponent(personaId)}`
     ),
+  stopSynthesis: (personaId: string) =>
+    request<any>("/api/synthesis/stop", { method: "POST", body: JSON.stringify({ personaId }) }),
 
   // PSCon CRS 실대화 데이터셋 (읽기 전용 시각화)
   psconConversations: () => request<any>("/api/pscon/conversations"),
