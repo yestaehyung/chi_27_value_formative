@@ -22,6 +22,9 @@ from sqlalchemy import func
 from app.db import models, serializers
 from app.db.database import SessionLocal
 from app.products.seed_loader import get_persona, get_scenario
+from app.llm.prompts import SYSTEM_BY_TASK, render_user_context
+from app.llm.provider import LLMMessage, get_provider
+from app.ontology.anchor_mapper import MOTIVATION_DIMS, TRAIT_ANCHORS
 
 _IN_CHUNK = 800  # SQLite IN(...) 파라미터 한도 회피
 
@@ -79,6 +82,10 @@ def _normalize_v2(entry: dict, scenario_id: str | None) -> dict | None:
 
 def _gt_for_session(sess: models.Session, v1: dict | None, v2: dict | None) -> dict | None:
     """세션에 실제로 주입된 GT — gtVersion 스탬프와 세션 시나리오로 해석."""
+    # 직접 실행에서 즉석 도출한 GT는 세션 종료 후 meta.ondemandGt에 post-hoc 기록됨 (복원 무오염).
+    od = (sess.meta or {}).get("ondemandGt")
+    if od:
+        return od
     if (sess.meta or {}).get("gtVersion") == "v2" and v2:
         gt = _normalize_v2(v2, sess.scenario_id)
         if gt:
@@ -400,18 +407,71 @@ def get_run(persona_id: str):
 
 
 # ── 온디맨드 직접 실행 (LLM user agent 합성) — /simulate "직접 실행" 탭 ──
-# run_llm_simulations_v2.py를 웹에서 persona 단위로. 실 LLM이라 수 분 → 백그라운드+폴링.
+# 선택한 persona × 시나리오로 합성. 실 LLM이라 수 분 → 백그라운드+폴링.
+# 미리 만든 v2 GT가 없으면(라이브 seed_naver 등) 그 자리에서 GT를 도출해 주입한다.
 # (단일 worker 가정의 in-memory 상태 — Railway nixpacks 기본 1 worker.)
 _RUNNING_SYNTH: set[str] = set()
+_VALUE_LEVELS = ("dominant", "present", "trace")
+_MOT_LEVELS = ("high", "medium", "low")
 
 
-async def _run_synthesis_bg(persona: dict, profile: dict, scenario: dict, max_turns: int, pid: str) -> None:
+def _validate_gt(out: dict) -> dict | None:
+    """derive_persona_profiles_v2._validate와 동일 계약 (TCV5 levels + 동기7 + 의도/구분)."""
+    values = out.get("valueLevels") or {}
+    if not all(values.get(a) in _VALUE_LEVELS for a in TRAIT_ANCHORS):
+        return None
+    motiv = {d: lv for d, lv in (out.get("motivationLevels") or {}).items()
+             if d in MOTIVATION_DIMS and lv in _MOT_LEVELS}
+    if len(motiv) < 3:
+        return None
+    for d in MOTIVATION_DIMS:
+        motiv.setdefault(d, "low")
+    if not out.get("hiddenIntentions") or not out.get("personaDistinction"):
+        return None
+    return {
+        "valueLevels": {a: values[a] for a in TRAIT_ANCHORS},
+        "motivationLevels": motiv,
+        "hiddenIntentions": out["hiddenIntentions"],
+        "personaDistinction": out["personaDistinction"],
+        "matchRationale": out.get("matchRationale") or "",
+    }
+
+
+async def _derive_gt(provider, persona: dict, scenario: dict) -> dict | None:
+    """(persona × scenario) GT 즉석 도출 — derive_persona_profiles_v2.derive_one과 동일 프롬프트/계약."""
+    context = {
+        "persona": {k: persona.get(k) for k in ("name", "personaNarrative", "demographics", "narratives")},
+        "scenario": {k: scenario.get(k) for k in ("id", "title", "targetCategory", "initialUserNeed", "description")},
+    }
+    out = await provider.generate_json(
+        [LLMMessage(role="system", content=SYSTEM_BY_TASK["persona_profile"]),
+         LLMMessage(role="user", content=render_user_context(context))],
+        task="persona_profile", context=context, temperature=0.8,
+    )
+    return _validate_gt(out) if isinstance(out, dict) else None
+
+
+async def _run_synthesis_bg(persona: dict, scenario: dict, pre_gt: dict | None,
+                            speech_style: str | None, max_turns: int, pid: str) -> None:
     from app.agents.judge import judge_causal_relations
     from app.agents.llm_user_agent import run_llm_simulation
 
     db = SessionLocal()
     try:
+        gt = pre_gt or await _derive_gt(get_provider(), persona, scenario)
+        if not gt:
+            import logging
+            logging.error("synthesis: GT 도출 실패 (persona=%s, scenario=%s)", pid, scenario.get("id"))
+            return
+        profile = {**gt, "speechStyle": speech_style}
         res = await run_llm_simulation(db, persona, profile, scenario, max_turns, gt_version="v2")
+        # 즉석 도출 GT는 세션 종료 후 meta에 post-hoc 기록 — 뷰어 '주입 GT'용. 세션이 끝났으므로
+        # service agent 복원엔 영향 없음(GT를 라이브 중 meta에 두면 안 된다는 원칙과 양립).
+        if not pre_gt:
+            sess = db.get(models.Session, res["sessionId"])
+            if sess:
+                sess.meta = {**(sess.meta or {}), "ondemandGt": {**gt, "gtVersion": "v2-ondemand"}}
+                db.commit()
         await judge_causal_relations(res["sessionId"])
     except Exception:  # noqa: BLE001 — 백그라운드: 실패해도 서버는 계속
         import logging
@@ -423,34 +483,29 @@ async def _run_synthesis_bg(persona: dict, profile: dict, scenario: dict, max_tu
 
 @router.post("/run")
 async def run_synthesis(req: dict, background_tasks: BackgroundTasks):
-    """선택한 persona 한 명으로 LLM 합성 대화를 즉시 시작(백그라운드). v2 GT 주입.
-    body: {personaId, scenarioId?(기본=matchedScenarioId), maxTurns?}. 진행은 /run-status로 폴링."""
+    """선택한 persona × 시나리오로 LLM 합성을 즉시 시작(백그라운드). 미리 만든 v2 GT가 있으면 쓰고,
+    없으면 그 자리에서 GT를 도출해 주입(라이브 seed_naver에서도 동작). 진행은 /run-status로 폴링.
+    body: {personaId, scenarioId, maxTurns?}."""
     pid = (req or {}).get("personaId")
     if not pid:
         raise HTTPException(400, "personaId required")
-    entry = _load_json(PROFILES_V2_PATH).get(pid)
-    if not entry:
-        raise HTTPException(404, "no v2 GT profile for this persona (run scripts/derive_persona_profiles_v2.py)")
-    sid = req.get("scenarioId") or entry.get("matchedScenarioId")
-    gt = (entry.get("scenarios") or {}).get(sid)
-    if not gt:  # v2 GT는 persona×scenario — 요청 시나리오에 GT 없으면 매칭 시나리오로 폴백
-        sid = entry.get("matchedScenarioId")
-        gt = (entry.get("scenarios") or {}).get(sid)
     persona = get_persona(pid)
-    scenario = get_scenario(sid)
-    if not (persona and scenario and gt):
-        raise HTTPException(
-            400,
-            f"합성 불가 (scenario={sid}, gtInProfile={bool(gt)}, scenarioInSeed={bool(scenario)}). "
-            "직접 실행은 데모 시드(VC_SEED_DIR=seed)에서 동작합니다 — v2 GT가 데모 시나리오 id에 묶여 있습니다.",
-        )
+    if not persona:
+        raise HTTPException(404, f"unknown persona: {pid}")
+    entry = _load_json(PROFILES_V2_PATH).get(pid) or {}
+    sid = req.get("scenarioId") or entry.get("matchedScenarioId")
+    scenario = get_scenario(sid) if sid else None
+    if not scenario:
+        raise HTTPException(400, f"scenario not resolvable in current seed: {sid}")
+    pre_gt = (entry.get("scenarios") or {}).get(sid)   # 있으면 사용, 없으면 백그라운드에서 즉석 도출
     if pid in _RUNNING_SYNTH:
         return {"status": "already_running", "personaId": pid, "scenarioId": sid}
     max_turns = max(2, min(12, int(req.get("maxTurns") or 6)))
     _RUNNING_SYNTH.add(pid)
-    profile = {**gt, "speechStyle": entry.get("speechStyle")}
-    background_tasks.add_task(_run_synthesis_bg, persona, profile, scenario, max_turns, pid)
-    return {"status": "started", "personaId": pid, "scenarioId": sid, "maxTurns": max_turns}
+    background_tasks.add_task(_run_synthesis_bg, persona, scenario, pre_gt,
+                             entry.get("speechStyle"), max_turns, pid)
+    return {"status": "started", "personaId": pid, "scenarioId": sid,
+            "maxTurns": max_turns, "gtSource": "pre-derived" if pre_gt else "on-the-fly"}
 
 
 @router.get("/run-status")
