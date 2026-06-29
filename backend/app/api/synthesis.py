@@ -410,7 +410,7 @@ def get_run(persona_id: str):
 # 선택한 persona × 시나리오로 합성. 실 LLM이라 수 분 → 백그라운드+폴링.
 # 미리 만든 v2 GT가 없으면(라이브 seed_naver 등) 그 자리에서 GT를 도출해 주입한다.
 # (단일 worker 가정의 in-memory 상태 — Railway nixpacks 기본 1 worker.)
-_RUNNING_SYNTH: set[str] = set()
+_RUNNING_SYNTH: dict[str, datetime] = {}   # personaId → 실행 시작시각 (이번 실행 세션 식별용)
 _VALUE_LEVELS = ("dominant", "present", "trace")
 _MOT_LEVELS = ("high", "medium", "low")
 
@@ -478,7 +478,7 @@ async def _run_synthesis_bg(persona: dict, scenario: dict, pre_gt: dict | None,
         logging.exception("synthesis on-demand run failed (persona=%s)", pid)
     finally:
         db.close()
-        _RUNNING_SYNTH.discard(pid)
+        _RUNNING_SYNTH.pop(pid, None)
 
 
 @router.post("/run")
@@ -501,7 +501,7 @@ async def run_synthesis(req: dict, background_tasks: BackgroundTasks):
     if pid in _RUNNING_SYNTH:
         return {"status": "already_running", "personaId": pid, "scenarioId": sid}
     max_turns = max(2, min(12, int(req.get("maxTurns") or 6)))
-    _RUNNING_SYNTH.add(pid)
+    _RUNNING_SYNTH[pid] = datetime.utcnow()
     background_tasks.add_task(_run_synthesis_bg, persona, scenario, pre_gt,
                              entry.get("speechStyle"), max_turns, pid)
     return {"status": "started", "personaId": pid, "scenarioId": sid,
@@ -510,5 +510,26 @@ async def run_synthesis(req: dict, background_tasks: BackgroundTasks):
 
 @router.get("/run-status")
 def run_synthesis_status(personaId: str):
-    """폴링용 — 해당 persona가 현재 합성 중인지. 끝나면 프론트가 /runs/{pid}로 결과를 읽는다."""
-    return {"running": personaId in _RUNNING_SYNTH}
+    """폴링용 — 진행 여부 + 이번 실행으로 생성된 세션 id(생기는 대로). 프론트가 그 세션의 turns를
+    채팅 UI로 실시간 렌더링한다(스피너 대신 턴이 하나씩 뜨게)."""
+    since = _RUNNING_SYNTH.get(personaId)
+    sid = None
+    if since is not None:
+        db = SessionLocal()
+        try:
+            for s in (db.query(models.Session)
+                      .filter(models.Session.mode == "simulation")
+                      .order_by(models.Session.started_at.desc()).all()):
+                if not (_is_synthesis(s) and str((s.meta or {}).get("personaId")) == personaId):
+                    continue
+                st = s.started_at
+                if st is None:
+                    continue
+                if st.tzinfo is not None:      # naive 비교로 통일
+                    st = st.replace(tzinfo=None)
+                if st >= since:
+                    sid = s.id
+                    break
+        finally:
+            db.close()
+    return {"running": personaId in _RUNNING_SYNTH, "sessionId": sid}

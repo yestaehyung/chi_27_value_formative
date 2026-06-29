@@ -142,7 +142,9 @@ export const api = {
       body: JSON.stringify({ personaId, scenarioId, maxTurns }),
     }),
   synthesisRunStatus: (personaId: string) =>
-    request<{ running: boolean }>(`/api/synthesis/run-status?personaId=${encodeURIComponent(personaId)}`),
+    request<{ running: boolean; sessionId: string | null }>(
+      `/api/synthesis/run-status?personaId=${encodeURIComponent(personaId)}`
+    ),
 
   // PSCon CRS 실대화 데이터셋 (읽기 전용 시각화)
   psconConversations: () => request<any>("/api/pscon/conversations"),

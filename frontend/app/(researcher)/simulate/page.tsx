@@ -5,7 +5,6 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { Persona, Scenario, Turn } from "@/lib/types";
 import MessageBubble from "@/components/chat/MessageBubble";
-import AnchorRadar from "@/components/preference/AnchorRadar";
 import SynthesisReview from "@/components/synthesis/SynthesisReview";
 
 const avatarUrl = (seed: string) =>
@@ -34,6 +33,8 @@ export default function SimulatePage() {
   const [maxTurns, setMaxTurns] = useState(6);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [live, setLive] = useState<any>(null);                       // 진행 중 세션(turns) — 실시간 채팅
+  const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [view, setView] = useState<"run" | "synth">("run");
 
@@ -63,16 +64,24 @@ export default function SimulatePage() {
     setRunning(true);
     setResult(null);
     setDetailOpen(false);
+    setLive(null);
+    setLiveSessionId(null);
+    let sid: string | null = null;
     try {
-      // 선택한 persona로 LLM 합성(숨은 의도 GT 주입)을 백그라운드 시작 → 끝날 때까지 폴링.
-      // 실 LLM이라 수 분 소요 — 한 번에 전체 배치를 돌리지 않고 이 페르소나 한 명만.
+      // persona × 시나리오 합성을 백그라운드 시작. 세션이 생기는 대로 그 세션의 turns를 폴링해
+      // 채팅 UI로 실시간 렌더링한다(스피너 대신 턴이 하나씩 뜨게 — 실제 채팅처럼).
       await api.runSynthesis(personaId, scenarioId, maxTurns);
-      for (let i = 0; i < 160; i++) {            // 상한 ~8분 (3s × 160)
-        await new Promise((r) => setTimeout(r, 3000));
+      for (let i = 0; i < 240; i++) {            // 상한 ~8분 (2s × 240)
+        await new Promise((r) => setTimeout(r, 2000));
         const st = await api.synthesisRunStatus(personaId);
+        if (st.sessionId) {
+          sid = st.sessionId;
+          setLiveSessionId(sid);
+          try { setLive(await api.getSession(sid)); } catch { /* 첫 턴 전엔 비어있을 수 있음 */ }
+        }
         if (!st.running) break;
       }
-      setView("synth");                          // 결과는 '합성 대화 보기'에서 (DB에서 로드 — 주입 GT ↔ 복원)
+      if (sid) { try { setLive(await api.getSession(sid)); } catch { /* noop */ } }   // 최종 렌더
     } catch (e) {
       console.error(e);
       alert("합성 실행 실패: " + (e as Error).message);
@@ -91,7 +100,6 @@ export default function SimulatePage() {
       ]
     : []
   ).filter(Boolean) as string[];
-  const lastSnapshot = result?.preferenceSnapshots?.at(-1);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -229,52 +237,37 @@ export default function SimulatePage() {
         </div>
       </div>
 
-      {result && (
-        <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
-          <div className="card p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold">대화 로그</h2>
-              <Link href={`/research/session/${result.sessionId}`}
+      {live && (
+        <div className="msg-in card p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold">
+              합성 대화
+              {running ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#4f46e5]">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4f46e5]" />생성 중…
+                </span>
+              ) : (
+                <span className="rounded-full bg-[#ecfdf5] px-2 py-0.5 text-xs font-medium text-[#047857]">완료</span>
+              )}
+            </h2>
+            {liveSessionId && (
+              <Link href={`/research/session/${liveSessionId}`}
                     className="text-xs text-emerald-600 hover:underline">
                 연구자 뷰에서 자세히 보기 →
               </Link>
-            </div>
-            <div className="max-h-[32rem] space-y-3 overflow-y-auto">
-              {result.turns.map((t: Turn) => <MessageBubble key={t.id} turn={t} showMeta />)}
-            </div>
+            )}
           </div>
-
-          <div className="space-y-4">
-            <div className="card p-4">
-              <h2 className="text-sm font-semibold">Evaluation</h2>
-              <dl className="mt-2 space-y-1.5 text-xs">
-                {Object.entries(result.evaluation).map(([k, v]) => (
-                  <div key={k} className="flex justify-between border-b border-slate-50 pb-1">
-                    <dt className="text-slate-500">{k}</dt>
-                    <dd className="font-mono font-medium tabular-nums">{v === null ? "–" : String(v)}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-
-            {lastSnapshot && (
-              <div className="card p-4">
-                <h2 className="text-sm font-semibold">최종 anchor 분포</h2>
-                <AnchorRadar scores={lastSnapshot.anchorScores} />
-                <div className="mt-2 text-xs text-slate-500">
-                  {lastSnapshot.userVisibleSummary?.oneSentenceSummary}
-                </div>
+          <div className="max-h-[36rem] space-y-3 overflow-y-auto">
+            {(live.turns || []).map((t: Turn) => <MessageBubble key={t.id} turn={t} showMeta />)}
+            {(live.turns || []).length === 0 && (
+              <p className="py-8 text-center text-sm text-[#9aa0a6]">합성 세션을 시작하는 중…</p>
+            )}
+            {running && (live.turns || []).length > 0 && (
+              <div className="flex items-center gap-1.5 px-1 py-1 text-xs text-[#9aa0a6]">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#c0c6cc]" />
+                다음 턴 생성 중…
               </div>
             )}
-
-            <div className="card p-4 text-xs text-slate-600">
-              <h2 className="text-sm font-semibold text-slate-800">생성된 데이터</h2>
-              <ul className="mt-2 space-y-1">
-                <li>피드백 이벤트: <b>{result.feedbackEvents.length}</b>개</li>
-                <li>chosen-rejected pair: <b>{result.pairs.length}</b>개</li>
-                <li>preference snapshot: <b>{result.preferenceSnapshots.length}</b>개</li>
-              </ul>
-            </div>
           </div>
         </div>
       )}
