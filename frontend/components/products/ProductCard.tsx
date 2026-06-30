@@ -22,6 +22,8 @@ export default function ProductCard({
   const p = impression.product;
   if (!p) return null;
   const ltr = Math.round((p.longTermReviewRatio ?? 0) * 100);
+  const showLtr = (p.longTermReviewRatio ?? 0) > 0;                                // Amazon엔 한달리뷰 없음(0) → 숨김
+  const showSales = !!p.recentSalesCount && p.recentSalesCount !== p.reviewCount;  // Amazon은 판매량 없어 리뷰수 프록시 → 숨김
   // build-time price is the median 정가(list); 실거래가 = 정가 × (1 − 평균 할인율)
   const discountPct = p.discountRate && p.discountRate > 0 ? Math.round(p.discountRate * 100) : 0;
   const realPrice = discountPct > 0 ? Math.round((p.price * (1 - p.discountRate!)) / 10) * 10 : p.price;
@@ -75,8 +77,8 @@ export default function ProductCard({
                 <span className="text-[#f59e0b]">★</span>{p.rating}
                 <span className="text-[#b0b8c1]">· 리뷰 {p.reviewCount?.toLocaleString()}</span>
               </span>
-              <span>한달리뷰 <b className={ltr >= 30 ? "text-[#047857]" : "text-[#404040]"}>{ltr}%</b></span>
-              <span>최근판매 {p.recentSalesCount?.toLocaleString()}건</span>
+              {showLtr && <span>한달리뷰 <b className={ltr >= 30 ? "text-[#047857]" : "text-[#404040]"}>{ltr}%</b></span>}
+              {showSales && <span>최근판매 {p.recentSalesCount?.toLocaleString()}건</span>}
             </div>
           </div>
 
