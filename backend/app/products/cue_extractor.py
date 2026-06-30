@@ -40,7 +40,15 @@ def build_cue_summary(item: dict, category_prices: list[int] | None = None) -> d
 
     ltr = item.get("longTermReviewRatio") or 0
     rating = item.get("rating") or 0
-    trust_cue = "high" if (ltr >= 0.3 and rating >= 4.6) else ("low" if ltr < 0.08 else "medium")
+    n_reviews = item.get("reviewCount") or 0
+    # 신뢰 신호: 평점 + 리뷰 수(검증된 규모) 기반 — NAVER/Amazon 공통 (Amazon엔 한달리뷰 ltr이 없음).
+    # ltr(NAVER)이 있으면 상향 보너스로만 사용. 가공 없이 메타 필드 그대로.
+    if (rating >= 4.5 and n_reviews >= 200) or (ltr >= 0.3 and rating >= 4.6):
+        trust_cue = "high"
+    elif rating < 3.8 or n_reviews < 20:
+        trust_cue = "low"
+    else:
+        trust_cue = "medium"
 
     sales = item.get("recentSalesCount") or 0
     if sales >= 8000:
