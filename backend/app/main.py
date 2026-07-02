@@ -51,20 +51,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.api import conflicts, exports, feedback, meta, preferences, pscon, research, sessions, simulations, study, synthesis, turns  # noqa: E402
+from fastapi import Depends  # noqa: E402
 
+from app.api import conflicts, exports, feedback, meta, preferences, pscon, research, sessions, simulations, study, synthesis, turns  # noqa: E402
+from app.core.research_gate import require_research_key  # noqa: E402
+
+# ── 참가자 스터디 플로우 (항상 마운트) ─────────────────────────────────
 app.include_router(sessions.router)
 app.include_router(turns.router)
 app.include_router(feedback.router)
 app.include_router(conflicts.router)
 app.include_router(preferences.router)
-app.include_router(simulations.router)
-app.include_router(research.router)
-app.include_router(exports.router)
 app.include_router(meta.router)
 app.include_router(study.router)
-app.include_router(pscon.router)
-app.include_router(synthesis.router)
+
+# ── 연구자 읽기 표면 (항상 마운트하되 키로 보호 — research_gate 규칙 참조) ──
+# 라이브 모니터링·download_study_sessions.py가 키를 들고 계속 쓸 수 있게 한다.
+app.include_router(research.router, dependencies=[Depends(require_research_key)])
+app.include_router(exports.router, dependencies=[Depends(require_research_key)])
+
+# ── 연구 전용 (스터디 배포에서는 아예 마운트 안 함 → 404) ─────────────────
+# 시뮬레이션·합성은 세션을 "쓰는" 표면이라, study 모드에서 빼는 것으로
+# 참가자 DB에 시뮬 데이터가 섞이는 일이 구조적으로 불가능해진다.
+if settings.app_mode != "study":
+    app.include_router(simulations.router)
+    app.include_router(pscon.router)
+    app.include_router(synthesis.router)
 
 
 @app.get("/api/health")

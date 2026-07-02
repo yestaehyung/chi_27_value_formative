@@ -63,6 +63,15 @@ class Settings:
         self.cors_origins = os.environ.get(
             "VC_CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
         ).split(",")
+        # ── 스터디 배포 분리 (2026-07-02) ──────────────────────────────
+        # VC_APP_MODE=study → simulations·synthesis·pscon 라우터를 아예 마운트하지
+        # 않는다(참가자 스터디 DB에 시뮬 데이터가 구조적으로 못 들어감). 기본 "" =
+        # 전체 마운트(로컬 개발·연구). 프론트의 APP_MODE=study와 짝으로 설정한다.
+        self.app_mode = os.environ.get("VC_APP_MODE", "").strip().lower()
+        # 연구자 API(research/exports) 보호 키 — 참가자 설문·대화 전체를 읽는 표면.
+        # 설정되면 X-Research-Key 헤더(또는 ?key=)가 일치해야 통과. 미설정이면
+        # study 모드에선 잠금(fail-closed), 그 외(로컬)는 기존처럼 개방.
+        self.research_key = os.environ.get("VC_RESEARCH_KEY", "").strip()
 
 
 settings = Settings()

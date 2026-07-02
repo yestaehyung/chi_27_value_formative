@@ -26,8 +26,26 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # backend/
 EXPORT_ROOT = os.path.join(HERE, "data", "study_export")
 
 
+def _research_key() -> str:
+    """연구자 키 (라이브 research API는 X-Research-Key 필수 — 스터디 분리 2026-07-02).
+    우선순위: VC_RESEARCH_KEY env → frontend/.env.local의 NEXT_PUBLIC_RESEARCH_KEY."""
+    key = os.environ.get("VC_RESEARCH_KEY", "").strip()
+    if key:
+        return key
+    env_local = os.path.join(os.path.dirname(HERE), "frontend", ".env.local")
+    if os.path.exists(env_local):
+        for line in open(env_local, encoding="utf-8"):
+            if line.strip().startswith("NEXT_PUBLIC_RESEARCH_KEY="):
+                return line.split("=", 1)[1].strip().strip('"').strip("'")
+    return ""
+
+
+KEY = _research_key()
+
+
 def get(path):
-    with urllib.request.urlopen(BASE + path, timeout=45) as r:
+    req = urllib.request.Request(BASE + path, headers={"X-Research-Key": KEY} if KEY else {})
+    with urllib.request.urlopen(req, timeout=45) as r:
         return json.load(r)
 
 

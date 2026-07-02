@@ -1,8 +1,17 @@
 // Thin API client — all calls proxied via Next.js rewrite to the FastAPI backend.
 
+// 연구자 키 (스터디 분리, 2026-07-02): 라이브 백엔드의 research/exports API는
+// X-Research-Key를 요구한다. 로컬 프론트를 라이브 백엔드에 물려 모니터링할 때
+// frontend/.env.local 에 NEXT_PUBLIC_RESEARCH_KEY를 넣으면 모든 요청에 실린다
+// (키 없는 로컬 백엔드는 이 헤더를 무시하므로 로컬 개발에는 영향 없음).
+const RESEARCH_KEY = process.env.NEXT_PUBLIC_RESEARCH_KEY;
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(path, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(RESEARCH_KEY ? { "X-Research-Key": RESEARCH_KEY } : {}),
+    },
     cache: "no-store",
     ...options,
   });
