@@ -6,7 +6,8 @@ import { api } from "@/lib/api";
 import { Conflict, Impression, PreferenceState, Turn } from "@/lib/types";
 import MessageBubble from "@/components/chat/MessageBubble";
 import AgentAvatar from "@/components/chat/AgentAvatar";
-import UserInputBox from "@/components/chat/UserInputBox";
+import ChatComposer from "@/components/chat/ChatComposer";
+import ThinkingSkeleton from "@/components/chat/ThinkingSkeleton";
 import ProductCard from "@/components/products/ProductCard";
 import { FeedbackPayload } from "@/components/products/ProductFeedbackButtons";
 import CurrentUnderstandingPanel from "@/components/preference/CurrentUnderstandingPanel";
@@ -32,6 +33,8 @@ export default function StudySessionPage() {
   const [finished, setFinished] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [participantId, setParticipantId] = useState<string>("");
+  const [chatInput, setChatInput] = useState(""); // 입력창 값 (답변 칩 클릭 시 여기에 채움)
+  const [pendingFirst, setPendingFirst] = useState<string | null>(null); // 시작 화면에서 넘어온 첫 발화
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -61,6 +64,12 @@ export default function StudySessionPage() {
         (fb[f.productId] ??= []).push(f.type);
       }
       setFeedbackByProduct(fb);
+      // 시작 화면(session/new)에서 넘긴 첫 발화 — 빈 세션이면 자동 전송 (새로고침엔 재전송 안 됨)
+      const first = sessionStorage.getItem(`vc_first_${sessionId}`);
+      if (first && d.turns.length === 0) {
+        sessionStorage.removeItem(`vc_first_${sessionId}`);
+        setPendingFirst(first);
+      }
     }).catch(console.error);
   }, [sessionId]);
 
@@ -193,9 +202,31 @@ export default function StudySessionPage() {
     }
   }, [turns, impressionsByTurn, scenarioTitle]);
 
+  // 시작 화면에서 넘어온 첫 발화 자동 전송 (sendMessage 정의 이후에 실행).
+  // ref 가드: dev StrictMode의 effect 이중 실행에서 중복 전송 방지.
+  const sentFirstRef = useRef(false);
+  useEffect(() => {
+    if (pendingFirst && !sentFirstRef.current) {
+      sentFirstRef.current = true;
+      setPendingFirst(null);
+      sendMessage(pendingFirst);
+    }
+  }, [pendingFirst, sendMessage]);
+
   const correctable = condition === "correctable";
   const showState = condition !== "baseline";
   const latestRecommendTurnId = Object.keys(impressionsByTurn).at(-1);
+
+  // 로딩 단계 문구 — 실제 파이프라인 단계(발화 이해 → 가치/기준 파악 → 충돌 검사 → 추천 준비)를
+  // 맥락에 따라 순서대로 보여준다. 마지막 단계는 응답 올 때까지 유지 (ThinkingSkeleton).
+  const hasRecommended = Object.keys(impressionsByTurn).length > 0;
+  const thinkingSteps = conflicts.length > 0
+    ? ["방금 말씀을 살펴보고 있어요…", "기존 기준과 다른 점을 확인하고 있어요…", "어떻게 반영할지 정리하고 있어요…"]
+    : hasRecommended
+      ? ["말씀을 살펴보고 있어요…", "바뀐 기준을 반영하고 있어요…", "기준에 맞는 상품을 다시 고르고 있어요…"]
+      : turns.filter((t) => t.role === "user").length <= 1
+        ? ["말씀을 이해하고 있어요…", "어떤 가치를 중요하게 보는지 살펴보고 있어요…", "맞는 상품을 고르고 있어요…"]
+        : ["말씀을 이해하고 있어요…", "기준을 정리하고 있어요…", "더 나은 추천을 준비하고 있어요…"];
 
   // ----- layout: chat (with inline product carousel) + preference panel -----
   return (
@@ -304,24 +335,24 @@ export default function StudySessionPage() {
             </div>
           ))}
 
-          {busy && (
-            <div className="flex items-center gap-2.5">
-              <AgentAvatar className="h-7 w-7" />
-              <span className="flex items-center gap-1 rounded-2xl rounded-tl-md border border-[#e4e8eb] bg-white px-4 py-3">
-                <span className="thinking-dot" /><span className="thinking-dot" /><span className="thinking-dot" />
-              </span>
-            </div>
-          )}
+          {busy && <ThinkingSkeleton steps={thinkingSteps} />}
           <div ref={chatEndRef} />
         </div>
-        <UserInputBox
-          onSend={sendMessage}
-          disabled={busy}
-          suggestions={
-            chipSuggestions /* 대화 중: 백엔드 동적 칩 */
-            ?? (initialNeed ? [initialNeed] : undefined) /* 첫 턴: 시나리오 기반 */
-          }
-        />
+        {/* 리디자인 입력창 (프리뷰 확정안) — 칩 클릭 시 입력창에 채움, 사용자가 다듬어 전송 */}
+        <div className="border-t border-[#f0f2f4] p-3">
+          <ChatComposer
+            value={chatInput}
+            onChange={setChatInput}
+            onSend={(msg) => { setChatInput(""); sendMessage(msg); }}
+            disabled={busy}
+            loading={busy}
+            placeholder="무엇을 찾고 계세요?"
+            suggestions={
+              chipSuggestions /* 대화 중: 백엔드 동적 칩 */
+              ?? (initialNeed && turns.length === 0 ? [initialNeed] : undefined) /* 첫 턴: 시나리오 기반 */
+            }
+          />
+        </div>
       </div>
 
       {/* Right: Preference panel (understanding chips · conflict · radar) */}
