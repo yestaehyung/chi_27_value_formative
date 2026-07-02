@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>에이전트 아키텍처 — Top-down · Bottom-up</title>
+<style>
+  body{margin:0;background:#fff;padding:28px;
+    font-family:"Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif}
+  svg{width:100%;max-width:1120px;height:auto;display:block;margin:0 auto}
+  .gray{fill:#f3f4f6}
+  .mint{fill:#e6f1ea;stroke:#cfe6d8;stroke-width:1}
+  .hot{fill:#dff3e8;stroke:#2f9e6e;stroke-width:1.5}
+  .hi{fill:#f6fdf9;stroke:#2f9e6e;stroke-width:2}
+  .flow{stroke:#2f9e6e;stroke-width:3;fill:none}
+  .link{stroke:#2f9e6e;stroke-width:3;fill:none;stroke-linejoin:round;stroke-linecap:round}
+  .dot{fill:#2f9e6e}
+  .title{font-size:22px;font-weight:800;fill:#1f2328}
+  .title-hi{font-size:15px;font-weight:800;fill:#1f7a54}
+  .role{font-size:16px;font-weight:800;fill:#1f2328}
+  .chip-t{font-size:13.5px;font-weight:700;fill:#1f2328;text-anchor:middle}
+  .chip-s{font-size:11.5px;font-weight:700;fill:#6b7280;text-anchor:middle}
+  .lab{font-size:14.5px;font-weight:800;fill:#1f2328}
+  /* KG */
+  .kg-e{stroke:#c3c8cf;stroke-width:1.6}
+  .kg-i{fill:#fff;stroke:#9aa0a6;stroke-width:1.5}
+  .kg-v{fill:#dff3e8;stroke:#2f9e6e;stroke-width:1.5}
+  .kg-d{fill:#fdeccd;stroke:#d97706;stroke-width:1.5}
+  .kg-t{font-size:12px;font-weight:700;fill:#1f2328;text-anchor:middle}
+  .lg{font-size:10.5px;font-weight:700;fill:#6b7280}
+</style>
+</head>
+<body>
+<svg viewBox="0 0 1120 690" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#2f9e6e"/>
+    </marker>
+  </defs>
+
+  <!-- ===================== LEFT: concept column ===================== -->
+  <!-- Top-down -->
+  <rect class="gray" x="30" y="50" width="500" height="140" rx="20"/>
+  <text class="title" x="60" y="127">Top-down</text>
+  <rect class="mint" x="200" y="75" width="150" height="90" rx="14"/>
+  <text class="chip-t" x="275" y="114">가치 5축</text>
+  <text class="chip-s" x="275" y="136">(TCV)</text>
+  <rect class="mint" x="365" y="75" width="155" height="90" rx="14"/>
+  <text class="chip-t" x="442" y="114">쇼핑 동기</text>
+  <text class="chip-s" x="442" y="136">(H / U)</text>
+
+  <!-- Hidden Intention = ontology graph (KG) -->
+  <rect class="hi" x="30" y="250" width="500" height="205" rx="20"/>
+  <text class="title-hi" x="52" y="278">Hidden Intention · 온톨로지 그래프</text>
+  <!-- edges -->
+  <line class="kg-e" x1="135" y1="330" x2="285" y2="312"/>
+  <line class="kg-e" x1="135" y1="330" x2="450" y2="362"/>
+  <line class="kg-e" x1="130" y1="405" x2="300" y2="408"/>
+  <line class="kg-e" x1="130" y1="405" x2="450" y2="362"/>
+  <!-- intention nodes -->
+  <rect class="kg-i" x="90"  y="315" width="92" height="30" rx="15"/><text class="kg-t" x="136" y="334">선물 인상</text>
+  <rect class="kg-i" x="92"  y="390" width="76" height="30" rx="15"/><text class="kg-t" x="130" y="409">내구성</text>
+  <!-- value/theory nodes (top-down) -->
+  <rect class="kg-v" x="247" y="297" width="78" height="30" rx="15"/><text class="kg-t" x="286" y="316">Social</text>
+  <rect class="kg-v" x="252" y="393" width="100" height="30" rx="15"/><text class="kg-t" x="302" y="412">Functional</text>
+  <!-- discovered node (bottom-up) -->
+  <rect class="kg-d" x="400" y="347" width="104" height="30" rx="15"/><text class="kg-t" x="452" y="366">체면 가격대</text>
+  <!-- legend -->
+  <circle cx="60"  cy="438" r="5" fill="#dff3e8" stroke="#2f9e6e" stroke-width="1.5"/><text class="lg" x="70" y="442">이론 가치 (top-down)</text>
+  <circle cx="245" cy="438" r="5" fill="#fdeccd" stroke="#d97706" stroke-width="1.5"/><text class="lg" x="255" y="442">발견 기준 (bottom-up)</text>
+  <circle cx="430" cy="438" r="5" fill="#fff" stroke="#9aa0a6" stroke-width="1.5"/><text class="lg" x="440" y="442">의도</text>
+
+  <!-- Bottom-up -->
+  <rect class="gray" x="30" y="515" width="500" height="140" rx="20"/>
+  <text class="title" x="60" y="592">Bottom-up</text>
+  <rect class="mint" x="200" y="540" width="150" height="90" rx="14"/>
+  <text class="chip-t" x="275" y="579">선택 / 거절</text>
+  <text class="chip-s" x="275" y="601">비교</text>
+  <rect class="mint" x="365" y="540" width="155" height="90" rx="14"/>
+  <text class="chip-t" x="442" y="579">새 기준</text>
+  <text class="chip-s" x="442" y="601">발견</text>
+
+  <!-- ===================== RIGHT: runtime ===================== -->
+  <rect class="gray" x="660" y="120" width="430" height="150" rx="20"/>
+  <text class="role" x="688" y="190">Service</text>
+  <text class="role" x="688" y="212">Agent</text>
+  <rect class="mint" x="775" y="150" width="135" height="90" rx="14"/>
+  <text class="chip-t" x="842" y="190">네이버 쇼핑</text>
+  <text class="chip-t" x="842" y="212">데이터</text>
+  <rect class="hot" x="925" y="150" width="150" height="90" rx="14"/>
+  <text class="chip-t" x="1000" y="190">이론 축</text>
+  <text class="chip-t" x="1000" y="212">(TCV + H/U)</text>
+
+  <rect class="gray" x="660" y="430" width="430" height="150" rx="20"/>
+  <text class="role" x="688" y="512">사용자</text>
+  <rect class="mint" x="775" y="460" width="135" height="90" rx="14"/>
+  <text class="chip-t" x="842" y="510">발화</text>
+  <rect class="hot" x="925" y="460" width="150" height="90" rx="14"/>
+  <text class="chip-t" x="1000" y="495">추천 상품에</text>
+  <text class="chip-t" x="1000" y="515">대한 반응</text>
+  <text x="1000" y="534" style="font-size:11.5px;font-weight:700;fill:#2f9e6e;text-anchor:middle">(선택 / 거절)</text>
+
+  <!-- ===== correspondence links (매핑) → left spine x=170 ===== -->
+  <polyline class="link" points="1000,120 1000,32 170,32 170,50"/>
+  <circle class="dot" cx="1000" cy="120" r="5"/>
+  <circle class="dot" cx="170" cy="50" r="5"/>
+  <polyline class="link" points="1000,580 1000,672 170,672 170,655"/>
+  <circle class="dot" cx="1000" cy="580" r="5"/>
+  <circle class="dot" cx="170" cy="655" r="5"/>
+
+  <!-- ===== convergence flows → Hidden Intention ===== -->
+  <line class="flow" x1="170" y1="190" x2="170" y2="244" marker-end="url(#ah)"/>   <!-- Top-down ↓ HI -->
+  <line class="flow" x1="170" y1="515" x2="170" y2="461" marker-end="url(#ah)"/>   <!-- Bottom-up ↑ HI -->
+
+  <!-- ===== runtime exchange ===== -->
+  <line class="flow" x1="843" y1="430" x2="843" y2="276" marker-end="url(#ah)"/>   <!-- 질의: 사용자 → agent -->
+  <text class="lab" x="822" y="360" text-anchor="end">질의</text>
+  <line class="flow" x1="965" y1="270" x2="965" y2="424" marker-end="url(#ah)"/>   <!-- 질문/추천: agent → 사용자 -->
+  <text class="lab" x="986" y="360">질문 / 추천</text>
+</svg>
+</body>
+</html>
