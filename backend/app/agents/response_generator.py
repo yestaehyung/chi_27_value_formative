@@ -120,16 +120,31 @@ async def rerank_by_intent(
     if not scored:
         return scored, {}
 
+    from app.products import profiles
+
     by_index = {i: sp for i, sp in enumerate(scored)}
     candidates = []
     for i, sp in enumerate(scored):
         p = sp.product
-        candidates.append({
+        cand = {
             "index": i, "title": p.title, "category": p.category,
             "price": p.price, "rating": p.rating, "reviewCount": p.review_count,
             "longTermReviewRatio": p.long_term_review_ratio,
-            "description": p.description, "priceCue": (p.cue_summary or {}).get("priceCue"),
-        })
+            "priceCue": (p.cue_summary or {}).get("priceCue"),
+        }
+        prof = profiles.get(p.id)
+        if prof:
+            # 정규화 프로필 (오프라인 LLM enrichment) — 제약 대조의 직접 손잡이.
+            # raw description 대신: 판단 재료는 늘고 토큰은 준다.
+            cand.update({
+                "productType": prof.get("productType"),
+                "audience": prof.get("audience"),
+                "keyAttributes": prof.get("keyAttributes") or [],
+                "caveats": prof.get("caveats") or [],
+            })
+        else:  # 프로필 없는 풀(seed/, seed_naver/) — 기존 산문 유지
+            cand["description"] = p.description
+        candidates.append(cand)
     context = {**intent_context, "candidates": candidates}
 
     order: list[int] = []
@@ -168,7 +183,7 @@ async def rerank_by_intent(
 _FALLBACK_SUGGESTIONS = {
     "clarify": ["네, 그게 중요해요", "아니요, 그건 아니에요", "잘 모르겠어요"],
     "recommend": ["더 저렴한 건 없나요?", "사실 디자인도 중요해요", "오래 쓰는 게 우선이에요"],
-    "explain": ["다른 기준으로 비교해줘", "이걸로 정할게요", "더 보여줄 수 있나요?"],
+    "answer": ["다른 기준으로 비교해줘", "이걸로 정할게요", "더 보여줄 수 있나요?"],
 }
 _FALLBACK_DEFAULT = ["좀 더 추천해줘", "가격이 가장 중요해요", "잘 모르겠어요"]
 

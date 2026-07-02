@@ -94,8 +94,18 @@ export default function StudySessionPage() {
       setChipSuggestions(res.replySuggestions?.length ? res.replySuggestions : null);
     } catch (e) {
       console.error(e);
-      setTurns((prev) => prev.filter((t) => t.id !== optimisticId)); // 실패 시 임시 메시지 제거
-      showToast("메시지 전송에 실패했어요.");
+      // 느린 턴(LLM ~30초+)에서 연결이 끊겨도 백엔드는 완료해 저장했을 수 있다 —
+      // 서버 상태로 재동기화해 진실을 화면에 맞춘다 (조용한 유실 방지).
+      try {
+        const d = await api.getSession(sessionId);
+        setTurns(d.turns);
+        if (d.preferenceState) setState(d.preferenceState);
+        setConflicts(d.conflicts);
+        showToast("연결이 불안정해 대화를 다시 불러왔어요.");
+      } catch {
+        setTurns((prev) => prev.filter((t) => t.id !== optimisticId)); // 재동기화도 실패 → 임시 메시지 제거
+        showToast("메시지 전송에 실패했어요.");
+      }
     } finally {
       setBusy(false);
     }
@@ -131,11 +141,12 @@ export default function StudySessionPage() {
       const res = await api.resolveConflict(conflictId, optionId, manualText);
       setConflicts((prev) => prev.filter((c) => c.id !== conflictId));
       setState(res.newPreferenceState);
-      setTurns((prev) => [...prev, {
+      // 해소 발화는 서버가 Turn으로 영속화해 돌려준다(새로고침·replay 생존). 구버전 응답 폴백 유지.
+      setTurns((prev) => [...prev, res.turn ?? {
         id: `local_${Date.now()}`,
         sessionId, turnIndex: prev.length, role: "service_agent",
         content: res.message, dialogueActs: [], relatedProductIds: [],
-        agentAction: "ask_correction", createdAt: new Date().toISOString(),
+        agentAction: "resolution", createdAt: new Date().toISOString(),
       } as Turn]);
     } catch (e) {
       console.error(e);
@@ -320,6 +331,7 @@ export default function StudySessionPage() {
             key={c.id}
             conflict={c}
             onResolve={(optionId, manualText) => resolveConflict(c.id, optionId, manualText)}
+            disabled={busy}
           />
         ))}
 

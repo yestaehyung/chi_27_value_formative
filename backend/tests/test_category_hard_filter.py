@@ -49,7 +49,7 @@ def test_monitor_query_keeps_monitors_despite_wrong_detected_category(db):
         db,
         query="나 모니터 사고 싶어 노트북이랑 같이 쓰게 모니터",
         category="노트북",
-        hard_constraints=[], soft_preferences=[], topic_labels=[], avoidances=[],
+        hard_constraints=[],
         return_pool=True, pool_size=15,
     )
     cats = {sp.product.category for sp in pool}
@@ -67,7 +67,7 @@ def test_embedding_path_keeps_monitor_despite_wrong_category(db, monkeypatch):
         db,
         query="노트북이랑 같이 쓸 모니터",
         category="노트북",
-        hard_constraints=[], soft_preferences=[], topic_labels=[], avoidances=[],
+        hard_constraints=[],
         return_pool=True, pool_size=15,
     )
     cats = {sp.product.category for sp in pool}
@@ -81,7 +81,7 @@ def test_search_falls_back_when_retrieved_ids_missing_from_db(db, monkeypatch):
                         lambda q, n=200: [("ghost1", 0.9), ("ghost2", 0.8)])  # DB에 없는 id
     pool = search_products(
         db, query="모니터", category="노트북",
-        hard_constraints=[], soft_preferences=[], topic_labels=[], avoidances=[],
+        hard_constraints=[],
         return_pool=True, pool_size=15,
     )
     assert pool, "retrieve가 DB에 없는 id만 줘도 추천 풀이 비면 안 됨(폴백 필요)"

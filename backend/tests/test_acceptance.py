@@ -102,6 +102,9 @@ def conflict_session(client):
     sid = new_session(client)
     say(client, sid, "운동 좋아하는 친구에게 줄 스마트워치를 찾고 있어요. 브랜드는 잘 몰라요.")
     say(client, sid, "가능하면 저렴한 게 좋아요.")
+    # 플래너 searchText(사용자 발화 전체 join, 2026-07-02) 기준 mock 노출 셋의 싼 워치 =
+    # watch_low_001. (조인 쿼리 도입 전 한때 cheap_006이 노출되어 재고정했던 이력 있음 —
+    # 픽스처는 항상 "실제 노출되는 상품"에 고정한다: 피드백은 노출 없이는 pair가 안 됨.)
     out = feedback(client, sid, "watch_low_001", "dislike",
                    reason_code="too_cheap_looking",
                    reason_text="선물인데 너무 저렴해 보이면 좀 그래요.")

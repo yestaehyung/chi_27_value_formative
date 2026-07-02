@@ -15,8 +15,20 @@ _TOKEN = re.compile(r"[0-9A-Za-z가-힣]+")
 
 
 def _doc(p: models.Product) -> str:
+    """FTS 문서 — 임베딩 _product_text와 정합: 프로필이 있으면 정규화 필드를 추가로 색인
+    (BM25 폴백 경로에서도 '커널형'·'유선' 같은 정규화 속성이 검색되게)."""
+    from app.products import profiles
+
     tags = " ".join(p.tags or [])
-    return f"{p.title or ''} {tags} {p.description or ''} {p.category or ''}"
+    base = f"{p.title or ''} {tags} {p.description or ''} {p.category or ''}"
+    prof = profiles.get(p.id)
+    if prof:
+        extra = " ".join(filter(None, [
+            prof.get("productType") or "", " ".join(prof.get("keyAttributes") or []),
+            prof.get("audience") or "",
+        ]))
+        return f"{base} {extra}"
+    return base
 
 
 def build_index(db: DbSession) -> int:

@@ -13,20 +13,15 @@ from sqlalchemy.orm import Session as DbSession
 from app.core.ids import new_id
 from app.db import models
 from app.llm.provider import LLMMessage, get_provider
-from app.agents.action_selector import (
-    build_action_decision_context,
-    fetch_action_decision,
-    select_next_action,
-)
+from app.agents import planner, recommender
 from app.agents.question_strategy import (
     _last_agent_action,
     build_value_question,
-    pick_diagnostic_anchor,
 )
 from app.agents import response_generator as rg
 from app.ontology.state_builder import build_snapshot
 from app.preference_commit.commit_engine import run_preference_commit
-from app.products.search import ScoredProduct, search_products
+from app.products.search import ScoredProduct
 from app.wimhf.pair_builder import build_pairs_for_feedback
 
 
@@ -110,8 +105,6 @@ def _create_impressions(
                 "price": True, "rating": True, "reviewCount": True,
                 "longTermReviewRatio": True, "recentSalesCount": True,
                 "sellerGrade": True, "deliveryFee": True,
-                # 연구자용: 이 후보가 검증하려는 가설 축 (사용자 UI에는 비노출 — §36)
-                **({"probeAnchor": sp.probe_anchor} if sp.probe_anchor else {}),
             },
         )
         db.add(imp)
@@ -120,24 +113,11 @@ def _create_impressions(
     return impressions
 
 
-def _build_intent_context(session: models.Session, snapshot, recent_turns) -> dict:
-    """LLM rerank의 'Goal' — 추출된 사용자 의도(시나리오+토픽+가치·동기). 점수→자연어
-    하드코딩 변환 없이, 토픽 라벨·설명·사용자 발화 원본을 주고 LLM이 판단하게 한다."""
-    meta = session.meta or {}
-    return {
-        "scenario": meta.get("shoppingGoal") or meta.get("category") or "",
-        "recentUtterances": [t.content for t in recent_turns[-4:] if t.role in ("user", "user_agent")],
-        "intentTopics": (snapshot.priority_order or []) if snapshot else [],
-        "values_TCV5": {k: v for k, v in (snapshot.anchor_scores or {}).items() if v > 0} if snapshot else {},
-        "motivations": {k: v for k, v in (snapshot.motivation_scores or {}).items() if v >= 0.4} if snapshot else {},
-        "hierarchyNote": "동기가 가치를 조건짓는다 — 이 쇼핑 동기 맥락에서 가치 기준에 맞게 정렬.",
-    }
-
-
 async def _classify_dialogue_acts(provider, content: str) -> list[str]:
-    """화행(dialogue act) 분류 — 발화로 뭘 하는가(reveal/inquire/accept…). PSCon taxonomy.
-    ※ IntentionTopic(가치 의도)과 다름. 실패 시 라벨 없음으로 강등.
-    (LLM task/출력 키는 PSCon 원문 'intent' 유지 — 내부 계약.)"""
+    """화행(dialogue act) 분류 — annotation 전용 (연구 로그). 2026-07-02부터 행동 결정에
+    쓰지 않는다: 화행 키워드 가드(accept→close 등)는 혼합 화행에서 오작동해 폐지, 판단은
+    플래너 LLM으로 이동 (docs/plans/2026-07-02-three-agent-crs-redesign.md).
+    실패 시 라벨 없음으로 강등. (LLM task/출력 키는 PSCon 원문 'intent' 유지 — 내부 계약.)"""
     try:
         out = await provider.generate_json(
             [LLMMessage(role="user", content=content)],
@@ -181,8 +161,9 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     db.commit()
     logging.info("service_agent.turn_pipeline_latency_sec=%.3f", time.perf_counter() - t_pipe)
 
-    # 4-6. action selection — 구조 가드는 규칙, "추천 vs 질문(+무엇을 probe)"은 action_decision(LLM).
-    # category는 더 이상 행동을 가르지 않지만, 상품 검색·clarify 텍스트에는 여전히 쓰인다.
+    # 4-6. 플래닝(②) — 구조 가드는 show_conflict 하나(DB 사실). 나머지는 플래너 LLM이
+    # 매개변수화된 액션을 결정: recommend(searchText, constraintsNote) / clarify(dimension,
+    # question) / answer / close (설계: docs/plans/2026-07-02-three-agent-crs-redesign.md).
     category = (session.meta or {}).get("category")
     direct_open = any(c.severity == "direct" for c in commit.new_conflicts)
     has_recommendations = (
@@ -190,19 +171,13 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         .filter(models.ProductImpression.session_id == session.id)
         .count() > 0
     )
-    decision = select_next_action(dialogue_acts, direct_open, has_recommendations)
-
-    # 추천하기에 가치·동기를 충분히 아는가? 부족하면 어떤 축(가치5/동기7)을 떠볼까? —
-    # 하드코딩 임계값/키워드 대신 LLM이 대화 맥락으로 판단(설계: docs/plans/2026-06-25-action-decision-design.md).
-    # RIG 예측은 선제 질문 소스로 LLM에 전달. 가치·동기는 대등(위계 강제 안 함 — 문헌상 미검증).
-    value_question: str | None = None
-    question_anchor: str | None = None
-    if decision.action == "llm_decide":
-        snap = commit.snapshot
+    decision = planner.structural_guard(direct_open)
+    if decision is None:
         pred = None
         try:
             from app import rig
 
+            # 이론층의 cross-session 가설 — 별도 tier가 아니라 플래너 컨텍스트 필드.
             pred = rig.top_predicted_concept(db, session.id)
         except Exception:  # noqa: BLE001
             pred = None
@@ -213,25 +188,30 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             .order_by(models.Turn.turn_index.desc())
             .limit(6).all()
         ))
-        ad = await fetch_action_decision(provider, build_action_decision_context(
-            ad_turns, snap, has_recommendations,
-            _last_agent_action(db, session.id), pred,
-            (session.meta or {}).get("shoppingGoal") or (session.meta or {}).get("category") or "",
-        ))
-        decision.action = ad["action"]
-        decision.reason = ad["reason"] or decision.reason
-        if decision.action == "clarify":
-            question_anchor = ad["probeDimension"]
-            value_question = ad["probeQuestion"]
-            if not value_question:  # 폴백: LLM이 질문을 안 주면 기존 가치질문 도구
-                value_question, question_anchor = build_value_question(snap, session)
+        decision = await planner.fetch_plan(
+            provider,
+            planner.build_planner_context(
+                ad_turns, commit.snapshot, has_recommendations,
+                _last_agent_action(db, session.id), pred,
+                (session.meta or {}).get("shoppingGoal") or category or "",
+                db=db, session=session,
+            ),
+            fallback_search_text=content.strip(),
+        )
+        if decision.action == "clarify" and not decision.probe_question:
+            # 폴백: LLM이 질문을 안 주면 기존 가치질문 도구
+            decision.probe_question, decision.probe_dimension = build_value_question(
+                commit.snapshot, session,
+            )
 
     impressions: list[models.ProductImpression] = []
     products: list[models.Product] = []
     related_ids: list[str] = []
     conflict_explanation: str | None = None
+    value_question: str | None = None
 
     if decision.action == "clarify":
+        value_question = decision.probe_question
         text = value_question or rg.clarify_text(category)
         session.current_stage = "clarification"
     elif decision.action == "show_conflict":
@@ -239,7 +219,9 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         conflict_explanation = commit.new_conflicts[0].explanation_for_user
         for c in commit.new_conflicts:
             c.status = "shown_to_user"
-    elif decision.action == "explain":
+    elif decision.action == "answer":
+        # 노출된 상품·상품 지식에 대한 질문에 답한다 (MG-ShopDial Answer+Explain 병합) —
+        # 새 검색 없이 마지막 노출 셋 + 대화를 근거로. 렌더러(generate_reply)가 최종 저작.
         products = _last_recommended_products(db, session.id)
         text = rg.explain_text(products)
         related_ids = [p.id for p in products]
@@ -249,36 +231,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         text = rg.close_text(chosen[0] if chosen else None)
         products = chosen[:1]
         session.current_stage = "decision"
-    else:  # recommend
-        snapshot = commit.snapshot
-        # 진단적 trade-off: 가장 불확실한 가설 축을 검증할 후보를 한 슬롯 포함
-        diagnostic = pick_diagnostic_anchor(snapshot, session)
-        # 검색 질의 보강: 발화 + 카테고리 + 추출된 가치(토픽).
-        # 발화("다시 추천해줘")엔 상품정보가 없어, 그동안 끌어낸 가치(내구성·브랜드 등)를
-        # 질의에 넣어야 임베딩이 그 가치 단서를 가진 상품을 찾는다. (상품 description의
-        # 객관 단서와 의미 매칭 — generate_product_descriptions가 단서를 서술해 둠.)
-        scenario_category = (session.meta or {}).get("category")
-        # priority 순 상위 토픽만 (너무 많으면 질의가 희석됨)
-        value_terms = " ".join((snapshot.priority_order or [])[:4]) if snapshot else ""
-        search_query = " ".join(
-            part for part in (content, scenario_category, value_terms) if part
-        ).strip()
-        # 후보 풀(임베딩+필터, 상위 15)을 받아 → LLM rerank(가치·동기) → 다양성으로 3개.
-        pool = search_products(
-            db,
-            query=search_query,
-            category=category,
-            hard_constraints=snapshot.hard_constraints if snapshot else [],
-            soft_preferences=snapshot.soft_preferences if snapshot else [],
-            topic_labels=snapshot.priority_order if snapshot else [],
-            avoidances=snapshot.avoidances if snapshot else [],
-            price_min=snapshot.price_min if snapshot else None,
-            price_max=snapshot.price_max if snapshot else None,
-            diagnostic_anchor=diagnostic,
-            return_pool=True,
-            pool_size=15,
-        )
-        # 답변 초안·순위는 rerank 후 확정한다(아래 recommend 블록). 여기선 후보 풀만 확보.
+    else:  # recommend — 실행(검색→rerank→3개)은 추천 에이전트(③)가 아래에서 수행.
         session.current_stage = "recommendation"
 
     # real LLM providers rewrite the template grounded on context (mock returns it as-is)
@@ -290,16 +243,19 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     )
     t_reply = time.perf_counter()
     state_for_llm = commit.snapshot.user_visible_summary if commit.snapshot else None
-    # 추천이면: LLM rerank(가치·동기로 후보 재정렬 + 카드텍스트) → 다양성 3개. 챗과 병렬.
+    # 추천이면: 추천 에이전트(③)가 검색 사양을 실행 — 임베딩 검색 → rerank(제약·기준 집행,
+    # stated+confirmed만 읽음) → trade-off 3개를 먼저 확정한 뒤, 그 "실제 노출 셋"에 근거해
+    # 답변을 만든다.
     card_texts: dict[str, dict] = {}
     scored: list[ScoredProduct] = []
     if decision.action == "recommend":
-        from app.products.search import select_tradeoff_set
-        intent_context = _build_intent_context(session, commit.snapshot, recent_turns)
-        # 가치·동기로 rerank → 다양성 3개를 먼저 확정한 뒤, 그 "실제 노출 셋"에 근거해 답변을 만든다.
-        # (이전엔 reply가 pool[:3], 카드가 reranked에 근거해 서로 다른 셋을 가리켰다 — A 수정.)
-        reranked, card_texts = await rg.rerank_by_intent(provider, pool, intent_context)
-        scored = select_tradeoff_set(reranked, top_k=3, diagnostic_anchor=diagnostic)
+        scored, card_texts = await recommender.run_recommendation(
+            db, provider, session,
+            search_text=decision.search_text or content.strip(),
+            constraints_note=decision.constraints_note,
+            recent_turns=recent_turns,
+            snapshot=commit.snapshot,
+        )
         products = [sp.product for sp in scored]
         related_ids = [p.id for p in products]
         text = await rg.generate_reply(

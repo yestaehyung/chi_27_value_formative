@@ -55,7 +55,7 @@ def test_recommends_after_already_clarified_once():
 def test_context_keeps_recent_turns_so_domain_persists():
     # belt-and-suspenders: 구조화 상태 옆에 최근 원문 턴을 둔다 → 이전 턴의 도메인(원피스)이
     # 최신 발화에 없어도 컨텍스트에 살아있어, 모델이 도메인을 잃지 않는다.
-    from app.agents.action_selector import build_action_decision_context
+    from app.agents.planner import build_planner_context
 
     class _T:
         def __init__(self, role, content):
@@ -66,7 +66,7 @@ def test_context_keeps_recent_turns_so_domain_persists():
         _T("service_agent", "어떤 느낌을 원하시는지 여쭤봐도 될까요?"),
         _T("user", "나 독특한거 좋아"),
     ]
-    ctx = build_action_decision_context(
+    ctx = build_planner_context(
         turns, snapshot=None, has_recommendations=False,
         last_agent_action="clarify", rag_prediction=None, scenario_goal="자유 대화",
     )

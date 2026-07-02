@@ -40,39 +40,6 @@ def most_uncertain_anchor(snapshot: models.PreferenceStateSnapshot | None) -> st
     return best
 
 
-# 시나리오 맥락에서 발현이 기대되는 anchor (이론모듈 Module B 시나리오-가치 매핑)
-EXPECTED_ANCHORS_BY_GOAL = [
-    ("선물", ["Social", "Emotional", "Conditional"]),
-    ("탐색", ["Epistemic", "Emotional"]),
-    ("고관여", ["Emotional", "Functional"]),
-    ("가성비", ["Functional", "Conditional"]),
-    ("취향", ["Social", "Emotional"]),
-    ("교체", ["Functional", "Emotional"]),
-]
-
-
-def pick_diagnostic_anchor(
-    snapshot: models.PreferenceStateSnapshot | None,
-    session: models.Session,
-) -> str | None:
-    """진단 trade-off 타깃 선정 (2단계):
-    1) 미확인 추론: confirmed와 total의 격차가 큰 anchor → 검증 자극
-    2) 미관측 기대 가설: 시나리오상 발현이 기대되는데 점수가 거의 0인 anchor
-       → 탐침 자극 (예: 선물 시나리오인데 Social 미관측이면 초저가 상품 노출)
-    """
-    gap_anchor = most_uncertain_anchor(snapshot)
-    if gap_anchor:
-        return gap_anchor
-    scores = (snapshot.anchor_scores or {}) if snapshot else {}
-    goal = ((session.meta or {}).get("shoppingGoal") or "") + str((session.meta or {}).get("category") or "")
-    for keyword, anchors in EXPECTED_ANCHORS_BY_GOAL:
-        if keyword in goal:
-            for a in anchors:
-                if scores.get(a, 0.0) < 0.15:
-                    return a
-    return None
-
-
 def _last_agent_action(db: DbSession, session_id: str) -> str | None:
     last = (
         db.query(models.Turn)

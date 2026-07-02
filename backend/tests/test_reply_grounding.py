@@ -1,9 +1,9 @@
 """A: 추천 답변(reply)은 실제로 노출되는 카드 셋에 근거해야 한다.
 
-버그: recommend 분기에서 generate_reply가 pool[:3](rerank 전 임베딩 순)에 근거하지만
-실제 노출 카드는 select_tradeoff_set(reranked)다 → 에이전트가 보여주지 않는 상품을
-말로 설명할 수 있다. 이 테스트는 generate_reply가 받은 products == 최종 impression 상품
-임을 검증한다 (수정 전 fail, 수정 후 pass).
+버그(당시): recommend 분기에서 generate_reply가 pool[:3](rerank 전 임베딩 순)에 근거하지만
+실제 노출 카드는 rerank 이후 셋 → 에이전트가 보여주지 않는 상품을 말로 설명할 수 있다.
+이 테스트는 generate_reply가 받은 products == 최종 impression 상품임을 검증한다.
+(2026-07-02: 노출 셋 = reranked[:3] — select_tradeoff_set 제거됨.)
 """
 import os
 import tempfile

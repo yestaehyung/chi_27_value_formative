@@ -1,5 +1,5 @@
 """Keyword search + scoring + trade-off sampler (spec §14, §29)."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from sqlalchemy.orm import Session as DbSession
 
@@ -13,11 +13,8 @@ from app.products.tag_filter import required_tags, tag_constraint_ok
 class ScoredProduct:
     product: models.Product
     score: float
-    matched: list[str] = field(default_factory=list)
-    weak: list[str] = field(default_factory=list)
     bucket: str = "balanced"
     relevance: float = 0.0  # 질의 적합도(text_relevance) — trade-off floor 게이트에 사용
-    probe_anchor: str | None = None  # 진단적 trade-off: 이 후보가 검증하는 가설 축
 
 
 # 질의 적합도 하한 — trade-off 다양화가 관련 없는 상품을 버킷에 채우는 것을 막는다 (§14.3 보강).
@@ -25,20 +22,6 @@ class ScoredProduct:
 # 절대 임계가 아니라 "이번 질의의 최고 적합도 대비 상대값"을 쓴다 — 대화체 질의
 # ("나 맥북 사고 싶어, 지금 고장났음")는 불용어가 token_score를 희석해 적합도가 통째로
 # 낮아지므로, 고정 임계는 관련 상품까지 잘라낸다(→ 빈 풀 폴백 → 오프도메인 누수). (2026-06-16)
-REL_FLOOR_MIN = 0.20   # 바닥 — 이보다 낮으면 사실상 무관
-REL_FLOOR_RATIO = 0.5  # 이번 질의 최고 적합도의 비율
-
-# 진단 후보 규칙: 불확실한 anchor 가설을 검증할 수 있는 상품 cue (active learning식 자극 설계)
-# 예: Social 가설이 추론 상태면 초저가 상품을 노출 — 싫어하면 체면 가설 확인, 좋아하면 기각
-# 진단 후보 규칙 — trait(TCV5) 가설 검증용 (motivation 층은 대화 프로브로 별도 확인)
-PROBE_RULES = {
-    "Social": lambda p: (p.cue_summary or {}).get("priceCue") == "very_low",
-    "Emotional": lambda p: (p.cue_summary or {}).get("trustCue") == "low"
-    or (p.long_term_review_ratio or 0) < 0.1,
-    "Epistemic": lambda p: (p.cue_summary or {}).get("noveltyCue") == "distinctive",
-    "Conditional": lambda p: (p.attributes or {}).get("style") == "basic",
-    "Functional": lambda p: (p.rating or 0) >= 4.7,
-}
 
 
 def assign_bucket(p: models.Product) -> str:
@@ -65,14 +48,9 @@ def search_products(
     query: str,
     category: str | None,
     hard_constraints: list[str],
-    soft_preferences: list[str],
-    topic_labels: list[str],
-    avoidances: list[str],
     price_min: int | None = None,
     price_max: int | None = None,
     top_k: int = 3,
-    diversify_by_tradeoff: bool = True,
-    diagnostic_anchor: str | None = None,
     return_pool: bool = False,
     pool_size: int = 15,
 ) -> list[ScoredProduct]:
@@ -118,27 +96,22 @@ def search_products(
     if tag_pass:
         candidates = tag_pass
 
-    # 5) 점수 = 적합도 + 태그 가점 → trade-off 랭킹.
-    #    적합도(relevance)는 **임베딩 유사도 우선**(의미 적합도) — retrieve 순위가 랭킹에 반영되어야
-    #    "RGB 게이밍" 같은 요구가 trust/popularity에 밀리지 않는다. 임베딩 없으면(mock) 키워드 적합도.
+    # 5) 점수 = 질의 적합도(임베딩 유사도 우선) + 태그 가점. 랭킹은 value-blind(2026-07-01):
+    #    가치·의도는 추천을 강제하지 않고 피드백에서 passive하게 추론한다. 임베딩 없으면(mock) 키워드 적합도.
     scored = []
     for p in candidates:
         sim = sim_by_id.get(p.id)
         rel = sim if sim is not None else text_relevance(p, query)
         if required and p.tags:
             rel = min(1.0, rel + 0.1 * len(set(p.tags) & set(required)))
-        score, matched, weak = compute_product_score(
-            p, query, hard_constraints, soft_preferences, topic_labels, avoidances, text_rel=rel
-        )
-        scored.append(ScoredProduct(product=p, score=score, matched=matched, weak=weak,
+        score = compute_product_score(p, query, text_rel=rel)
+        scored.append(ScoredProduct(product=p, score=score,
                                     bucket=assign_bucket(p), relevance=rel))
     ranked = apply_diversity_rerank(sorted(scored, key=lambda x: x.score, reverse=True))
 
-    if return_pool:  # LLM rerank용: 다양성 적용 전 상위 후보 풀(점수순). 호출부가 rerank→다양성.
+    if return_pool:  # LLM rerank용 상위 후보 풀(점수순). 노출 셋 확정은 rerank(LLM)가 한다.
         return ranked[:pool_size]
-    if not diversify_by_tradeoff:
-        return ranked[:top_k]
-    return select_tradeoff_set(ranked, top_k, diagnostic_anchor)
+    return ranked[:top_k]
 
 
 def apply_diversity_rerank(ranked: list[ScoredProduct]) -> list[ScoredProduct]:
@@ -168,53 +141,9 @@ def apply_diversity_rerank(ranked: list[ScoredProduct]) -> list[ScoredProduct]:
     return result
 
 
-def select_tradeoff_set(
-    ranked: list[ScoredProduct],
-    top_k: int = 3,
-    diagnostic_anchor: str | None = None,
-) -> list[ScoredProduct]:
-    """Pick top candidates from distinct trade-off buckets so the set deliberately
-    surfaces tensions (price vs trust vs distinctiveness) that elicit hidden intentions.
-
-    diagnostic_anchor가 주어지면, 그 가설을 검증하는 진단 후보가 결과에 반드시
-    포함되게 한다 — 단 슬롯을 추가로 뺏지 않고 **가장 약한 멤버와 교체**한다.
-    이렇게 해야 핵심 trade-off 3종(저가/신뢰/프리미엄) 다양성을 유지하면서도
-    추천을 active learning의 질의로 쓸 수 있다 (hidden intention 강화 ⓐ)."""
-    # 0) 질의 적합도 floor — 관련도 낮은 상품이 trade-off 버킷을 채우지 않게 한다.
-    #    관련 상품이 하나도 없으면(우리가 안 가진 카테고리 등) 점수 상위로 폴백해 빈 응답을 막는다.
-    top_rel = max((sp.relevance for sp in ranked), default=0.0)
-    floor = max(REL_FLOOR_MIN, top_rel * REL_FLOOR_RATIO)
-    pool = [sp for sp in ranked if sp.relevance >= floor] or ranked[:top_k]
-
-    # 1) 1번 슬롯 = 점수 최상위 고정 (정합성 보장 — 사용자 요구에 가장 맞는 후보가 항상 포함).
-    #    나머지 슬롯만 버킷 다양성으로 채워 trade-off를 노출한다 (정합성 ⊕ 다양성).
-    #    pool은 점수순(ranked 유래)이라 pool[0]이 최상위. 다양성이 1위를 밀어내지 않게 함.
-    chosen: list[ScoredProduct] = [pool[0]] if pool else []
-    used_buckets: set[str] = {pool[0].bucket} if pool else set()
-    for sp in pool[1:]:  # 2번 슬롯부터 다양성 (다른 버킷 우선)
-        if sp.bucket not in used_buckets:
-            chosen.append(sp)
-            used_buckets.add(sp.bucket)
-        if len(chosen) >= top_k:
-            break
-    for sp in pool:  # 버킷이 부족하면 점수순으로 채움
-        if len(chosen) >= top_k:
-            break
-        if sp not in chosen:
-            chosen.append(sp)
-
-    # 2) 진단 후보가 이미 포함됐으면 태그만, 아니면 가장 약한 멤버와 교체
-    rule = PROBE_RULES.get(diagnostic_anchor or "")
-    if rule is not None:
-        in_set = next((sp for sp in chosen if rule(sp.product)), None)
-        if in_set is not None:
-            in_set.probe_anchor = diagnostic_anchor
-        else:
-            probe = next((sp for sp in pool if rule(sp.product) and sp not in chosen), None)
-            # 1번 슬롯(점수 최상위)은 보존 — 진단 후보는 2번 이후 가장 약한 멤버와만 교체.
-            replaceable = chosen[1:] or chosen
-            if probe is not None and replaceable:
-                weakest = min(replaceable, key=lambda x: x.score)
-                chosen[chosen.index(weakest)] = probe
-                probe.probe_anchor = diagnostic_anchor
-    return chosen
+# select_tradeoff_set은 2026-07-02 제거 — 노출 셋 확정은 rerank(LLM)가 한다.
+# 셋의 대비(강점이 서로 다른 3개 = 수동 관측 도구)는 rerank 프롬프트의 구성 원칙으로 이동,
+# mock rerank는 결정론 priceCue 스프레드로 같은 계약을 지킨다. 옛 버킷 규칙은 아마존 풀에서
+# 88%가 단일 버킷(novel_or_distinctive)으로 형해화됐고, 희소 버킷 후보를 rerank 순위 깊은
+# 곳에서 승격시켜 제약 위반품(유선 이어폰)을 노출시키는 부작용만 남겼다.
+# assign_bucket/bucket은 풀 단계 MMR(apply_diversity_rerank)용으로만 유지.

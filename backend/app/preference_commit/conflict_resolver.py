@@ -50,7 +50,7 @@ def resolve_conflict(
     conflict: models.PreferenceConflict,
     option_id: str,
     manual_text: str | None,
-) -> tuple[models.ConflictResolutionEvent, models.PreferenceStateSnapshot, str]:
+) -> tuple[models.ConflictResolutionEvent, models.PreferenceStateSnapshot, str, models.Turn]:
     options = conflict.suggested_resolutions or []
     option = next((o for o in options if o.get("id") == option_id), None)
     action = option["action"] if option else option_id  # allow passing the action directly
@@ -128,7 +128,6 @@ def resolve_conflict(
         resulting_snapshot_id=snapshot.id,
     )
     db.add(event)
-    db.commit()
 
     message = build_resolution_message(
         action,
@@ -136,4 +135,23 @@ def resolve_conflict(
         new_label=new_topic.label if new_topic else None,
         avoidance_label=avoidance_label,
     )
-    return event, snapshot, message
+    # 해소 발화를 Turn으로 영속화 (2026-07-02) — 이전엔 프론트 로컬 말풍선뿐이라
+    # 새로고침·연구 replay에서 사라졌다. 시뮬레이션의 자동 해소도 대화 기록이 남는다.
+    last_turn = (
+        db.query(models.Turn)
+        .filter(models.Turn.session_id == conflict.session_id)
+        .order_by(models.Turn.turn_index.desc())
+        .first()
+    )
+    turn = models.Turn(
+        id=new_id("turn"),
+        session_id=conflict.session_id,
+        turn_index=(last_turn.turn_index + 1) if last_turn else 0,
+        role="service_agent",
+        content=message,
+        agent_action="resolution",
+        dialogue_acts=[],
+    )
+    db.add(turn)
+    db.commit()
+    return event, snapshot, message, turn

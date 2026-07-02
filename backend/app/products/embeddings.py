@@ -61,10 +61,28 @@ def _embed(texts: list[str]) -> list[list[float]] | None:
 
 
 def _product_text(p) -> str:
-    """임베딩 텍스트 — BM25 _doc와 정합. 생성 서술(description)·태그·카테고리경로 포함해
-    빈약한 제목을 보강한다 (scripts/generate_product_descriptions.py 산출)."""
+    """임베딩 텍스트 — BM25 _doc와 정합.
+
+    프로필(product_profiles.json, 오프라인 LLM enrichment)이 있으면 **정체성 필드만**으로
+    구성 — title/titleFull/productType/keyAttributes/audience/category. 프로필 산문(profile)은
+    의도적으로 제외한다: 산문의 용도 서술("여행·출퇴근에 적합")이 카테고리를 넘어 공명해
+    "여행용 가벼운 노트북" 쿼리에 이어폰을 끌어오는 누수를 만들었다(2026-07-02 진단 —
+    retrieval은 정체가 지배해야 하고, 용도 적합은 rerank가 판단한다). 프로필이 없는 풀
+    (seed/, seed_naver/)은 기존 구성 유지 — 그 풀들의 벡터 캐시가 계속 유효하다.
+    ※ 구성 변경 시 해당 seed의 product_vectors.json을 지우고 재임베딩할 것 (캐시는 id-키)."""
+    from app.products import profiles
+
+    attrs = p.attributes or {}
+    prof = profiles.get(p.id)
+    if prof:
+        parts = [
+            p.category or "", prof.get("productType") or "",
+            p.title or "", attrs.get("titleFull") or "",
+            " ".join(prof.get("keyAttributes") or []), prof.get("audience") or "",
+        ]
+        return " ".join(s for s in parts if s).strip()
     tags = " ".join(p.tags or [])
-    cat_path = (p.attributes or {}).get("categoryPath", "") if p.attributes else ""
+    cat_path = attrs.get("categoryPath", "")
     return f"{p.title or ''} {p.description or ''} {tags} {cat_path} {p.category or ''}".strip()
 
 

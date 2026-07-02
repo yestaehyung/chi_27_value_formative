@@ -17,7 +17,8 @@ from enum import Enum
 
 class DialogueAct(str, Enum):
     """화행 — 사용자가 발화로 '무엇을 하는가' (PSCon taxonomy).
-    ※ 가치 의도(IntentionTopic)와 다름. action_selector가 다음 행동 결정에 사용."""
+    ※ 가치 의도(IntentionTopic)와 다름. 2026-07-02부터 annotation 전용(연구 로그) —
+    행동 결정은 플래너 LLM(app/agents/planner.py)이 대화 원문으로 판단한다."""
     REVEAL = "reveal"        # 원하는 상품/조건/선호를 드러냄
     INTERPRET = "interpret"  # 기존 요구 구체화·반응
     REVISE = "revise"        # 요구/추천 수정

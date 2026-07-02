@@ -855,10 +855,21 @@ def card_rationale(ctx: dict) -> dict:
 
 
 def rerank(ctx: dict) -> dict:
-    """결정론적 rerank — 입력 후보 순서를 그대로 유지(임베딩 순서 = 폴백과 동일).
-    각 후보에 간단한 사실 기반 카드텍스트를 붙인다. (실 provider는 가치·동기로 재정렬.)"""
+    """결정론적 rerank — 상위는 priceCue 스프레드(강점이 다른 셋 = 관측 도구 계약),
+    나머지는 입력(적합도) 순서 유지. select_tradeoff_set 제거(2026-07-02) 후 노출 셋
+    확정이 rerank로 왔으므로, 데모 재현성(가격대 대비 있는 3개)을 mock이 보장한다.
+    (실 provider는 RERANK_SYSTEM 원칙 6으로 같은 계약을 판단.)"""
+    cands = list(ctx.get("candidates", []))
+    spread, rest, used_cues = [], [], set()
+    for c in cands:  # 적합도순 그리디 — 새 priceCue를 처음 보는 후보를 앞으로
+        cue = c.get("priceCue")
+        if cue not in used_cues:
+            spread.append(c)
+            used_cues.add(cue)
+        else:
+            rest.append(c)
     ranking = []
-    for c in ctx.get("candidates", []):
+    for c in spread + rest:
         ltr = round((c.get("longTermReviewRatio") or 0) * 100)
         rating = c.get("rating") or 0
         matched = []
@@ -884,7 +895,7 @@ def reply_suggestion(ctx: dict) -> dict:
         sug = ["네, 그게 중요해요", "아니요, 그건 아니에요", "잘 모르겠어요"]
     elif action == "recommend":
         sug = ["더 저렴한 건 없나요?", "사실 디자인도 중요해요", "오래 쓰는 게 우선이에요"]
-    elif action == "explain":
+    elif action == "answer":
         sug = ["다른 기준으로 비교해줘", "이걸로 정할게요", "더 보여줄 수 있나요?"]
     else:
         sug = ["좀 더 추천해줘", "가격이 가장 중요해요", "잘 모르겠어요"]
@@ -927,33 +938,63 @@ def _probe_target(values: dict, motivations: dict) -> tuple[str, str]:
     return dim, _PROBE_Q.get(dim, "이번 쇼핑에서 가장 중요하게 보는 기준이 무엇일까요?")
 
 
+# close/answer 판정 구문 — mock 화행 분류(intent_classification)와 동일 구문을 써서
+# 옛 구조 가드(accept→close, inquire→explain) 시절의 데모·시뮬 흐름을 재현한다.
+_ACCEPT_PHRASES = ("로 할게", "으로 할게", "결정했", "구매할게", "이걸로", "주문할게")
+_INQUIRE_PHRASES = ("뭐가", "어떤 게", "어떤게", "차이", "어때", "괜찮을까", "궁금", "알려줘", "어떨까")
+_REVEAL_PHRASES = ("찾고 있", "추천해", "필요해", "사려고", "사고 싶", "보여줘", "보여주")
+
+
 def action_decision(ctx: dict) -> dict:
-    """결정론 행동 판단 (mock 계약·폴백). 실 provider는 LLM이 대화 맥락으로 판단.
-    규칙: 명시적 추천요구→recommend / 추천이력 있음→recommend / 직전 clarify→recommend
-    (연속 금지) / 가치·동기 신호 빈약→clarify + 가장 빈 축 probe / 그 외→recommend."""
+    """결정론 플래너 (mock 계약·폴백) — 4-vocab + 매개변수. 실 provider는 LLM이 판단.
+
+    searchText = 사용자 발화 전부 join (대화형 쿼리 재작성의 결정론 근사) — 턴1의 도메인
+    ('스마트워치')이 턴2의 얇은 발화('저렴한 게 좋아요')에서도 쿼리에 살아남는다.
+    규칙 순서: 결정 발화→close / 명시적 추천요구→recommend / 노출 상품 질문→answer /
+    직전 clarify→recommend(연속 금지) / 추천이력→recommend / 신호 빈약→clarify+probe /
+    그 외→recommend."""
     turns = ctx.get("recentTurns") or []
-    latest_user = next(
-        (m.get("content", "") for m in reversed(turns) if m.get("role") in ("user", "user_agent")),
-        "",
-    )
-    utt = latest_user or ctx.get("recentUtterance") or ""
+    user_utts = [u for u in (ctx.get("userUtterances") or []) if isinstance(u, str) and u]
+    if not user_utts:
+        user_utts = [m.get("content", "") for m in turns
+                     if m.get("role") in ("user", "user_agent") and m.get("content")]
+    latest = user_utts[-1] if user_utts else (ctx.get("recentUtterance") or "")
+    search_text = " ".join(user_utts).strip() or latest
+    base = {"searchText": search_text, "constraintsNote": ""}
     has_rec = bool(ctx.get("hasRecommendations"))
     last = ctx.get("lastAgentAction")
     values = ctx.get("values") or {}
     motivations = ctx.get("motivations") or {}
 
-    if any(k in utt for k in ("추천", "바로", "보여줘", "골라줘", "정해줘")):
-        return {"action": "recommend", "reason": "user explicitly asked to recommend"}
-    if has_rec:
-        return {"action": "recommend", "reason": "recommendations exist — re-recommend with updated state"}
+    if has_rec and _has(latest, *_ACCEPT_PHRASES):
+        return {**base, "action": "close", "reason": "user announced a purchase decision"}
+    if _has(latest, "추천", "바로", "보여줘", "골라줘", "정해줘"):
+        return {**base, "action": "recommend", "reason": "user explicitly asked to recommend"}
+    if has_rec and ("?" in latest or _has(latest, *_INQUIRE_PHRASES)) \
+            and not _has(latest, *_REVEAL_PHRASES):
+        return {**base, "action": "answer", "reason": "question about shown products"}
     if last == "clarify":
-        return {"action": "recommend", "reason": "already clarified once — recommend (PSCon pattern)"}
+        return {**base, "action": "recommend", "reason": "already clarified once — recommend (PSCon pattern)"}
+    if has_rec:
+        return {**base, "action": "recommend", "reason": "recommendations exist — re-recommend with updated state"}
     value_count = sum(1 for v in values.values() if isinstance(v, (int, float)) and v >= 0.1)
     if value_count < 2:
         dim, q = _probe_target(values, motivations)
-        return {"action": "clarify", "reason": "value/motivation signals sparse — probe",
+        return {**base, "action": "clarify", "reason": "value/motivation signals sparse — probe",
                 "probe": {"dimension": dim, "question": q}}
-    return {"action": "recommend", "reason": "enough understanding to recommend"}
+    return {**base, "action": "recommend", "reason": "enough understanding to recommend"}
+
+
+def product_profile(ctx: dict) -> dict:
+    """결정론 상품 프로필 (오프라인 배치용 task의 mock 계약) — 주어진 텍스트를 그대로
+    구조에 얹는다 (환각 0). 실 provider는 LLM이 정규화·해석한다."""
+    return {
+        "profile": ctx.get("description") or ctx.get("title") or "",
+        "productType": ctx.get("category") or "",
+        "audience": "성인 공용",
+        "keyAttributes": [],
+        "caveats": [],
+    }
 
 
 def generic_text(_prompt: str) -> str:
@@ -982,4 +1023,5 @@ TASK_HANDLERS = {
     "rerank": rerank,
     "state_summary": state_summary,
     "action_decision": action_decision,
+    "product_profile": product_profile,
 }

@@ -7,10 +7,13 @@ export default function ConflictCard({
   conflict,
   onResolve,
   onDismiss,
+  disabled = false,
 }: {
   conflict: Conflict;
   onResolve: (optionId: string, manualText?: string) => void;
   onDismiss?: () => void;
+  /** 답변 생성 중 해소 잠금 — 해소가 항상 다음 추천에 반영되도록(레이스·구상태 응답 방지). */
+  disabled?: boolean;
 }) {
   const [manualMode, setManualMode] = useState(false);
   const [manualText, setManualText] = useState("");
@@ -50,21 +53,28 @@ export default function ConflictCard({
             {options.filter((o) => o.action !== "manual_edit").map((o) => (
               <button
                 key={o.id}
+                disabled={disabled}
                 onClick={() => onResolve(o.id)}
                 onMouseEnter={() => setHovered(o.id)}
                 onMouseLeave={() => setHovered(null)}
-                className="block w-full rounded-xl border border-[#e4e8eb] bg-white px-4 py-2.5 text-left text-xs font-medium text-[#404040] transition-colors duration-150 hover:border-[#4f46e5] hover:bg-[#f7fdf9] hover:text-[#047857] active:scale-[0.98]"
+                className="block w-full rounded-xl border border-[#e4e8eb] bg-white px-4 py-2.5 text-left text-xs font-medium text-[#404040] transition-colors duration-150 hover:border-[#4f46e5] hover:bg-[#f7fdf9] hover:text-[#047857] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[#e4e8eb] disabled:hover:bg-white disabled:hover:text-[#404040]"
               >
                 {o.label}
               </button>
             ))}
             {options.some((o) => o.action === "manual_edit") && (
               <button
+                disabled={disabled}
                 onClick={() => setManualMode(true)}
-                className="block w-full rounded-xl border border-dashed border-[#c9cdd2] bg-white px-4 py-2.5 text-left text-xs text-[#787c82] transition-colors duration-150 hover:border-[#4f46e5] hover:text-[#047857] active:scale-[0.98]"
+                className="block w-full rounded-xl border border-dashed border-[#c9cdd2] bg-white px-4 py-2.5 text-left text-xs text-[#787c82] transition-colors duration-150 hover:border-[#4f46e5] hover:text-[#047857] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[#c9cdd2] disabled:hover:text-[#787c82]"
               >
                 직접 수정하기
               </button>
+            )}
+            {disabled && (
+              <div className="rounded-xl bg-[#f5f6f8] px-3 py-2 text-[11px] text-[#9aa0a6]">
+                답변을 만드는 중이에요 — 잠시 후 선택할 수 있어요.
+              </div>
             )}
             {hoveredOption && (
               <div className="rounded-xl bg-[#f5f6f8] px-3 py-2 text-[11px] text-[#606060]">
@@ -85,7 +95,7 @@ export default function ConflictCard({
               <button className="btn px-3 py-1.5 text-xs" onClick={() => setManualMode(false)}>취소</button>
               <button
                 className="btn btn-primary px-3 py-1.5 text-xs"
-                disabled={!manualText.trim()}
+                disabled={disabled || !manualText.trim()}
                 onClick={() => onResolve("manual_edit", manualText.trim())}
               >
                 이 기준으로 수정
