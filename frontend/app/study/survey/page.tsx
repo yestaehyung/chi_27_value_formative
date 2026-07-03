@@ -152,7 +152,7 @@ function Question({
                   key={n}
                   type="button"
                   onClick={() => onSingle(String(n))}
-                  className={`h-10 flex-1 rounded-md border text-sm font-semibold tabular-nums transition-colors duration-150 active:scale-[0.94] ${
+                  className={`h-10 flex-1 rounded-md border text-sm font-semibold tabular-nums transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] ${
                     on ? "border-[#4f46e5] bg-[#4f46e5] text-white" : "border-[#e4e8eb] text-slate-600 hover:border-[#4f46e5]"
                   }`}
                 >
@@ -200,7 +200,7 @@ function Question({
                 key={opt}
                 type="button"
                 onClick={() => onMulti(opt)}
-                className={`rounded-full border px-3 py-1.5 text-sm transition-colors duration-150 active:scale-[0.96] ${
+                className={`rounded-full border px-3 py-1.5 text-sm transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] ${
                   on ? "border-[#4f46e5] bg-[#4f46e5] text-white" : "border-[#e4e8eb] text-slate-600 hover:border-[#4f46e5]"
                 }`}
               >

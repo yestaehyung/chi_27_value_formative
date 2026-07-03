@@ -1,4 +1,5 @@
-"""Keyword search + scoring + trade-off sampler (spec §14, §29)."""
+"""Product retrieval: embedding/BM25 retrieve → filters → value-blind relevance rank.
+노출 셋 확정(제약 집행 + 보완적 3개 구성)은 recommender의 LLM rerank가 한다 (spec §14, §29)."""
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session as DbSession
@@ -13,15 +14,7 @@ from app.products.tag_filter import required_tags, tag_constraint_ok
 class ScoredProduct:
     product: models.Product
     score: float
-    bucket: str = "balanced"
-    relevance: float = 0.0  # 질의 적합도(text_relevance) — trade-off floor 게이트에 사용
-
-
-# 질의 적합도 하한 — trade-off 다양화가 관련 없는 상품을 버킷에 채우는 것을 막는다 (§14.3 보강).
-# detect_category 하드필터에 의존하지 않고, 사용자의 실제 발화↔제목 적합도로 거른다.
-# 절대 임계가 아니라 "이번 질의의 최고 적합도 대비 상대값"을 쓴다 — 대화체 질의
-# ("나 맥북 사고 싶어, 지금 고장났음")는 불용어가 token_score를 희석해 적합도가 통째로
-# 낮아지므로, 고정 임계는 관련 상품까지 잘라낸다(→ 빈 풀 폴백 → 오프도메인 누수). (2026-06-16)
+    bucket: str = "balanced"  # apply_diversity_rerank의 브랜드/버킷 중복 감점에 사용
 
 
 def assign_bucket(p: models.Product) -> str:
@@ -105,8 +98,7 @@ def search_products(
         if required and p.tags:
             rel = min(1.0, rel + 0.1 * len(set(p.tags) & set(required)))
         score = compute_product_score(p, query, text_rel=rel)
-        scored.append(ScoredProduct(product=p, score=score,
-                                    bucket=assign_bucket(p), relevance=rel))
+        scored.append(ScoredProduct(product=p, score=score, bucket=assign_bucket(p)))
     ranked = apply_diversity_rerank(sorted(scored, key=lambda x: x.score, reverse=True))
 
     if return_pool:  # LLM rerank용 상위 후보 풀(점수순). 노출 셋 확정은 rerank(LLM)가 한다.

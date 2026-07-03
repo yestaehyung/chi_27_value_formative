@@ -178,7 +178,7 @@ export default function StudySessionPage() {
     } catch (e) {
       console.error(e);
     }
-  }, []);
+  }, [sessionId]);
 
   const copyConversation = useCallback(async () => {
     const label = (r: string) => (r === "user" ? "나" : "에이전트");

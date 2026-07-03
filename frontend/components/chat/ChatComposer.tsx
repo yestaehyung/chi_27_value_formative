@@ -63,7 +63,7 @@ export default function ChatComposer({
             key={s}
             onClick={() => setText(s)}
             disabled={disabled}
-            className="rounded-full border border-[#e4e8eb] bg-white px-3 py-1.5 text-[12px] text-[#5f6368] transition-colors duration-150 hover:bg-[#f5f6f8] active:scale-[0.96] disabled:opacity-50"
+            className="rounded-full border border-[#e4e8eb] bg-white px-3 py-1.5 text-[12px] text-[#5f6368] transition-[color,background-color,border-color,transform] duration-150 hover:bg-[#f5f6f8] active:scale-[0.96] disabled:opacity-50"
             style={{ ["--tw-text-opacity" as string]: "1" }}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = brand; e.currentTarget.style.color = brand; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e4e8eb"; e.currentTarget.style.color = "#5f6368"; }}

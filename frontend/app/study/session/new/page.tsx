@@ -102,7 +102,7 @@ export default function NewSessionPage() {
               onClick={() => pickScenario(sc)}
               disabled={creating}
               title={sc.initialUserNeed}
-              className={`rounded-full border px-4 py-2 text-sm transition-colors duration-150 active:scale-[0.97] disabled:opacity-50 ${
+              className={`rounded-full border px-4 py-2 text-sm transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] disabled:opacity-50 ${
                 selected?.id === sc.id
                   ? "border-[#4f46e5] bg-[#eef2ff] text-[#4f46e5]"
                   : "border-[#e4e8eb] bg-white text-[#404040] hover:border-[#4f46e5] hover:text-[#4f46e5]"
