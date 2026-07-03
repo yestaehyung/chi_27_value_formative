@@ -129,8 +129,6 @@ export const SURVEY: SurveySection[] = [
       lk("F2_3", "AI가 내가 미처 말하지 못한 부분까지 고려해 추천해주면 도움이 될 것 같다."),
       lk("F2_4", "AI가 나를 잘못 이해했을 때 직접 수정할 수 있어야 한다."),
       lk("F2_5", "AI가 나를 어떻게 이해하고 있는지 확인할 수 있으면 좋겠다."),
-      lk("F2_6", "AI가 확신이 낮은 추론도 '확실하지 않음'이라고 표시하고 보여주면 좋겠다."),
-      lk("F2_7", "AI가 내 쇼핑 기준을 계속 저장하거나 업데이트하는 것은 조심스럽게 느껴진다."),
       lk("F2_8", "AI가 추천을 빨리 끝내기보다, 내가 기준을 정리할 수 있도록 질문해주면 좋겠다."),
       lk("F2_9", "AI가 내 취향을 너무 단정적으로 말하면 불편할 것 같다."),
       lk("F2_10", "AI가 내 선택 기준을 정리해주면 내가 무엇을 원하는지 더 잘 알 수 있을 것 같다."),
@@ -147,8 +145,10 @@ const SCORING: { key: string; items: string[] }[] = [
   { key: "Conditional", items: ["D5_1", "D5_2", "D5_3"] },
   { key: "Utilitarian", items: ["E1_1", "E1_2", "E1_3", "E1_4", "E1_5", "E1_6"] },
   { key: "Hedonic", items: ["E2_1", "E2_2", "E2_3", "E2_4", "E2_5", "E2_6"] },
-  { key: "CorrectabilityNeed", items: ["F2_4", "F2_5", "F2_6"] },
-  { key: "PrivacyConcern", items: ["F2_7"] },
+  // F2_6(확신 표시)·F2_7(저장 우려/PrivacyConcern)은 2026-07-03 설문 축소로 제거 —
+  // CorrectabilityNeed는 남은 2문항 평균 (computeProfile이 답한 항목만 평균하므로
+  // 과거 응답자 프로필과도 호환).
+  { key: "CorrectabilityNeed", items: ["F2_4", "F2_5"] },
 ];
 
 export function computeProfile(answers: Record<string, unknown>): Record<string, number> {
