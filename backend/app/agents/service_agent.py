@@ -210,6 +210,11 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     conflict_explanation: str | None = None
     value_question: str | None = None
 
+    # 직전 노출 셋 — 이 시점(새 impression 저장 전)에 잡아야 "직전"이다.
+    # renderer가 과거 노출 상품을 언급할 때의 유일한 근거 데이터로 전달된다
+    # (없으면 그 발화 공간이 전부 추측이 된다 — 2026-07-03 live 허위 진술 버그).
+    prev_shown = _last_recommended_products(db, session.id)
+
     if decision.action == "clarify":
         value_question = decision.probe_question
         text = value_question or rg.clarify_text(category)
@@ -222,14 +227,13 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     elif decision.action == "answer":
         # 노출된 상품·상품 지식에 대한 질문에 답한다 (MG-ShopDial Answer+Explain 병합) —
         # 새 검색 없이 마지막 노출 셋 + 대화를 근거로. 렌더러(generate_reply)가 최종 저작.
-        products = _last_recommended_products(db, session.id)
+        products = prev_shown
         text = rg.explain_text(products)
         related_ids = [p.id for p in products]
         session.current_stage = "comparison"
     elif decision.action == "close":
-        chosen = _last_recommended_products(db, session.id)
-        text = rg.close_text(chosen[0] if chosen else None)
-        products = chosen[:1]
+        text = rg.close_text(prev_shown[0] if prev_shown else None)
+        products = prev_shown[:1]
         session.current_stage = "decision"
     else:  # recommend — 실행(검색→rerank→3개)은 추천 에이전트(③)가 아래에서 수행.
         session.current_stage = "recommendation"
@@ -262,12 +266,14 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             provider, action=decision.action, template_text=rg.recommend_text(products),
             recent_turns=recent_turns, products=products, state_summary=state_for_llm,
             conflict_explanation=conflict_explanation, must_ask_question=value_question,
+            previously_shown=prev_shown,
         )
     else:
         text = await rg.generate_reply(
             provider, action=decision.action, template_text=text, recent_turns=recent_turns,
             products=products, state_summary=state_for_llm,
             conflict_explanation=conflict_explanation, must_ask_question=value_question,
+            previously_shown=prev_shown,
         )
     logging.info("service_agent.generate_reply_latency_sec=%.3f", time.perf_counter() - t_reply)
 

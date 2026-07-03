@@ -64,16 +64,31 @@ async def generate_reply(
     state_summary: dict | None,
     conflict_explanation: str | None = None,
     must_ask_question: str | None = None,
+    previously_shown: list[models.Product] | None = None,
 ) -> str:
     """LLM-grounded reply; falls back to the deterministic template on mock/error."""
     if provider.name == "mock":
         return template_text
+    from app.products import profiles
+
+    # 직전 노출 셋 — 이게 없으면 "앞서 보여드린 상품" 이야기가 전부 추측이 된다
+    # (2026-07-03 live: 남성 2/3 세트를 "전부 여성용으로 골랐다"고 허위 진술).
+    # 제목+정체 필드만 — 과거 주장의 근거로 충분하고 토큰을 아낀다.
+    prev_products = []
+    for p in previously_shown or []:
+        entry: dict = {"title": p.title}
+        prof = profiles.get(p.id)
+        if prof:
+            entry["productType"] = prof.get("productType")
+            entry["audience"] = prof.get("audience")
+        prev_products.append(entry)
     context = {
         "recentDialogue": [
             {"role": t.role, "content": t.content} for t in recent_turns[-8:]
         ],
         "decidedAction": action,
         "mustAskQuestion": must_ask_question,
+        "previouslyShownProducts": prev_products,
         "productsToShow": [
             {
                 "title": p.title, "price": p.price, "rating": p.rating,

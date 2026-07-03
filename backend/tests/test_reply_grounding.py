@@ -36,6 +36,66 @@ def _say(client, sid, text):
     return r.json()
 
 
+def test_second_recommend_passes_previously_shown_set(client, monkeypatch):
+    """B: 재추천 턴의 reply는 '직전에 무엇을 보여줬는지'(previously_shown)를 근거로 받아야 한다.
+
+    버그(2026-07-03, live flash): 사용자가 "저는 여성이에요"로 교정하자 renderer가
+    직전 노출 셋 데이터 없이 "앞서 보여드린 상품들은 전부 여성용"(실제 2/3 남성용)이라는
+    허위 진술을 생성. 과거 노출 셋이 컨텍스트에 없으면 그 발화 공간은 전부 추측이 된다.
+    """
+    import app.agents.service_agent as sa
+
+    captured: list = []
+    orig = sa.rg.generate_reply
+
+    async def spy(provider, **kw):
+        if kw.get("action") == "recommend":
+            captured.append([p.id for p in (kw.get("previously_shown") or [])])
+        return await orig(provider, **kw)
+
+    monkeypatch.setattr(sa.rg, "generate_reply", spy)
+
+    sid = _new_session(client)
+    out1 = _say(client, sid, "운동 좋아하는 친구에게 줄 스마트워치를 추천해주세요")
+    assert out1["agentResponse"]["agentAction"] == "recommend", out1["agentResponse"]
+    first_shown = [p["product"]["id"] for p in out1["recommendedProducts"]]
+
+    out2 = _say(client, sid, "너무 비싸지 않은 걸로 다시 추천해주세요")
+    assert out2["agentResponse"]["agentAction"] == "recommend", out2["agentResponse"]
+
+    # 첫 추천 턴: 직전 노출 없음 → 빈 목록 / 재추천 턴: 직전 = 첫 노출 셋 그대로.
+    assert captured[0] == []
+    assert captured[1] == first_shown, (
+        f"reply got previously_shown={captured[1]} but first turn showed {first_shown}"
+    )
+
+
+def test_generate_reply_context_carries_previously_shown_products():
+    """previouslyShownProducts가 LLM 유저 컨텍스트에 실려야 과거 노출 언급이 근거를 갖는다."""
+    import asyncio
+
+    from app.agents import response_generator as rg
+    from app.db import models
+
+    class CaptureProvider:
+        name = "capture"  # "mock"이면 short-circuit되므로 다른 이름
+
+        async def generate_text(self, messages, max_tokens=700):
+            self.user_msg = messages[-1].content
+            return "ok"
+
+    prev = [models.Product(id="p_prev1", title="ELETOP 남성 울 트렌치 코트", price=108000)]
+    new = [models.Product(id="p_new1", title="추야투 여성 롱 패딩 코트", price=97200)]
+    cap = CaptureProvider()
+    asyncio.run(rg.generate_reply(
+        cap, action="recommend", template_text="초안",
+        recent_turns=[], products=new, state_summary=None,
+        previously_shown=prev,
+    ))
+    assert "previouslyShownProducts" in cap.user_msg
+    assert "ELETOP 남성 울 트렌치 코트" in cap.user_msg
+
+
 def test_reply_is_grounded_on_the_shown_product_set(client, monkeypatch):
     import app.agents.service_agent as sa
 
