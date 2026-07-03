@@ -34,6 +34,9 @@ async def post_feedback(session_id: str, req: FeedbackRequest, background_tasks:
     return {
         "feedbackEvent": serializers.feedback_to_dict(result.feedback_event),
         "updatedPreferenceState": serializers.snapshot_to_dict(result.snapshot) if result.snapshot else None,
-        "newConflicts": [serializers.conflict_to_dict(c) for c in result.new_conflicts],
+        "newConflicts": [serializers.conflict_to_dict(c) for c in serializers.participant_conflicts(result.new_conflicts)],
         "chosenRejectedPairsCreated": [serializers.pair_to_dict(p) for p in result.pairs],
+        # 자세히(view_detail) 클릭의 상호작용 응답 — 상품 설명 + 궁금점 질문 턴 (2026-07-03)
+        "agentTurn": serializers.turn_to_dict(result.agent_turn) if result.agent_turn else None,
+        "replySuggestions": result.reply_suggestions,
     }

@@ -50,6 +50,35 @@ def explain_text(products: list[models.Product]) -> str:
     return "\n".join(lines)
 
 
+def detail_text(p: models.Product, prof: dict | None = None) -> str:
+    """자세히 클릭에 대한 결정론 초안 (mock 출력 겸 실패 폴백) — 상품 사실 + 프로필
+    (오프라인 enrichment의 keyAttributes/caveats)로 설명하고, 무엇이 궁금한지 묻는다.
+    질문이 핵심: 탐색 클릭의 의미를 시스템이 추측하는 대신 사용자가 직접 말하게 한다."""
+    lines = [f"'{p.title}'에 대해 더 알려드릴게요."]
+    facts = []
+    if p.price is not None:
+        facts.append(f"가격 {p.price:,}원")
+    if p.rating:
+        facts.append(f"평점 {p.rating}")
+    if p.review_count:
+        facts.append(f"리뷰 {p.review_count:,}개")
+    if facts:
+        lines.append(" · ".join(facts))
+    if prof:
+        if prof.get("profile"):
+            lines.append(str(prof["profile"]))
+        attrs = prof.get("keyAttributes") or []
+        if attrs:
+            lines.append("주요 특징: " + ", ".join(str(a) for a in attrs[:5]))
+        caveats = prof.get("caveats") or []
+        if caveats:
+            lines.append("참고할 점: " + " / ".join(str(c) for c in caveats[:2]))
+    elif p.description:
+        lines.append(p.description[:200])
+    lines.append("이 상품에서 어떤 점이 궁금하신가요? 그냥 둘러보신 거라도 편하게 말씀해 주세요.")
+    return "\n\n".join(lines)
+
+
 def conflict_text(conflict: models.PreferenceConflict) -> str:
     base = conflict.explanation_for_user or "말씀해주신 기준 사이에 충돌이 있는 것 같아요."
     return f"기준이 바뀐 것 같아요.\n\n{base}\n\n아래 카드에서 어떻게 반영할지 선택해 주세요."
@@ -199,6 +228,9 @@ _FALLBACK_SUGGESTIONS = {
     "clarify": ["네, 그게 중요해요", "아니요, 그건 아니에요", "잘 모르겠어요"],
     "recommend": ["더 저렴한 건 없나요?", "사실 디자인도 중요해요", "오래 쓰는 게 우선이에요"],
     "answer": ["다른 기준으로 비교해줘", "이걸로 정할게요", "더 보여줄 수 있나요?"],
+    # 자세히 클릭 후 — "그냥 둘러봤어요"가 핵심 칩: 호기심 클릭을 명시적으로 캡처해
+    # 시스템이 추측할 여지를 없앤다.
+    "detail": ["가격이 적당한지 궁금해요", "기능·사양이 궁금해요", "그냥 둘러봤어요"],
 }
 _FALLBACK_DEFAULT = ["좀 더 추천해줘", "가격이 가장 중요해요", "잘 모르겠어요"]
 

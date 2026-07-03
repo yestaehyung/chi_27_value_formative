@@ -236,6 +236,16 @@ def snapshot_to_dict(s: models.PreferenceStateSnapshot) -> dict:
     }
 
 
+def participant_conflicts(conflicts: list) -> list:
+    """참가자 화면으로 내보낼 충돌 — severity=direct만 (2026-07-03).
+
+    구조 가드(show_conflict = open direct만)와 같은 철학의 일관 적용: 개입(4버튼
+    결정 카드)은 '해소 없이 진행 불가'라는 DB 사실일 때만, ambiguous(가설 수준
+    관찰 — LLM 스스로 "충돌하지는 않지만"이라 적는 급)는 칩·연구자 뷰의 영역.
+    감지·저장은 그대로 — 연구 replay(/api/research)는 무필터로 전부 본다."""
+    return [c for c in conflicts if c.severity == "direct"]
+
+
 def conflict_to_dict(c: models.PreferenceConflict) -> dict:
     return {
         "id": c.id,

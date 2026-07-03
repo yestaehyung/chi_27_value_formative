@@ -42,6 +42,9 @@ class FeedbackResult:
     snapshot: models.PreferenceStateSnapshot | None = None
     new_conflicts: list[models.PreferenceConflict] = field(default_factory=list)
     pairs: list[models.ChosenRejectedPair] = field(default_factory=list)
+    # 탐색 클릭(자세히)의 상호작용 응답 — 상품 설명 + 궁금점 질문 턴 (2026-07-03)
+    agent_turn: models.Turn | None = None
+    reply_suggestions: list[str] = field(default_factory=list)
 
 
 def _next_turn_index(db: DbSession, session_id: str) -> int:
@@ -368,6 +371,13 @@ async def handle_feedback(
     # commit immediately so the write lock is NOT held during the LLM pipeline
     db.commit()
 
+    # 탐색 클릭(자세히 등)은 선호 표명이 아니라 호기심일 수 있다 — 커밋 엔진(토픽 생성)을
+    # 태우지 않고, 상품을 설명하며 무엇이 궁금한지 되묻는 상호작용으로 전환한다 (2026-07-03).
+    # 실사례: 최고가 상품 자세히 클릭 1건 → '가격 부담' 토픽 날조(conf 0.9) → 유령 충돌 카드.
+    # 사용자의 답변이 일반 턴 파이프라인을 타고 진짜 명시 증거가 된다. FeedbackEvent 로그는 유지.
+    if feedback_type in ("view_detail", "click"):
+        return await _handle_detail_view(db, provider, session, product_id, fb)
+
     # chosen-rejected pairs within the same recommendation turn (spec §10, §11 Phase A)
     pairs = await build_pairs_for_feedback(db, provider, session, fb)
 
@@ -386,3 +396,59 @@ async def handle_feedback(
         new_conflicts=commit.new_conflicts,
         pairs=pairs,
     )
+
+
+async def _handle_detail_view(
+    db: DbSession,
+    provider,
+    session: models.Session,
+    product_id: str,
+    fb: models.FeedbackEvent,
+) -> FeedbackResult:
+    """자세히 클릭 → 해당 상품 설명 + "어떤 점이 궁금하세요?" 턴 (2026-07-03).
+
+    conflict_resolver의 해소-턴 영속화 패턴 재사용 — 새로고침·연구 replay에 남는다.
+    LLM-first-write-last: 렌더링(LLM)은 락 없이, Turn 기록은 짧은 트랜잭션으로."""
+    from app.products import profiles
+
+    product = db.get(models.Product, product_id)
+    if product is None:  # 방어 — API 레이어에서 이미 404 처리됨
+        return FeedbackResult(feedback_event=fb)
+
+    recent_turns = (
+        db.query(models.Turn)
+        .filter(models.Turn.session_id == session.id)
+        .order_by(models.Turn.turn_index)
+        .all()
+    )
+    snapshot = (
+        db.query(models.PreferenceStateSnapshot)
+        .filter(models.PreferenceStateSnapshot.session_id == session.id)
+        .order_by(models.PreferenceStateSnapshot.created_at.desc())
+        .first()
+    )
+    template = rg.detail_text(product, profiles.get(product.id))
+    text = await rg.generate_reply(
+        provider, action="answer", template_text=template,
+        recent_turns=recent_turns, products=[product],
+        state_summary=snapshot.user_visible_summary if snapshot else None,
+        must_ask_question="이 상품에서 어떤 점이 궁금하신가요?",
+        previously_shown=_last_recommended_products(db, session.id),
+    )
+
+    turn = models.Turn(
+        id=new_id("turn"),
+        session_id=session.id,
+        turn_index=_next_turn_index(db, session.id),
+        role="service_agent",
+        content=text,
+        agent_action="detail",  # 연구 로그용 — planner 4-vocab 아님(UI 트리거)
+        related_product_ids=[product.id],
+    )
+    db.add(turn)
+    db.commit()
+
+    suggestions = await rg.generate_reply_suggestions(
+        provider, "detail", text, snapshot.user_visible_summary if snapshot else None,
+    )
+    return FeedbackResult(feedback_event=fb, agent_turn=turn, reply_suggestions=suggestions)

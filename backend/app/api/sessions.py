@@ -108,5 +108,6 @@ def get_session(session_id: str, db: DbSession = Depends(get_db)):
         ],
         "feedback": [serializers.feedback_to_dict(f) for f in feedback],
         "preferenceState": serializers.snapshot_to_dict(snapshot) if snapshot else None,
-        "conflicts": [serializers.conflict_to_dict(c) for c in conflicts],
+        # 참가자 화면용 페이로드 — ambiguous 충돌은 카드로 내보내지 않는다 (연구 뷰는 /api/research)
+        "conflicts": [serializers.conflict_to_dict(c) for c in serializers.participant_conflicts(conflicts)],
     }

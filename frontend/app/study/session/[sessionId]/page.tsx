@@ -133,6 +133,11 @@ export default function StudySessionPage() {
       }));
       if (res.updatedPreferenceState) setState(res.updatedPreferenceState);
       if (res.newConflicts?.length) setConflicts((prev) => [...prev, ...res.newConflicts]);
+      // 자세히 클릭 → 에이전트가 상품을 설명하며 궁금점을 되묻는 턴 (조용한 추론 대신 상호작용)
+      if (res.agentTurn) {
+        setTurns((prev) => [...prev, res.agentTurn]);
+        setChipSuggestions(res.replySuggestions?.length ? res.replySuggestions : null);
+      }
       if (res.chosenRejectedPairsCreated?.length) {
         showToast("반응이 기록됐어요.");
       }
