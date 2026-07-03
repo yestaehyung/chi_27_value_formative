@@ -248,7 +248,12 @@ def participant_state(snapshot, session) -> dict | None:
     d = snapshot_to_dict(snapshot)
     ev = (session.meta or {}).get("motivationEvidence") or {}
     d["motivationEvidence"] = {
-        dim: list(e.get("quotes") or []) for dim, e in ev.items() if isinstance(e, dict)
+        dim: {
+            "best": e.get("best"),                      # asserts(직접 말함)|suggests(함의)|hints(힌트)
+            "count": sum((e.get("counts") or {}).values()),  # 누적 신호 횟수
+            "quotes": list(e.get("quotes") or []),
+        }
+        for dim, e in ev.items() if isinstance(e, dict)
     }
     return d
 

@@ -17,6 +17,11 @@ const DIMS: { key: string; label: string; meaning: string }[] = [
 
 const COVER = 0.4; // 이 이상 = 대화에서 드러남 / 미만 = 아직 안 떠봄(흐리게)
 
+// 감지 rubric 3-level (ontology/levels.py MOTIVATION_LEVELS) — 참가자용 한국어 라벨
+const LEVEL_LABEL: Record<string, string> = {
+  asserts: "직접 말함", suggests: "함의됨", hints: "약한 힌트",
+};
+
 export default function MotivationRadar({
   scores,
   evidence,
@@ -24,8 +29,8 @@ export default function MotivationRadar({
   onSelect,
 }: {
   scores: Record<string, number>;
-  /** dim → 감지 근거 발화 인용 (최근순 누적) — 있으면 제네릭 문구 대신 인용을 보여준다 */
-  evidence?: Record<string, string[]>;
+  /** dim → {best: 신호 수준, count: 횟수, quotes: 발화 인용} — 있으면 제네릭 문구 대신 근거를 보여준다 */
+  evidence?: Record<string, { best?: string; count?: number; quotes?: string[] }>;
   size?: number;
   onSelect?: (dim: string | null) => void;
 }) {
@@ -92,10 +97,15 @@ export default function MotivationRadar({
           <div className="mt-0.5 text-[#606060]">{sel.meaning}</div>
           <div className="mt-1.5 border-t border-[#e4e8eb] pt-1.5 text-[#9aa0a6]">
             {(scores[sel.key] ?? 0) >= COVER ? (
-              evidence?.[sel.key]?.length ? (
+              evidence?.[sel.key]?.quotes?.length ? (
                 <>
+                  {/* 신호 수준 + 횟수 — 가치 breakdown의 동기판 대응물 (측정은 3-level rubric뿐) */}
+                  <div className="mb-1 font-medium text-[#787c82]">
+                    {LEVEL_LABEL[evidence[sel.key].best ?? ""] ?? "감지됨"}
+                    {(evidence[sel.key].count ?? 0) > 0 && ` · 신호 ${evidence[sel.key].count}회`}
+                  </div>
                   {/* 감지 근거 인용 — 최근 것부터 최대 2개 (제네릭 문구 대신 발화와 연결) */}
-                  {evidence[sel.key].slice(-2).reverse().map((q, i) => (
+                  {evidence[sel.key].quotes!.slice(-2).reverse().map((q, i) => (
                     <div key={i} className="mt-0.5 first:mt-0">
                       <span className="text-[#4f46e5]">&ldquo;{q}&rdquo;</span>
                       {i === 0 && " — 이런 말씀에서 이 동기가 보였어요."}

@@ -32,10 +32,14 @@ def test_motivation_evidence_quotes_exposed_to_participant(client):
                       json={"role": "user", "content": "운동하는 친구에게 줄 스마트워치가 급해서 빨리 필요해요"}).json()
 
     ev = (out["preferenceState"] or {}).get("motivationEvidence") or {}
-    assert "Utilitarian" in ev and ev["Utilitarian"], f"turn response missing motivation quotes: {ev}"
-    assert all(isinstance(q, str) and q for q in ev["Utilitarian"])
+    assert "Utilitarian" in ev, f"turn response missing motivation evidence: {ev}"
+    util = ev["Utilitarian"]
+    # {best, count, quotes} — level(직접 말함/함의/힌트) + 신호 횟수 + 발화 인용
+    assert util.get("best") in ("asserts", "suggests", "hints"), util
+    assert isinstance(util.get("count"), int) and util["count"] >= 1, util
+    assert util.get("quotes") and all(isinstance(q, str) and q for q in util["quotes"])
 
     # 세션 재로드(새로고침)에도 같은 근거가 실린다
     d = client.get(f"/api/sessions/{sid}").json()
     ev2 = (d["preferenceState"] or {}).get("motivationEvidence") or {}
-    assert "Utilitarian" in ev2 and ev2["Utilitarian"]
+    assert ev2.get("Utilitarian", {}).get("quotes"), ev2
