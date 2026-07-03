@@ -13,6 +13,7 @@ import { FeedbackPayload } from "@/components/products/ProductFeedbackButtons";
 import CurrentUnderstandingPanel from "@/components/preference/CurrentUnderstandingPanel";
 import ConflictCard from "@/components/preference/ConflictCard";
 import EvidenceDrawer from "@/components/preference/EvidenceDrawer";
+import PostSurveyModal from "@/components/study/PostSurveyModal";
 
 export default function StudySessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -32,6 +33,8 @@ export default function StudySessionPage() {
   const [chipSuggestions, setChipSuggestions] = useState<string[] | null>(null);
   const [finished, setFinished] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [postSurveyOpen, setPostSurveyOpen] = useState(false); // 마치기 확인 → 사후 설문 → 완료
+  const [postSubmitting, setPostSubmitting] = useState(false);
   const [participantId, setParticipantId] = useState<string>("");
   const [chatInput, setChatInput] = useState(""); // 입력창 값 (답변 칩 클릭 시 여기에 채움)
   const [pendingFirst, setPendingFirst] = useState<string | null>(null); // 시작 화면에서 넘어온 첫 발화
@@ -240,7 +243,7 @@ export default function StudySessionPage() {
             <div className="mt-4 flex gap-2">
               <button onClick={() => setConfirmEnd(false)} className="btn flex-1 py-2">취소</button>
               <button
-                onClick={() => { setConfirmEnd(false); setFinished(true); }}
+                onClick={() => { setConfirmEnd(false); setPostSurveyOpen(true); }}
                 className="btn btn-primary flex-1 py-2"
               >
                 마치기
@@ -248,6 +251,27 @@ export default function StudySessionPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 마치기 확인 → 사후 설문 (이해·만족·신뢰 + 확장) → 완료 화면 */}
+      {postSurveyOpen && (
+        <PostSurveyModal
+          submitting={postSubmitting}
+          onSubmit={async (answers, profile) => {
+            setPostSubmitting(true);
+            try {
+              await api.submitPostSurvey(sessionId, answers, profile);
+              setPostSurveyOpen(false);
+              setFinished(true);
+            } catch (e) {
+              console.error(e);
+              showToast("설문 저장에 실패했어요 — 다시 제출하거나 건너뛸 수 있어요.");
+            } finally {
+              setPostSubmitting(false);
+            }
+          }}
+          onSkip={() => { setPostSurveyOpen(false); setFinished(true); }}
+        />
       )}
 
       {/* 쇼핑 마치기 → 완료 화면 (추후 순차 플로우에서 '다음 쇼핑으로'로 대체) */}

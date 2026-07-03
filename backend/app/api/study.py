@@ -118,6 +118,31 @@ def log_inspect(session_id: str, req: InspectRequest, db: DbSession = Depends(ge
     return {"ok": True}
 
 
+class PostSurveyRequest(BaseModel):
+    answers: dict                    # {itemId: "1".."7"} — 7점 리커트
+    profile: Optional[dict] = None   # 구인별 평균 (understanding/satisfaction/trust/…)
+
+
+@router.put("/sessions/{session_id}/post-survey")
+def submit_post_survey(session_id: str, req: PostSurveyRequest, db: DbSession = Depends(get_db)):
+    """세션 종료 사후 설문 (이해·만족·신뢰 핵심 3구인 + 확장 4구인) — per-session,
+    회상 GT와 같은 meta 채널에 저장. 재제출 시 덮어쓴다(마지막 응답이 유효)."""
+    from datetime import datetime, timezone
+
+    session = db.get(models.Session, session_id)
+    if session is None:
+        raise HTTPException(404, "session not found")
+    meta = dict(session.meta or {})
+    meta["postSurvey"] = {
+        "answers": req.answers,
+        "profile": req.profile or {},
+        "submittedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    session.meta = meta
+    db.commit()
+    return {"ok": True, "profile": meta["postSurvey"]["profile"]}
+
+
 @router.put("/sessions/{session_id}/ground-truth")
 def set_ground_truth(session_id: str, req: GroundTruthRequest, db: DbSession = Depends(get_db)):
     session = db.get(models.Session, session_id)

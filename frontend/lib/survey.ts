@@ -158,3 +158,80 @@ export function computeProfile(answers: Record<string, unknown>): Record<string,
 
 // 필수(참여기준/동의) 문항 — 미응답이면 제출 불가, excludeIf면 참여 제외
 export const REQUIRED_IDS = SURVEY.flatMap((s) => s.questions.filter((q) => q.required).map((q) => q.id));
+
+// ── 사후 설문 (세션 종료 시, per-session) ─────────────────────────────
+// 핵심 3구인(이해·만족·신뢰, 반드시 응답) + 확장 4구인(이 연구의 각도, 선택 응답).
+// 7점 리커트, 응답은 sessions.meta.postSurvey에 저장 (회상 GT와 같은 채널).
+
+export type PostSurveyGroup = {
+  id: string;
+  title: string;
+  core?: boolean; // 핵심 구인 — 미응답 시 제출 불가
+  items: { id: string; label: string }[];
+};
+
+export const POST_SURVEY: PostSurveyGroup[] = [
+  {
+    id: "understanding", title: "이해", core: true,
+    items: [
+      { id: "PS_U1", label: "이 에이전트는 내가 무엇을 원하는지 잘 이해했다." },
+      { id: "PS_U2", label: "이 에이전트는 내가 말하지 않은 숨은 기준까지 어느 정도 파악했다." },
+    ],
+  },
+  {
+    id: "satisfaction", title: "만족", core: true,
+    items: [
+      { id: "PS_S1", label: "이번 대화에서 받은 추천에 전반적으로 만족한다." },
+      { id: "PS_S2", label: "다시 쇼핑할 때 이 에이전트를 또 쓰고 싶다." },
+    ],
+  },
+  {
+    id: "trust", title: "신뢰", core: true,
+    items: [
+      { id: "PS_T1", label: "이 에이전트가 제시한 추천과 설명을 신뢰할 수 있었다." },
+      { id: "PS_T2", label: "이 에이전트에게 나의 구매 결정을 맡겨도 괜찮겠다." },
+    ],
+  },
+  {
+    id: "repair", title: "거절과 수정 대응",
+    items: [
+      { id: "PS_R1", label: "내 마음에 들지 않는 추천이 나왔을 때, 나는 그것을 분명히 거절하거나 바꿔 달라고 말했다." },
+      { id: "PS_R2", label: "내가 거절하거나 조건을 바꿨을 때, 에이전트가 그에 맞게 잘 대응했다." },
+    ],
+  },
+  {
+    id: "elicitation", title: "숨은 기준과 질문",
+    items: [
+      { id: "PS_Q1", label: "이 에이전트는 내 상황에 필요한 것을 적절히 되물었다." },
+      { id: "PS_Q2", label: "대화를 하면서 내가 미처 생각하지 못한 기준을 알아차리게 됐다." },
+    ],
+  },
+  {
+    id: "construction", title: "선호 구성",
+    items: [
+      { id: "PS_C1", label: "대화를 시작할 때와 끝날 때, 내가 원하는 상품의 기준이 달라졌다." },
+      { id: "PS_C2", label: "이 대화는 내가 무엇을 원하는지 스스로 정리하는 데 도움이 됐다." },
+    ],
+  },
+  {
+    id: "effort", title: "노력과 경험",
+    items: [
+      { id: "PS_E1", label: "원하는 답을 얻기까지 든 노력이 적절했다." },
+      { id: "PS_E2", label: "이번 쇼핑 대화 자체가 즐거웠다." },
+    ],
+  },
+];
+
+export const POST_CORE_IDS = POST_SURVEY.filter((g) => g.core).flatMap((g) => g.items.map((i) => i.id));
+
+// 구인별 평균 (응답한 항목만) — 사전 설문 computeProfile과 같은 규칙
+export function computePostProfile(answers: Record<string, unknown>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const g of POST_SURVEY) {
+    const vals = g.items
+      .map((i) => Number(answers[i.id]))
+      .filter((v) => Number.isFinite(v) && v > 0);
+    if (vals.length) out[g.id] = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100;
+  }
+  return out;
+}

@@ -127,6 +127,13 @@ export const api = {
     }),
   gap: (sessionId: string) => request<any>(`/api/study/sessions/${sessionId}/gap`),
 
+  // 세션 종료 사후 설문 (이해·만족·신뢰 + 확장) — sessions.meta.postSurvey
+  submitPostSurvey: (sessionId: string, answers: Record<string, unknown>, profile: Record<string, number>) =>
+    request<{ ok: boolean }>(`/api/study/sessions/${sessionId}/post-survey`, {
+      method: "PUT",
+      body: JSON.stringify({ answers, profile }),
+    }),
+
   // FS1 사전 설문 → 참가자 생성(설문 저장)
   submitSurvey: (answers: Record<string, unknown>, profile: Record<string, number>, label?: string) =>
     request<{ participantId: string; label: string }>("/api/study/survey", {
