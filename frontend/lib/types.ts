@@ -108,6 +108,8 @@ export type PreferenceState = {
     }[];
   }>;
   motivationScores?: Record<string, number>;
+  // 동기 감지 시그널의 발화 인용 (dim → 최근 quotes) — radar에서 근거로 표시
+  motivationEvidence?: Record<string, string[]>;
   hardConstraints: string[];
   softPreferences: string[];
   avoidances: string[];

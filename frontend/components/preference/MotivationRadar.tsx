@@ -19,10 +19,13 @@ const COVER = 0.4; // 이 이상 = 대화에서 드러남 / 미만 = 아직 안 
 
 export default function MotivationRadar({
   scores,
+  evidence,
   size = 260,
   onSelect,
 }: {
   scores: Record<string, number>;
+  /** dim → 감지 근거 발화 인용 (최근순 누적) — 있으면 제네릭 문구 대신 인용을 보여준다 */
+  evidence?: Record<string, string[]>;
   size?: number;
   onSelect?: (dim: string | null) => void;
 }) {
@@ -88,9 +91,23 @@ export default function MotivationRadar({
           <div className="font-bold text-[#191919]">{sel.label}</div>
           <div className="mt-0.5 text-[#606060]">{sel.meaning}</div>
           <div className="mt-1.5 border-t border-[#e4e8eb] pt-1.5 text-[#9aa0a6]">
-            {(scores[sel.key] ?? 0) >= COVER
-              ? "대화에서 이 동기가 보였어요."
-              : "아직 대화에서 드러나지 않은 동기예요 — 에이전트가 떠볼 후보예요."}
+            {(scores[sel.key] ?? 0) >= COVER ? (
+              evidence?.[sel.key]?.length ? (
+                <>
+                  {/* 감지 근거 인용 — 최근 것부터 최대 2개 (제네릭 문구 대신 발화와 연결) */}
+                  {evidence[sel.key].slice(-2).reverse().map((q, i) => (
+                    <div key={i} className="mt-0.5 first:mt-0">
+                      <span className="text-[#4f46e5]">&ldquo;{q}&rdquo;</span>
+                      {i === 0 && " — 이런 말씀에서 이 동기가 보였어요."}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                "대화에서 이 동기가 보였어요."
+              )
+            ) : (
+              "아직 대화에서 드러나지 않은 동기예요 — 에이전트가 떠볼 후보예요."
+            )}
           </div>
         </div>
       ) : (

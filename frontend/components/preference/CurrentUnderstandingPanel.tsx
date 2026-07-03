@@ -168,7 +168,11 @@ export default function CurrentUnderstandingPanel({
             <div className="mb-5 text-center text-[11px] font-medium text-[#9aa0a6]">
               이번 쇼핑 동기
             </div>
-            <MotivationRadar scores={state.motivationScores || {}} size={260} />
+            <MotivationRadar
+              scores={state.motivationScores || {}}
+              evidence={state.motivationEvidence}
+              size={260}
+            />
           </div>
         )}
       </div>

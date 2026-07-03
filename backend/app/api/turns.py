@@ -32,7 +32,7 @@ async def post_turn(session_id: str, req: TurnRequest, background_tasks: Backgro
         "turn": serializers.turn_to_dict(result.user_turn),
         "agentResponse": serializers.turn_to_dict(result.agent_turn),
         "recommendedProducts": impressions,
-        "preferenceState": serializers.snapshot_to_dict(result.snapshot) if result.snapshot else None,
+        "preferenceState": serializers.participant_state(result.snapshot, session),
         "conflicts": [serializers.conflict_to_dict(c) for c in serializers.participant_conflicts(result.conflicts)],
         "replySuggestions": result.reply_suggestions,
     }

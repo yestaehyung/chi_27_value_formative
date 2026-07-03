@@ -236,6 +236,23 @@ def snapshot_to_dict(s: models.PreferenceStateSnapshot) -> dict:
     }
 
 
+def participant_state(snapshot, session) -> dict | None:
+    """참가자 응답용 preferenceState — 스냅샷 + 동기 근거 인용 (2026-07-03).
+
+    motivationEvidence(감지 시그널의 발화 인용, dim별 최근 4개)는 session.meta에
+    축적되지만 스냅샷 컬럼이 아니라 직렬화에서 빠져 있었다 → 동기 radar가 제네릭
+    문구만 보여줬다. 여기서 {dim: quotes}로 합쳐 내보낸다 (가치 칩의 근거 버튼과
+    같은 DG3 철학 — 추론은 근거 인용과 함께 노출)."""
+    if snapshot is None:
+        return None
+    d = snapshot_to_dict(snapshot)
+    ev = (session.meta or {}).get("motivationEvidence") or {}
+    d["motivationEvidence"] = {
+        dim: list(e.get("quotes") or []) for dim, e in ev.items() if isinstance(e, dict)
+    }
+    return d
+
+
 def participant_conflicts(conflicts: list) -> list:
     """참가자 화면으로 내보낼 충돌 — severity=direct만 (2026-07-03).
 

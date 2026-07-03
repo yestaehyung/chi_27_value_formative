@@ -33,7 +33,7 @@ async def post_feedback(session_id: str, req: FeedbackRequest, background_tasks:
     background_tasks.add_task(judge_causal_relations, session_id)
     return {
         "feedbackEvent": serializers.feedback_to_dict(result.feedback_event),
-        "updatedPreferenceState": serializers.snapshot_to_dict(result.snapshot) if result.snapshot else None,
+        "updatedPreferenceState": serializers.participant_state(result.snapshot, session),
         "newConflicts": [serializers.conflict_to_dict(c) for c in serializers.participant_conflicts(result.new_conflicts)],
         "chosenRejectedPairsCreated": [serializers.pair_to_dict(p) for p in result.pairs],
         # 자세히(view_detail) 클릭의 상호작용 응답 — 상품 설명 + 궁금점 질문 턴 (2026-07-03)
