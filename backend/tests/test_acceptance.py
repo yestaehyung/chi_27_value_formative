@@ -57,13 +57,13 @@ def test_1_basic_recommendation(client):
     assert action in ("clarify", "recommend")
     if action == "recommend":
         products = out["recommendedProducts"]
-        assert len(products) == 3
+        assert len(products) == 5  # 노출 셋 5개 (2026-07-04: 3→5 확대)
         # trade-offs: not all from the same price band
         cues = {p["product"]["cueSummary"]["priceCue"] for p in products}
         assert len(cues) >= 2, f"expected trade-off price cues, got {cues}"
         # impressions logged
         session = client.get(f"/api/sessions/{sid}").json()
-        assert len(session["impressions"]) == 3
+        assert len(session["impressions"]) == 5
 
 
 # ---------------------------------------------------------------------------

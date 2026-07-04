@@ -1,7 +1,7 @@
 """③ 추천 에이전트 — recommend(searchText, constraintsNote)의 실행
 (설계: docs/plans/2026-07-02-three-agent-crs-redesign.md).
 
-[임베딩 검색: 도구] → LLM rerank(제약·기준 집행) → trade-off 3개.
+[임베딩 검색: 도구] → LLM rerank(제약·기준 집행) → trade-off 5개 (2026-07-04: 3→5).
 
 evidence-purity 규칙: rerank가 읽는 것은 **stated(명시 발화) + confirmed(사용자
 확인 기준)뿐** — 미확인 배후 추론(anchor/motivation 원점수)은 랭킹에 넣지 않는다.
@@ -61,10 +61,10 @@ async def run_recommendation(
     recent_turns,
     snapshot,
     pool_size: int = 15,
-    top_k: int = 3,
+    top_k: int = 5,
 ) -> tuple[list[ScoredProduct], dict[str, dict]]:
     """검색 사양(searchText/constraintsNote)을 실행해 노출 셋을 확정한다.
-    반환: (trade-off 3개, {productId: 카드텍스트}). 상품 선별은 전부 여기서 —
+    반환: (trade-off top_k개, {productId: 카드텍스트}). 상품 선별은 전부 여기서 —
     플래너에는 상품 ID가 흐르지 않는다."""
     pool = search_products(
         db,
@@ -79,7 +79,7 @@ async def run_recommendation(
     intent_context = build_rerank_context(db, session, recent_turns, constraints_note)
     reranked, card_texts = await rg.rerank_by_intent(provider, pool, intent_context)
     # 노출 셋 = rerank 상위 top_k 그대로 (2026-07-02: select_tradeoff_set 제거).
-    # 셋의 대비(관측 도구 속성 — 강점이 서로 다른 3개)는 rerank 프롬프트의 구성 원칙으로,
+    # 셋의 대비(관측 도구 속성 — 강점이 서로 다른 후보들)는 rerank 프롬프트의 구성 원칙으로,
     # mock에서는 결정론 priceCue 스프레드로 처리한다. 옛 버킷 규칙은 아마존 풀에서
     # 88%가 단일 버킷으로 형해화됐고, 희소 버킷을 순위 깊은 곳에서 끌어올려 제약 위반품을
     # 승격시키는 부작용만 남았다(유선 이어폰 누수).

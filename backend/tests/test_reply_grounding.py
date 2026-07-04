@@ -116,7 +116,7 @@ def test_reply_is_grounded_on_the_shown_product_set(client, monkeypatch):
 
     assert out["agentResponse"]["agentAction"] == "recommend", out["agentResponse"]
     shown_ids = [p["product"]["id"] for p in out["recommendedProducts"]]
-    assert len(shown_ids) == 3
+    assert len(shown_ids) == 5  # 노출 셋 5개 (2026-07-04: 3→5 확대)
 
     # 답변은 정확히 노출되는 3개 카드에 근거해야 한다 (pool[:3]가 아니라).
     assert captured.get("product_ids") == shown_ids, (
