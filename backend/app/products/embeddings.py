@@ -43,18 +43,27 @@ def cosine(a: list[float], b: list[float]) -> float:
     return sum(x * y for x, y in zip(a, b))
 
 
+_EMBED_BATCH = 500  # OpenAI 한도: 요청당 입력 2,048개 — 대량 증분(수천 개) 시 청크 필수 (2026-07-04)
+
+
 def _embed(texts: list[str]) -> list[list[float]] | None:
     if not texts:
         return []
+    out: list[list[float]] = []
     try:
-        with httpx.Client(timeout=60) as client:
-            resp = client.post(
-                "https://api.openai.com/v1/embeddings",
-                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-                json={"model": settings.embedding_model, "input": texts, "dimensions": _DIM},
-            )
-            resp.raise_for_status()
-            return [_normalize(d["embedding"]) for d in resp.json()["data"]]
+        with httpx.Client(timeout=120) as client:
+            for i in range(0, len(texts), _EMBED_BATCH):
+                chunk = texts[i:i + _EMBED_BATCH]
+                resp = client.post(
+                    "https://api.openai.com/v1/embeddings",
+                    headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                    json={"model": settings.embedding_model, "input": chunk, "dimensions": _DIM},
+                )
+                resp.raise_for_status()
+                out.extend(_normalize(d["embedding"]) for d in resp.json()["data"])
+                if len(texts) > _EMBED_BATCH:
+                    _log.info("embedded %d/%d", len(out), len(texts))
+        return out
     except Exception as e:  # noqa: BLE001 — 실패는 키워드 폴백으로 강등
         _log.warning("embedding call failed: %s", e)
         return None
