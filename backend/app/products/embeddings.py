@@ -95,16 +95,23 @@ def ensure_product_vectors(products) -> None:
     global _loaded
     if _loaded or not enabled():
         return
+    import gzip
     import json
     items = [(p.id, _product_text(p)) for p in products]
 
+    # 캐시 파일: .json.gz 우선(2026-07-04 — 풀 6천+ 규모에서 평문 JSON이 GitHub 단일
+    # 파일 한도 100MB를 넘어 gzip+6자리 반올림으로 전환), 없으면 legacy .json 폴백
+    # (seed/·seed_naver 기존 캐시 유효 유지).
+    cache_gz = settings.seed_dir / "product_vectors.json.gz"
     cache = settings.seed_dir / "product_vectors.json"
     cached: dict[str, list[float]] = {}
-    if cache.exists():
-        try:
+    try:
+        if cache_gz.exists():
+            cached = json.loads(gzip.decompress(cache_gz.read_bytes()).decode("utf-8"))
+        elif cache.exists():
             cached = json.loads(cache.read_text(encoding="utf-8"))
-        except Exception as e:  # noqa: BLE001
-            _log.warning("vector cache read failed: %s", e)
+    except Exception as e:  # noqa: BLE001
+        _log.warning("vector cache read failed: %s", e)
     # 캐시에 있는 현재 상품 벡터는 그대로 재사용
     _product_vectors.update({pid: cached[pid] for pid, _ in items if pid in cached})
     # 캐시에 없는 id만 임베딩 (증분 — 새 상품만)
@@ -119,11 +126,12 @@ def ensure_product_vectors(products) -> None:
     else:
         _log.info("product vectors loaded from disk cache (%d)", len(items))
     _loaded = True
-    # 디스크 캐시를 현재 상품 id 집합으로 갱신 (삭제된 id prune, 새 id 포함)
+    # 디스크 캐시를 현재 상품 id 집합으로 갱신 (삭제된 id prune, 새 id 포함).
+    # 6자리 반올림(유사도 오차 ~1e-6) + gzip — 항상 .json.gz로 쓴다.
     try:
-        cache.write_text(
-            json.dumps({pid: _product_vectors[pid] for pid, _ in items if pid in _product_vectors}),
-            encoding="utf-8")
+        payload = {pid: [round(x, 6) for x in _product_vectors[pid]]
+                   for pid, _ in items if pid in _product_vectors}
+        cache_gz.write_bytes(gzip.compress(json.dumps(payload).encode("utf-8"), compresslevel=6))
     except Exception as e:  # noqa: BLE001
         _log.warning("vector cache write failed: %s", e)
 
