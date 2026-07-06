@@ -255,8 +255,9 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     # 답변을 만든다.
     card_texts: dict[str, dict] = {}
     scored: list[ScoredProduct] = []
+    rec_diag: dict | None = None
     if decision.action == "recommend":
-        scored, card_texts = await recommender.run_recommendation(
+        scored, card_texts, rec_diag = await recommender.run_recommendation(
             db, provider, session,
             search_text=decision.search_text or content.strip(),
             constraints_note=decision.constraints_note,
@@ -302,6 +303,34 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         impressions = _create_impressions(
             db, session, agent_turn, [scored_by_id[p.id] for p in products], card_texts
         )
+
+    # 플래너·rerank 의사결정 기록 (llm_calls) — 사후 디버깅/검색품질 분석용 (2026-07-06).
+    # '사수 선물' 사례에서 로그 부재로 searchText·풀을 재구성해야 했던 공백을 메운다.
+    # 로깅 실패가 턴을 깨면 안 되므로 통째로 _safe 성격의 try로 감싼다.
+    try:
+        from app.core.config import settings as _settings
+
+        if decision.action != "show_conflict":  # 구조 가드 턴은 LLM 판단이 없음
+            db.add(models.LLMCall(
+                id=new_id("llm"), session_id=session.id, task="action_decision",
+                provider=_settings.llm_provider,
+                request={"turnId": agent_turn.id, "utterance": content[:500]},
+                response={"action": decision.action, "reason": decision.reason,
+                          "searchText": decision.search_text,
+                          "constraintsNote": decision.constraints_note,
+                          "probeDimension": decision.probe_dimension,
+                          "subtype": decision.subtype},
+            ))
+        if rec_diag is not None:
+            db.add(models.LLMCall(
+                id=new_id("llm"), session_id=session.id, task="rerank",
+                provider=_settings.llm_provider,
+                request={"turnId": agent_turn.id, **{k: rec_diag[k] for k in
+                         ("searchText", "constraintsNote", "poolSize", "pool", "rerankContext")}},
+                response={"shownIds": rec_diag["shownIds"]},
+            ))
+    except Exception:  # noqa: BLE001
+        logging.warning("llm_calls logging failed", exc_info=True)
 
     db.commit()
 

@@ -60,12 +60,13 @@ async def run_recommendation(
     constraints_note: str,
     recent_turns,
     snapshot,
-    pool_size: int = 15,
+    pool_size: int = 30,   # 15→30 (2026-07-06): 카탈로그 600→10,780 확대에 맞춘 recall 확장
     top_k: int = 5,
-) -> tuple[list[ScoredProduct], dict[str, dict]]:
+) -> tuple[list[ScoredProduct], dict[str, dict], dict]:
     """검색 사양(searchText/constraintsNote)을 실행해 노출 셋을 확정한다.
-    반환: (trade-off top_k개, {productId: 카드텍스트}). 상품 선별은 전부 여기서 —
-    플래너에는 상품 ID가 흐르지 않는다."""
+    반환: (trade-off top_k개, {productId: 카드텍스트}, 진단 dict). 상품 선별은 전부
+    여기서 — 플래너에는 상품 ID가 흐르지 않는다. 진단 dict는 llm_calls 기록용:
+    검색 풀 전체를 남겨 "정답이 풀에 없었나 vs rerank가 버렸나"를 사후 구분한다."""
     pool = search_products(
         db,
         query=search_text,
@@ -84,4 +85,14 @@ async def run_recommendation(
     # 88%가 단일 버킷으로 형해화됐고, 희소 버킷을 순위 깊은 곳에서 끌어올려 제약 위반품을
     # 승격시키는 부작용만 남았다(유선 이어폰 누수).
     scored = reranked[:top_k]
-    return scored, card_texts
+    diag = {
+        "searchText": search_text,
+        "constraintsNote": constraints_note,
+        "poolSize": len(pool),
+        "pool": [{"id": sp.product.id, "category": sp.product.category,
+                  "title": (sp.product.title or "")[:60], "score": round(sp.score, 4)}
+                 for sp in pool],
+        "rerankContext": intent_context,
+        "shownIds": [sp.product.id for sp in scored],
+    }
+    return scored, card_texts, diag
