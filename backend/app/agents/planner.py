@@ -48,6 +48,7 @@ def build_planner_context(
     db: DbSession | None = None,
     session: models.Session | None = None,
     window: int = 6,
+    last_shown: list | None = None,
 ) -> dict:
     """플래너에 넘길 컨텍스트 (belt-and-suspenders, 연구 2026-06-25).
 
@@ -92,10 +93,23 @@ def build_planner_context(
     else:  # DB 없이 호출되는 경우(테스트 등) — 최근 턴에서 유도
         user_utterances = [m["content"] for m in msgs if m["role"] in ("user", "user_agent")]
         feedback_events = []
+    # 직전 노출 셋 요약 (④′ 2026-07-06) — "더 저렴한 걸로"·"첫 번째 거 비슷한 걸로" 같은
+    # 직전-세트 참조 발화의 기준점. 바운딩(제목·가격·카테고리·핵심속성 2)해 컨텍스트 비대 방지.
+    # 참조 해소용 읽기 정보일 뿐 — 상품 선별은 여전히 recommender(rerank) 소관.
+    from app.products import profiles
+
+    last_shown_summary = []
+    for p in last_shown or []:
+        prof = profiles.get(p.id) or {}
+        last_shown_summary.append({
+            "title": p.title, "price": p.price, "category": p.category,
+            "keyAttributes": (prof.get("keyAttributes") or [])[:2],
+        })
     return {
         "recentTurns": msgs,
         "userUtterances": user_utterances,
         "feedbackEvents": feedback_events,
+        "lastShownProducts": last_shown_summary,
         "values": (snapshot.anchor_scores or {}) if snapshot else {},
         "motivations": (snapshot.motivation_scores or {}) if snapshot else {},
         "ragPrediction": rag_prediction,

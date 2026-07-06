@@ -174,6 +174,10 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         .filter(models.ProductImpression.session_id == session.id)
         .count() > 0
     )
+    # 직전 노출 셋 — 새 impression 저장 전인 이 시점에 잡아야 "직전"이다. 두 소비처:
+    # ① planner 컨텍스트(④′ — "더 저렴한 걸로" 같은 직전-세트 참조의 기준점),
+    # ② renderer(previouslyShownProducts — 과거 노출 언급의 근거, 2026-07-03).
+    prev_shown = _last_recommended_products(db, session.id)
     decision = planner.structural_guard(direct_open)
     if decision is None:
         pred = None
@@ -197,7 +201,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
                 ad_turns, commit.snapshot, has_recommendations,
                 _last_agent_action(db, session.id), pred,
                 (session.meta or {}).get("shoppingGoal") or category or "",
-                db=db, session=session,
+                db=db, session=session, last_shown=prev_shown,
             ),
             fallback_search_text=content.strip(),
         )
@@ -212,11 +216,6 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     related_ids: list[str] = []
     conflict_explanation: str | None = None
     value_question: str | None = None
-
-    # 직전 노출 셋 — 이 시점(새 impression 저장 전)에 잡아야 "직전"이다.
-    # renderer가 과거 노출 상품을 언급할 때의 유일한 근거 데이터로 전달된다
-    # (없으면 그 발화 공간이 전부 추측이 된다 — 2026-07-03 live 허위 진술 버그).
-    prev_shown = _last_recommended_products(db, session.id)
 
     if decision.action == "clarify":
         value_question = decision.probe_question
