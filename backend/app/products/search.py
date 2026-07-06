@@ -36,6 +36,20 @@ def assign_bucket(p: models.Product) -> str:
     return "balanced"
 
 
+def blend_relevance(lex: float, sim: float | None, alpha: float) -> float:
+    """하이브리드 적합도 — rel = α·어휘 + (1-α)·코사인 (2026-07-06).
+
+    두 신호 모두 [0,1]이라 정규화 없이 섞는다 (KGGen식 raw BM25 합산의 스케일 문제 없음).
+    어휘 팔(text_relevance)은 타입 명사·카테고리명 정확 일치에 강해, dense 검색의 타입
+    취약성(Sciavolino et al. EMNLP'21 — F2 크로스 카테고리 오염)을 보정한다.
+    α=0 → 코사인 단독(기존 동작) / sim 없음(임베딩 비활성·mock) → 어휘 단독(기존 폴백)."""
+    if sim is None:
+        return lex
+    if alpha <= 0:
+        return sim
+    return alpha * lex + (1 - alpha) * sim
+
+
 def search_products(
     db: DbSession,
     query: str,
@@ -46,20 +60,31 @@ def search_products(
     top_k: int = 3,
     return_pool: bool = False,
     pool_size: int = 15,
+    alpha: float | None = None,
 ) -> list[ScoredProduct]:
     # 1) retrieve — 의미 임베딩 우선, 실패/비활성(mock·테스트) 시 BM25(FTS5)로 폴백.
     #    임베딩이 의미를 보고(예: "운동용 이어폰"↔"러닝 이어버드"), BM25는 글자 trigram만 본다.
+    from app.core.config import settings
     from app.products import embeddings
+
+    if alpha is None:
+        alpha = settings.hybrid_alpha
 
     # 임베딩 retrieve는 (id, 코사인 유사도)를 받아 유사도를 랭킹에 반영한다.
     # 비활성/미로드(mock·테스트) 시 BM25 폴백 — 그땐 유사도 없음(sim_by_id 빈 dict).
+    # α>0(하이브리드): 후보 = 임베딩 top-200 ∪ BM25 top-200 — 어휘로만 잡히는 정답
+    # (정확한 카테고리명·속성어 일치)이 임베딩 컷에서 탈락하지 않게 한다.
     sim_by_id: dict[str, float] = {}
-    scored_ids = embeddings.retrieve_scored(query, n=200)
+    bm25_ids: list[str] = search_index.retrieve(db, query, n=200) if alpha > 0 else []
+    scored_ids = (
+        embeddings.retrieve_scored(query, n=200, include_ids=set(bm25_ids))
+        if bm25_ids else embeddings.retrieve_scored(query, n=200)  # α=0: 기존 호출 그대로
+    )
     if scored_ids is not None:
         sim_by_id = {pid: sim for pid, sim in scored_ids}
-        ids = [pid for pid, _ in scored_ids]
+        ids = [pid for pid, _ in scored_ids]  # 임베딩 top-200 순 + (union 시) BM25-only 후미
     else:
-        ids = search_index.retrieve(db, query, n=200)
+        ids = bm25_ids or search_index.retrieve(db, query, n=200)
     if ids:
         pm = {p.id: p for p in db.query(models.Product).filter(models.Product.id.in_(ids)).all()}
         candidates = [pm[i] for i in ids if i in pm]
@@ -89,12 +114,14 @@ def search_products(
     if tag_pass:
         candidates = tag_pass
 
-    # 5) 점수 = 질의 적합도(임베딩 유사도 우선) + 태그 가점. 랭킹은 value-blind(2026-07-01):
-    #    가치·의도는 추천을 강제하지 않고 피드백에서 passive하게 추론한다. 임베딩 없으면(mock) 키워드 적합도.
+    # 5) 점수 = 질의 적합도(blend_relevance: α·어휘 + (1-α)·코사인) + 태그 가점.
+    #    랭킹은 value-blind(2026-07-01): 가치·의도는 추천을 강제하지 않고 피드백에서
+    #    passive하게 추론한다. α=0이면 코사인 단독(기존), 임베딩 없으면(mock) 어휘 단독.
     scored = []
     for p in candidates:
         sim = sim_by_id.get(p.id)
-        rel = sim if sim is not None else text_relevance(p, query)
+        lex = text_relevance(p, query) if (sim is None or alpha > 0) else 0.0
+        rel = blend_relevance(lex, sim, alpha)
         if required and p.tags:
             rel = min(1.0, rel + 0.1 * len(set(p.tags) & set(required)))
         score = compute_product_score(p, query, text_rel=rel)

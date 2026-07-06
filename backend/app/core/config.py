@@ -43,6 +43,11 @@ class Settings:
         self.openai_reasoning_effort = os.environ.get("VC_OPENAI_REASONING_EFFORT", "minimal")
         # 의미 기반 상품 검색용 임베딩 (chat provider와 무관하게 OpenAI 사용 — DeepSeek는 임베딩 없음)
         self.embedding_model = os.environ.get("VC_EMBEDDING_MODEL", "text-embedding-3-small")
+        # 하이브리드 검색 가중치 α: rel = α·어휘(text_relevance) + (1-α)·코사인 (2026-07-06).
+        # 0 = 코사인 단독(구 동작) / >0 = 임베딩∪BM25 union 후보 + 블렌드. 두 신호 모두 [0,1]이라 정규화 불요.
+        # 기본 0.3 — A/B 실측(scripts/ab_hybrid_retrieval.py, 24케이스): 풀 카테고리 정합
+        # 0.800→0.906, 선물 맥락어 오염(주얼리→생일캔들 4/30→30/30) 소멸, 0.5는 어휘 과잉으로 열화.
+        self.hybrid_alpha = float(os.environ.get("VC_HYBRID_ALPHA", "0.3"))
         # DeepSeek — OpenAI-compatible API (https://api.deepseek.com)
         self.deepseek_api_key = os.environ.get("DEEPSEEK_API_KEY")
         # 모델: "deepseek-v4-flash"(284B/13B) | "deepseek-v4-pro"(1.6T/49B), 둘 다 1M ctx.

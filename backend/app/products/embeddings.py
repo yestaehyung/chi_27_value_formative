@@ -152,9 +152,14 @@ def retrieve(query: str, n: int = 200) -> list[str] | None:
     return None if out is None else [pid for pid, _ in out]
 
 
-def retrieve_scored(query: str, n: int = 200) -> list[tuple[str, float]] | None:
+def retrieve_scored(query: str, n: int = 200,
+                    include_ids: set[str] | None = None) -> list[tuple[str, float]] | None:
     """retrieve와 같되 (product_id, 코사인 유사도) 쌍을 반환 — 유사도를 랭킹에 쓰기 위함.
-    유사도(의미 적합도)는 최종 점수의 주 신호여야 한다(retrieve 순위가 버려지지 않게)."""
+    유사도(의미 적합도)는 최종 점수의 주 신호여야 한다(retrieve 순위가 버려지지 않게).
+
+    include_ids(하이브리드 union용, 2026-07-06): BM25가 올린 후보처럼 top-n 밖이어도
+    유사도가 필요한 id들 — 전 상품 스캔은 어차피 하므로 쿼리 임베딩 추가 호출 없이
+    top-n 뒤에 붙여 반환한다."""
     if not enabled() or not _loaded:
         return None
     qv = query_vector(query)
@@ -162,7 +167,11 @@ def retrieve_scored(query: str, n: int = 200) -> list[tuple[str, float]] | None:
         return None
     scored = [(pid, cosine(qv, v)) for pid, v in _product_vectors.items()]
     scored.sort(key=lambda x: x[1], reverse=True)
-    return scored[:n]
+    top = scored[:n]
+    if include_ids:
+        have = {pid for pid, _ in top}
+        top += [(pid, s) for pid, s in scored[n:] if pid in include_ids and pid not in have]
+    return top
 
 
 def product_vector(product_id: str) -> list[float] | None:

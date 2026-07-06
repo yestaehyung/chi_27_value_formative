@@ -60,8 +60,8 @@ def test_embedding_path_keeps_monitor_despite_wrong_category(db, monkeypatch):
     # 임베딩 경로 시뮬레이션: 코사인 검색이 모니터를 1위로 올렸다고 가정한다.
     # 하드필터가 살아있으면 category=="노트북"이 이 모니터를 제거한다(버그).
     monkeypatch.setattr(
-        embeddings, "retrieve_scored",
-        lambda q, n=200: [("m1", 0.92), ("l1", 0.51), ("l2", 0.40)],
+        embeddings, "retrieve_scored",  # include_ids: 하이브리드 union 시그니처 (2026-07-06)
+        lambda q, n=200, include_ids=None: [("m1", 0.92), ("l1", 0.51), ("l2", 0.40)],
     )
     pool = search_products(
         db,
@@ -78,7 +78,7 @@ def test_search_falls_back_when_retrieved_ids_missing_from_db(db, monkeypatch):
     """인덱스/임베딩이 DB에 없는 id를 돌려줘도(재시드 등 불일치) 추천 풀이 비면 안 된다 → 전체 폴백.
     버그 증상: recommend인데 카드 0개 = search_products가 빈 풀을 반환."""
     monkeypatch.setattr(embeddings, "retrieve_scored",
-                        lambda q, n=200: [("ghost1", 0.9), ("ghost2", 0.8)])  # DB에 없는 id
+                        lambda q, n=200, include_ids=None: [("ghost1", 0.9), ("ghost2", 0.8)])  # DB에 없는 id
     pool = search_products(
         db, query="모니터", category="노트북",
         hard_constraints=[],
