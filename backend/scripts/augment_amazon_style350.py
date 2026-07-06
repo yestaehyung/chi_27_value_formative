@@ -38,7 +38,14 @@ CAPS = {"meta_Clothing_Shoes_and_Jewelry": 10000000,
         "meta_Electronics": 12000000,
         "meta_Home_and_Kitchen": 6000000}
 
-CLOTH_JUNK = ("costume", "cosplay", "halloween", "jewelry making", "charm only", "diy")
+# 2026-07-06 보강: 산업/직업용(작업복·스크럽·안전장구)과 노벨티 조크 문구 상품 제외
+# (formative 테스트에서 '사수 선물'에 안전 우의·Best Grandpa Ever 티셔츠가 노출된 사고)
+CLOTH_JUNK = ("costume", "cosplay", "halloween", "jewelry making", "charm only", "diy",
+              "scrub", "coverall", "hi-vis", "high visibility", "safety", "workwear",
+              "work jean", "work pant", "carpenter", "flame resistant", "fire resistant",
+              "uniform", "nurse", "medical",
+              "funny", "novelty", "gag gift", "sarcas", "joke", "grandpa", "grandma",
+              "papa ", " ever shirt", "best dad", "best mom", "retirement gift")
 ELEC_JUNK = ("case", "cover", "protector", "band", "strap", "replacement", "charger",
              "cable", "adapter", "stand", "mount", "skin", "sticker", "hub", "sleeve",
              "earpad", "ear pad", "cushion", "tips", "hook")
