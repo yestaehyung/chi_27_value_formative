@@ -149,12 +149,23 @@ async def fetch_plan(provider, context: dict, fallback_search_text: str) -> Plan
     action = out.get("action")
     if action not in ACTIONS:
         action = "recommend"
-    if action == "close" and not context.get("hasRecommendations"):
+    if action in ("answer", "close") and not context.get("hasRecommendations"):
+        # 노출 이력이 없으면 설명·마무리할 상품이 없다 — 독스트링 계약대로 둘 다 강등
+        # (2026-07-06: close만 강등되던 구현 버그 수정 — FS1 실측: 노출 0에서 answer가
+        #  통과해 "조금 더 구체적으로…" 빈 응답이 나감).
+        action = "recommend"
+    if action == "clarify" and context.get("lastAgentAction") == "clarify":
+        # 연속 clarify 금지 — mock 계약("직전 clarify→recommend")을 실 경로에 정렬
+        # (2026-07-06: flash가 4연속 clarify → 참가자 세션 포기. 프롬프트의 "짧게 한 번"을
+        #  작은 모델이 안 지키므로, lastAgentAction이라는 DB 사실로 구조 집행).
         action = "recommend"
 
     search_text = out.get("searchText")
     if not isinstance(search_text, str) or not search_text.strip():
-        search_text = fallback_search_text
+        # 강등된 recommend는 LLM이 searchText를 안 만든 상태 — 얇은 최신 발화 대신
+        # 발화 전량 합성으로 폴백 (mock의 결정론 근사와 동일: 턴1의 도메인이 살아남게).
+        utts = [u for u in (context.get("userUtterances") or []) if isinstance(u, str) and u.strip()]
+        search_text = " ".join(utts) if utts else fallback_search_text
     constraints_note = out.get("constraintsNote")
     if not isinstance(constraints_note, str):
         constraints_note = ""
