@@ -185,6 +185,25 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         .all()
     )
     decision = planner.structural_guard(direct_open)
+    # 플래너 컨텍스트는 한 번 만들어 두 아키텍처(pipeline planner / agentic loop)에
+    # 동일하게 공급한다 — 축 2 비교의 정보 동일성 (agentic_loop.py 변인 통제 참조).
+    planner_context = None
+    if decision is None:
+        pred = None
+        try:
+            from app import rig
+
+            # 이론층의 cross-session 가설 — 별도 tier가 아니라 플래너 컨텍스트 필드.
+            pred = rig.top_predicted_concept(db, session.id)
+        except Exception:  # noqa: BLE001
+            pred = None
+        # 최근 대화 윈도우(원문) + 구조화 상태를 함께 — 도메인·맥락이 턴을 넘어 유지되게.
+        planner_context = planner.build_planner_context(
+            recent_turns[-6:], commit.snapshot, has_recommendations,
+            _last_agent_action(db, session.id), pred,
+            (session.meta or {}).get("shoppingGoal") or category or "",
+            db=db, session=session, last_shown=prev_shown,
+        )
     # ── 축 2 실험 경로 (VC_TURN_LOOP=agentic, 2026-07-07) ──
     # 대화 에이전트 하나가 search_and_rank를 도구로 써서 해석·행동결정·문장화를 한
     # 컨텍스트에서 수행 (agentic_loop.py). 구조 가드(show_conflict)는 그대로 선행하고,
@@ -199,6 +218,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             try:
                 agentic = await agentic_loop.run_turn(
                     db, provider, session, commit, content, recent_turns,
+                    planner_context=planner_context,
                 )
                 decision = planner.PlannerDecision(
                     action="recommend" if agentic.scored else "answer",
@@ -210,30 +230,8 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
                 logging.exception("agentic loop failed; falling back to pipeline")
                 agentic = None
     if decision is None:
-        pred = None
-        try:
-            from app import rig
-
-            # 이론층의 cross-session 가설 — 별도 tier가 아니라 플래너 컨텍스트 필드.
-            pred = rig.top_predicted_concept(db, session.id)
-        except Exception:  # noqa: BLE001
-            pred = None
-        # 최근 대화 윈도우(원문) + 구조화 상태를 함께 — 도메인·맥락이 턴을 넘어 유지되게.
-        ad_turns = list(reversed(
-            db.query(models.Turn)
-            .filter(models.Turn.session_id == session.id)
-            .order_by(models.Turn.turn_index.desc())
-            .limit(6).all()
-        ))
         decision = await planner.fetch_plan(
-            provider,
-            planner.build_planner_context(
-                ad_turns, commit.snapshot, has_recommendations,
-                _last_agent_action(db, session.id), pred,
-                (session.meta or {}).get("shoppingGoal") or category or "",
-                db=db, session=session, last_shown=prev_shown,
-            ),
-            fallback_search_text=content.strip(),
+            provider, planner_context, fallback_search_text=content.strip(),
         )
         if decision.action == "clarify" and not decision.probe_question:
             # 폴백: LLM이 질문을 안 주면 기존 가치질문 도구
