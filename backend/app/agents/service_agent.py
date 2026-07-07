@@ -178,7 +178,37 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     # ① planner 컨텍스트(④′ — "더 저렴한 걸로" 같은 직전-세트 참조의 기준점),
     # ② renderer(previouslyShownProducts — 과거 노출 언급의 근거, 2026-07-03).
     prev_shown = _last_recommended_products(db, session.id)
+    recent_turns = (
+        db.query(models.Turn)
+        .filter(models.Turn.session_id == session.id)
+        .order_by(models.Turn.turn_index)
+        .all()
+    )
     decision = planner.structural_guard(direct_open)
+    # ── 축 2 실험 경로 (VC_TURN_LOOP=agentic, 2026-07-07) ──
+    # 대화 에이전트 하나가 search_and_rank를 도구로 써서 해석·행동결정·문장화를 한
+    # 컨텍스트에서 수행 (agentic_loop.py). 구조 가드(show_conflict)는 그대로 선행하고,
+    # 실패하면 기존 파이프라인으로 폴백 — 기본(pipeline)과 mock에선 절대 타지 않는다.
+    agentic = None
+    if decision is None and provider.name != "mock":
+        from app.core.config import settings as _cfg
+
+        if _cfg.turn_loop == "agentic":
+            from app.agents import agentic_loop
+
+            try:
+                agentic = await agentic_loop.run_turn(
+                    db, provider, session, commit, content, recent_turns,
+                )
+                decision = planner.PlannerDecision(
+                    action="recommend" if agentic.scored else "answer",
+                    reason="agentic_loop",
+                    search_text=(agentic.tool_args or {}).get("searchText"),
+                    constraints_note=(agentic.tool_args or {}).get("constraintsNote", ""),
+                )
+            except Exception:  # noqa: BLE001 — 실험 경로 실패가 턴을 깨면 안 됨
+                logging.exception("agentic loop failed; falling back to pipeline")
+                agentic = None
     if decision is None:
         pred = None
         try:
@@ -217,7 +247,10 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     conflict_explanation: str | None = None
     value_question: str | None = None
 
-    if decision.action == "clarify":
+    if agentic is not None:
+        # 축 2: 텍스트·노출 셋이 이미 확정 — 아래 파이프라인 액션 분기·렌더러를 건너뛴다
+        session.current_stage = "recommendation" if agentic.scored else "clarification"
+    elif decision.action == "clarify":
         value_question = decision.probe_question
         text = value_question or rg.clarify_text(category)
         session.current_stage = "clarification"
@@ -241,12 +274,6 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         session.current_stage = "recommendation"
 
     # real LLM providers rewrite the template grounded on context (mock returns it as-is)
-    recent_turns = (
-        db.query(models.Turn)
-        .filter(models.Turn.session_id == session.id)
-        .order_by(models.Turn.turn_index)
-        .all()
-    )
     t_reply = time.perf_counter()
     state_for_llm = commit.snapshot.user_visible_summary if commit.snapshot else None
     # 추천이면: 추천 에이전트(③)가 검색 사양을 실행 — 임베딩 검색 → rerank(제약·기준 집행,
@@ -255,7 +282,15 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     card_texts: dict[str, dict] = {}
     scored: list[ScoredProduct] = []
     rec_diag: dict | None = None
-    if decision.action == "recommend":
+    if agentic is not None:
+        # 축 2: 도구 결과를 본 같은 컨텍스트가 이미 응답을 썼다 — 렌더러 불필요
+        text = agentic.text
+        scored = agentic.scored
+        card_texts = agentic.card_texts
+        rec_diag = agentic.rec_diag
+        products = [sp.product for sp in scored]
+        related_ids = [p.id for p in products]
+    elif decision.action == "recommend":
         scored, card_texts, rec_diag = await recommender.run_recommendation(
             db, provider, session,
             search_text=decision.search_text or content.strip(),
@@ -334,6 +369,14 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
                           "constraintsNote": decision.constraints_note,
                           "probeDimension": decision.probe_dimension,
                           "subtype": decision.subtype},
+            ))
+        if agentic is not None:
+            db.add(models.LLMCall(
+                id=new_id("llm"), session_id=session.id, task="agentic_loop",
+                provider=_settings.llm_provider,
+                request={"turnId": agent_turn.id, "utterance": content[:500]},
+                response={"toolCalls": [{"name": t["name"], "args": t["args"]}
+                                        for t in agentic.trace]},
             ))
         if rec_diag is not None:
             db.add(models.LLMCall(
