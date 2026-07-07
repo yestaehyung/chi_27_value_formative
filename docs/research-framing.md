@@ -163,3 +163,30 @@ FS1의 관찰 포인트 — 네이버 협업의 실용적 기여점.
    장착한 실험 플랫폼 (study condition·correction trace·trajectory 자동 로깅)
 4. **실증적**: 발화 분석(0% latent) vs 자극-반응(31~50% latent)의 격차를 데이터로
    제시 — "발화만으론 부족하다"는 가설의 정량 근거
+
+---
+
+## 9. 호스트 에이전트 프레이밍 결정 (2026-07-07, 사용자 확정)
+
+**결정 (사용자):** 논문에서 대화 에이전트 자체를 기여로 주장하지 않는다.
+에이전트는 **Rufus로 대표되는 업계 표준형**(단일 대화 에이전트 + 도구 호출:
+상품 검색·상세 조회·프로필 조회 — AWS 공개 아키텍처 참조)을 "주어진 호스트"로
+인스턴스화하고, **기여는 그 위에 부착되는 hidden-intention 층 전체**에 싣는다:
+백그라운드 user-model agent(commit engine) + 증거 순수성 게이트(도구 경계) +
+칩/충돌카드 외재화 + 교정 채널 + participant spec/RIG.
+
+함의 (시스템 결정 기록 — 구현·실험 설계에 반영):
+
+1. **본 실험(ablation)은 층 on/off** — 같은 Rufus형 호스트에서 외재화·교정 층의
+   유무가 이해/신뢰/숨은기준 자각(사후설문 구인)에 주는 효과. 기여를 ablate하는
+   실험 구조 (기존 `studyCondition=correctable` 계측 재사용).
+2. **pipeline vs agentic 비교는 일반성 증거로 강등** — "층은 오케스트레이션 구조와
+   무관하게 부착된다"의 시연 (두 호스트에서 동작; 지침·정보 verbatim 공유, 2026-07-07
+   agentic v2 변인 통제 참조).
+3. 표기: 실제 Rufus는 비공개이므로 "Rufus-style / industry-standard tool-using
+   shopping agent"로 쓰고, Rufus 공개 자료·AWS 아키텍처 블로그를 표준형의 실재
+   근거로 인용. novelty 문장: "이 표준형에는 사용자가 개입 가능한 의도 해석 층이
+   없다 — 우리는 그것을 부착한다."
+4. 호스트 구현은 `app/agents/agentic_loop.py` (VC_TURN_LOOP=agentic). 리뷰어 리스크
+   메모: "멀티에이전트 프레임워크 주장 + 프레임워크 평가 부재 = reject" 패턴을
+   이 프레이밍이 구조적으로 회피 (프레임워크를 주장하지 않음).

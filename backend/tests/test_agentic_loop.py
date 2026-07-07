@@ -103,6 +103,67 @@ def test_run_turn_without_tool_call_is_clarify_like(client):
         db.close()
 
 
+class _MultiToolStub:
+    """Rufus형 도구셋 검증용 — 프로필 조회 + 상세 조회를 부르고 텍스트 반환."""
+    name = "stub"
+
+    def __init__(self, detail_title):
+        self.detail_title = detail_title
+
+    async def generate_with_tools(self, messages, tools, execute_tool, **kwargs):
+        assert {t["function"]["name"] for t in tools} == {
+            "search_and_rank", "get_product_details", "get_user_profile"}
+        profile = await execute_tool("get_user_profile", {})
+        detail = await execute_tool("get_product_details", {"title": self.detail_title})
+        trace = [{"name": "get_user_profile", "args": {}, "result": profile},
+                 {"name": "get_product_details", "args": {"title": self.detail_title},
+                  "result": detail}]
+        return "상세 정보를 반영한 답변", trace
+
+    async def generate_json(self, messages, task=None, context=None, **kwargs):
+        return {"ranking": []}
+
+
+def test_rufus_toolset_profile_and_details(client):
+    """v3 도구셋: get_user_profile은 층의 출력만(확인 기준·요약), get_product_details는
+    카탈로그 사실을 반환. 도구만 부르고 검색을 안 하면 노출 셋은 비어 있다(answer성)."""
+    from app.agents import agentic_loop
+    from app.db import models
+    from app.db.database import SessionLocal
+
+    sid = _make_session(client)
+    db = SessionLocal()
+    try:
+        session = db.get(models.Session, sid)
+        any_product = db.query(models.Product).first()
+        result = asyncio.run(agentic_loop.run_turn(
+            db, _MultiToolStub(any_product.title[:6]), session, _FakeCommit(),
+            "이 상품 자세히 알려줘", recent_turns=[],
+        ))
+        assert result.scored == []  # 검색 안 함 → 노출 없음
+        prof_result = result.trace[0]["result"]
+        assert "confirmedCriteria" in prof_result and "understandingSummary" in prof_result
+        # 층 출력만 — 미확인 원점수 축은 프로필 도구에 없다
+        assert "values" not in prof_result and "motivations" not in prof_result
+        detail = result.trace[1]["result"]
+        assert detail["found"] is True and detail["title"] == any_product.title
+        assert "price" in detail and "caveats" in detail
+    finally:
+        db.close()
+
+
+def test_product_details_not_found(client):
+    from app.agents import agentic_loop
+    from app.db.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        out = agentic_loop._product_details(db, type("S", (), {"id": "none"})(), "존재하지않는상품명XYZ")
+        assert out["found"] is False
+    finally:
+        db.close()
+
+
 def test_mock_provider_has_no_tool_loop():
     from app.llm.provider import MockLLMProvider
 

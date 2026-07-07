@@ -85,6 +85,9 @@ export const api = {
       body: JSON.stringify({ scenarioId, userAgentProfileId, maxTurns, autoResolveConflicts: true }),
     }),
 
+  llmCalls: (sessionId: string, task?: string) =>
+    request<any[]>(`/api/research/sessions/${sessionId}/llm-calls${task ? `?task=${task}` : ""}`),
+
   researchSessions: (mode?: string) =>
     request<any>(`/api/research/sessions${mode ? `?mode=${mode}` : ""}`),
   sessionReplay: (sessionId: string) => request<any>(`/api/research/sessions/${sessionId}/replay`),

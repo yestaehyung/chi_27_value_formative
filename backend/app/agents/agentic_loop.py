@@ -27,6 +27,19 @@
 (하이브리드 검색→rerank→exclude→evidence purity — purity는 도구 경계에서 강제),
 show_conflict 구조 가드도 이 루프 밖(service_agent)에서 선행한다. 합쳐지는 것은
 planner+renderer뿐이다.
+
+## v3 (2026-07-07): Rufus형 표준 도구셋 — 논문 프레이밍 결정의 구현
+
+research-framing.md §9: 호스트는 업계 표준형(Rufus — 검색/상세조회/프로필조회 도구를
+가진 단일 대화 에이전트, AWS 공개 아키텍처 참조)으로 인스턴스화하고 기여는 층에 싣는다.
+- search_and_rank: 상품 검색+선별 (purity 게이트 내장)
+- get_product_details: 상품 상세·리뷰 신호 조회 (사용자가 특정 상품을 파고들 때)
+- get_user_profile: **층 부착의 전시장** — Rufus의 '프로필 조회' 자리에 우리
+  hidden-intention 층의 출력만 꽂힌다: 확인된 기준(칩 교정 통과분)·명시 조건·
+  현재 이해 요약·참가자 스펙(세션 간 기억). 미확인 추론 가설은 내보내지 않는다.
+- 주문 조회는 미구현: 연구 범위에 구매 이력이 없다 — 세션 간 기억의 대응물은
+  participant spec/RIG (get_user_profile로 노출).
+비교 실험 주의: 도구셋 확장으로 두 팔의 도구 가용성이 다르다 — 일반성 시연에서 기록.
 """
 import json
 import logging
@@ -50,6 +63,8 @@ _AGENTIC_SHIM = """[실행 방식 — 위 두 지침의 이 모드 매핑]
 - 도구 결과의 shown 목록이 화면 카드로 노출된다(응답 지침의 productsToShow에 해당).
   noExactMatch가 true면 응답 지침의 recommendationNote(noExactMatch) 규칙을 적용한다
   (shown의 differsHow가 nearestAlternatives에 해당).
+- answer로 판단했고 특정 상품의 세부 근거가 필요하면 get_product_details를,
+  사용자의 확인된 기준·지난 세션 맥락이 필요하면 get_user_profile을 호출해도 된다.
 - 응답 지침의 draftTemplate·mustAskQuestion은 이 모드에는 주어지지 않는다 — 해당
   규칙은 건너뛴다."""
 
@@ -60,30 +75,119 @@ AGENTIC_SYSTEM = (
     + "\n\n" + _AGENTIC_SHIM
 )
 
-TOOLS = [{
-    "type": "function",
-    "function": {
-        "name": "search_and_rank",
-        "description": (
-            "카탈로그에서 상품을 검색하고 사용자의 명시 제약·확인된 기준으로 선별해 "
-            "최대 5개를 화면 카드로 노출한다. 반환된 shown 목록이 실제로 사용자 화면에 보인다."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "searchText": {
-                    "type": "string",
-                    "description": "완결된 한국어 검색문 — 제품 종류 + 직접 언급된 선호 특징만",
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search_and_rank",
+            "description": (
+                "카탈로그에서 상품을 검색하고 사용자의 명시 제약·확인된 기준으로 선별해 "
+                "최대 5개를 화면 카드로 노출한다. 반환된 shown 목록이 실제로 사용자 화면에 보인다."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "searchText": {
+                        "type": "string",
+                        "description": "완결된 한국어 검색문 — 제품 종류 + 직접 언급된 선호 특징만",
+                    },
+                    "constraintsNote": {
+                        "type": "string",
+                        "description": "예산·필수·비선호·수령자 맥락 요약. 없으면 빈 문자열",
+                    },
                 },
-                "constraintsNote": {
-                    "type": "string",
-                    "description": "예산·필수·비선호·수령자 맥락 요약. 없으면 빈 문자열",
-                },
+                "required": ["searchText"],
             },
-            "required": ["searchText"],
         },
     },
-}]
+    {
+        "type": "function",
+        "function": {
+            "name": "get_product_details",
+            "description": (
+                "상품 하나의 상세 정보를 조회한다 (가격·평점·리뷰 신호·주요 속성·주의점·프로필). "
+                "사용자가 특정 상품에 대해 자세히 묻거나 비교 근거가 필요할 때 사용. "
+                "이 세션에서 화면에 보여준 상품을 우선 찾는다."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string",
+                              "description": "조회할 상품 제목 (일부 문자열이면 됨)"},
+                },
+                "required": ["title"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_user_profile",
+            "description": (
+                "시스템의 사용자 이해 층이 파악한 프로필을 조회한다: 사용자가 확인·수정한 "
+                "쇼핑 기준, 명시된 가격대·필수 조건, 현재 이해 요약, (있으면) 지난 세션에서 "
+                "누적된 스펙. 확인 전 추론 가설은 포함되지 않는다."
+            ),
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+]
+
+
+def _product_details(db: DbSession, session: models.Session, title_query: str) -> dict:
+    """Rufus형 상세 조회 — 이 세션에서 노출된 상품 우선(사용자는 화면의 카드를 지칭),
+    없으면 카탈로그 전체에서 제목 부분일치."""
+    from app.products import profiles as prof_mod
+
+    q = (title_query or "").strip()
+    if not q:
+        return {"found": False, "note": "title이 비어 있음"}
+    shown = (
+        db.query(models.Product)
+        .join(models.ProductImpression,
+              models.ProductImpression.product_id == models.Product.id)
+        .filter(models.ProductImpression.session_id == session.id)
+        .filter(models.Product.title.like(f"%{q}%"))
+        .first()
+    )
+    p = shown or (
+        db.query(models.Product).filter(models.Product.title.like(f"%{q}%")).first()
+    )
+    if p is None:
+        return {"found": False, "note": f"'{q}'와 일치하는 상품이 카탈로그에 없음"}
+    prof = prof_mod.get(p.id) or {}
+    return {
+        "found": True, "title": p.title, "price": p.price, "category": p.category,
+        "rating": p.rating, "reviewCount": p.review_count,
+        "longTermReviewRatio": p.long_term_review_ratio,
+        "sellerGrade": p.seller_grade, "deliveryFee": p.delivery_fee,
+        "productType": prof.get("productType"), "audience": prof.get("audience"),
+        "keyAttributes": prof.get("keyAttributes") or [],
+        "caveats": prof.get("caveats") or [],
+        "profile": prof.get("profile") or (p.description or "")[:300],
+    }
+
+
+def _user_profile(db: DbSession, session: models.Session, commit) -> dict:
+    """층 부착 지점 — hidden-intention 층의 *출력만* 노출한다: 확인된 기준(칩 교정
+    통과분)·명시 조건·이해 요약·참가자 스펙. 미확인 anchor/motivation 원점수는
+    내보내지 않는다 (가설은 확인을 거쳐야 행동에 닿는다 — evidence purity와 동일 원칙)."""
+    from app.agents.recommender import _stated_and_confirmed_criteria
+
+    snapshot = commit.snapshot
+    out: dict = {
+        "confirmedCriteria": _stated_and_confirmed_criteria(db, session.id),
+        "understandingSummary": (snapshot.user_visible_summary if snapshot else None) or {},
+        "priceRange": ({"min": snapshot.price_min, "max": snapshot.price_max}
+                       if snapshot else None),
+        "hardConstraints": (snapshot.hard_constraints if snapshot else None) or [],
+    }
+    if session.participant_id:
+        part = db.get(models.Participant, session.participant_id)
+        spec = getattr(part, "spec_markdown", None) if part else None
+        if spec:
+            out["crossSessionSpec"] = spec[:1500]
+    return out
 
 
 @dataclass
@@ -129,6 +233,10 @@ async def run_turn(
     holder: dict = {}
 
     async def execute(name: str, args: dict) -> dict:
+        if name == "get_product_details":
+            return _product_details(db, session, args.get("title") or "")
+        if name == "get_user_profile":
+            return _user_profile(db, session, commit)
         if name != "search_and_rank":
             return {"error": f"unknown tool: {name}"}
         search_text = (args.get("searchText") or "").strip() or content.strip()

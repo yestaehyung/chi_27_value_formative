@@ -18,5 +18,5 @@ export function middleware(req: NextRequest) {
 
 // matcher에 걸리는 경로에서만 실행 — /study/* 와 /api/* 프록시는 건드리지 않는다.
 export const config = {
-  matcher: ["/", "/simulate/:path*", "/research/:path*", "/pscon/:path*"],
+  matcher: ["/", "/simulate/:path*", "/research/:path*", "/pscon/:path*", "/rufus/:path*"],
 };

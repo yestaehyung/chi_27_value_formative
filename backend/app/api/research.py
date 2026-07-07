@@ -352,3 +352,19 @@ def research_meta(db: DbSession = Depends(get_db)):
         "personas": load_personas(),
         "products": [serializers.product_to_dict(p) for p in products],
     }
+
+
+@router.get("/sessions/{session_id}/llm-calls")
+def session_llm_calls(session_id: str, task: str | None = None,
+                      db: DbSession = Depends(get_db)):
+    """세션의 LLM 의사결정 로그 (action_decision/rerank/agentic_loop 등) —
+    Rufus형 호스트 테스트 UI(/rufus)의 도구 호출 trace 표시와 사후 진단용."""
+    q = db.query(models.LLMCall).filter(models.LLMCall.session_id == session_id)
+    if task:
+        q = q.filter(models.LLMCall.task == task)
+    rows = q.order_by(models.LLMCall.created_at).all()
+    return [{
+        "id": r.id, "task": r.task, "provider": r.provider,
+        "request": r.request or {}, "response": r.response or {},
+        "createdAt": r.created_at.isoformat() if r.created_at else None,
+    } for r in rows]
