@@ -92,7 +92,7 @@ def _create_impressions(
     impressions = []
     card_texts = card_texts or {}
     for rank, sp in enumerate(scored, start=1):
-        # 카드 설명은 LLM 생성(generate_card_rationales) — 사용자 가치에 연결(B1).
+        # 카드 설명은 rerank가 순위와 함께 생성(rerank_by_intent의 card_texts) — 사용자 가치에 연결(B1).
         # 누락 시 폴백(빈 reason 방지). BUCKET_PHRASE/규칙 matched·weak는 더 이상 안 씀.
         card = card_texts.get(sp.product.id) or {}
         imp = models.ProductImpression(

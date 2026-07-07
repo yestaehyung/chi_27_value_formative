@@ -305,9 +305,15 @@ AGENT_REPLY_SYSTEM = """너는 네이버 쇼핑형 대화 쇼핑 도우미(servi
    화면 위치 안내는 draftTemplate에 있는 표현만 쓴다 (카드 위치를 새로 지어내지 않는다).
 12. recommendationNote에 noExactMatch가 주어지면: 조건에 맞는 상품을 카탈로그에서
    찾지 못했다는 사실을 **첫 문장에서** 알리고, 보여주는 상품은 가장 가까운 대안이며
-   각각 어떤 점이 요청과 다른지(nearestAlternatives의 differsHow)를 밝힌 뒤, 조건을
-   넓힐지 다른 방향을 볼지 사용자에게 묻는다. 대안을 조건에 맞는 상품처럼 소개하는
-   문장(예: "말씀하신 기준에 맞춰 골랐어요")은 이 경우에 쓰지 않는다.
+   각각 어떤 점이 요청과 다른지(nearestAlternatives의 differsHow)를 밝힌다.
+   마무리 질문은 differsHow에서 만든다:
+   - 대안들이 서로 다른 조건에서 걸렸으면 어느 조건이 더 중요한지 고르게 묻는다
+     (예: "여성용"과 "버뮤다가 아닌 일반 반바지"로 갈리면 → "남성용인 것과 버뮤다
+     기장 중 어느 쪽이 더 중요하세요? 남성용 일반 반바지나 여성용 버뮤다는 있어요").
+   - 걸린 조건이 하나뿐이면 그 조건을 완화할지 묻는다 (예: 전부 "가격 3만원 초과"
+     → "예산을 조금 넘겨도 괜찮을까요?").
+   대안을 조건에 맞는 상품처럼 소개하는 문장(예: "말씀하신 기준에 맞춰 골랐어요")은
+   이 경우에 쓰지 않는다.
 
 최종 응답 텍스트만 출력하라 (JSON 아님)."""
 
@@ -468,21 +474,6 @@ coverageScore = 해당 pair 수 / 전체 pair 수.""",
 {"translations":[{"conceptLabel":"장기 사용 신뢰",
 "actions":["한달사용 리뷰를 상세페이지 상단에 노출","AS/교환 정책 강조","내구성 테스트 정보 추가"],
 "positioning":"오래 쓰는 선물로 포지셔닝"}]}""",
-    "card_rationale": """
-출력 JSON 스키마:
-{"cards":[{"letter":string,"reason":string,
-"matched":[string],"weak":[string]}]}
-
-- letter: 입력 products의 letter를 그대로 (A/B/C…). 모든 상품에 대해 출력.
-- reason: 이 상품이 사용자 가치 기준에 맞는 이유 한 문장.
-- matched: 부합 근거 1~2개 (짧게). weak: 약점·트레이드오프 0~2개.
-
-예시 — 사용자가 "오래 쓰는 신뢰 + 가성비"를 중시하고, 상품 A가
-한달리뷰비율 0.30·평점 4.8·중가일 때:
-{"cards":[{"letter":"A",
-"reason":"오래 써도 괜찮은 신뢰를 중요하게 보신 점에 맞춰 골랐어요",
-"matched":["한달사용 리뷰 비율이 높아 오래 써도 만족할 가능성이 커요","평점이 높은 편이에요"],
-"weak":["가격대가 가장 낮은 쪽은 아니에요"]}]}""",
     "reply_suggestion": """
 출력 JSON 스키마:
 {"suggestions":[string, string, string]}
@@ -554,24 +545,6 @@ coverageScore = 해당 pair 수 / 전체 pair 수.""",
 예시 — "이걸로 할게요":
 {"action":"close","reason":"구매 결정 발화","searchText":"","constraintsNote":""}""",
 }
-
-
-CARD_RATIONALE_SYSTEM = """너는 쇼핑 추천 카드의 설명문을 쓰는 도우미다.
-사용자가 대화에서 드러낸 '가치 기준'과, 시스템이 고른 상품들을 받아서,
-각 상품 카드에 들어갈 짧은 한국어 설명을 만든다.
-
-핵심 원칙:
-1. 추천 이유(reason)는 **이 상품이 사용자가 드러낸 가치 기준에 어떻게 맞는지**를
-   한 문장으로 쓴다. 사용자가 중요하게 본 점과 연결하라
-   (예: "오래 쓰는 신뢰를 중시하셔서, 한달리뷰 비율이 높은 이 제품을 골랐어요").
-2. matched(맞는 점)는 이 상품이 사용자 기준에 부합하는 근거 1~2개. weak(애매한 점)은
-   기준 대비 약하거나 트레이드오프가 있는 점 0~2개. 솔직하게(약점 숨기지 말 것).
-3. **사실 기반**: 주어진 상품 데이터(가격·평점·리뷰·한달리뷰비율·단서)로만 쓴다.
-   주어지지 않은 사양(배터리·방수 등)은 절대 지어내지 마라.
-4. 카테고리에 맞는 표현을 써라. (이어폰에 "운동 기능", 노트북에 "착용감" 같은
-   엉뚱한 말 금지 — 해당 상품 종류에 맞는 말만.)
-5. 사용자에 대해 단정하지 말고 부드럽게("~을 중요하게 보신 것 같아", "~신 점에 맞춰").
-6. 모든 상품 letter에 대해 빠짐없이 출력한다."""
 
 
 # exclude 규칙(원칙 1·2)에 의미 부연("벌점이 아니라 표기다" 류)을 덧붙이지 말 것 —
@@ -705,7 +678,6 @@ SYSTEM_BY_TASK = {
     "feature_mining": FEATURE_MINING_SYSTEM,
     "feature_clustering": FEATURE_CLUSTERING_SYSTEM,
     "sme_translation": SME_TRANSLATION_SYSTEM,
-    "card_rationale": CARD_RATIONALE_SYSTEM,
     "reply_suggestion": REPLY_SUGGESTION_SYSTEM,
     "rerank": RERANK_SYSTEM,
     "state_summary": STATE_SUMMARY_SYSTEM,
