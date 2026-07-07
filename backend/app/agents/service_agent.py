@@ -265,11 +265,26 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         )
         products = [sp.product for sp in scored]
         related_ids = [p.id for p in products]
+        # ② 부분 정직 (2026-07-07): 노출 전체가 근접 대안이면(준수 후보 0 = rerank의
+        # 출력 사실) 정직 초안 + recommendationNote로 렌더러가 부재를 먼저 고지하게 한다.
+        near_miss = rec_diag.get("nearMiss") or {}
+        rec_note = None
+        if near_miss or not scored:
+            rec_note = {
+                "noExactMatch": True,
+                "nearestAlternatives": [
+                    {"title": p.title, "differsHow": near_miss.get(p.id, "")}
+                    for p in products
+                ],
+            }
+            template = rg.near_miss_text(scored)
+        else:
+            template = rg.recommend_text(scored)
         text = await rg.generate_reply(
-            provider, action=decision.action, template_text=rg.recommend_text(products),
+            provider, action=decision.action, template_text=template,
             recent_turns=recent_turns, products=products, state_summary=state_for_llm,
             conflict_explanation=conflict_explanation, must_ask_question=value_question,
-            previously_shown=prev_shown,
+            previously_shown=prev_shown, recommendation_note=rec_note,
         )
     else:
         text = await rg.generate_reply(

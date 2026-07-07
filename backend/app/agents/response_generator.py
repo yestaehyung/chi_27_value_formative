@@ -31,6 +31,23 @@ def recommend_text(scored: list[ScoredProduct]) -> str:
     )
 
 
+def near_miss_text(scored: list[ScoredProduct]) -> str:
+    """전 후보가 제약 위반일 때의 정직 초안 (② 부분 정직, 2026-07-07) — 조건에 맞는
+    상품의 부재를 먼저 알리고, 근접 대안이 어떤 점에서 다른지는 카드(weak)가 보여주며,
+    다음 방향(조건 완화/다른 방향)은 사용자가 정한다. mock 출력 겸 실패 폴백."""
+    if not scored:
+        return (
+            "말씀하신 조건에 맞는 상품을 지금 카탈로그에서는 찾지 못했어요. "
+            "조건을 조금 넓혀볼까요, 아니면 다른 종류의 상품을 찾아볼까요?"
+        )
+    n = len(scored)
+    return (
+        f"말씀하신 조건에 딱 맞는 상품은 지금 카탈로그에서 찾지 못했어요. "
+        f"대신 가장 가까운 후보 {n}가지를 보여드릴게요 — 각 카드에 조건과 다른 점을 "
+        "표시해두었어요. 조건을 조금 넓혀볼까요, 아니면 다른 방향으로 찾아볼까요?"
+    )
+
+
 def explain_text(products: list[models.Product]) -> str:
     if not products:
         return "조금 더 구체적으로 어떤 점이 궁금하신지 알려주시면 비교해드릴게요."
@@ -94,6 +111,7 @@ async def generate_reply(
     conflict_explanation: str | None = None,
     must_ask_question: str | None = None,
     previously_shown: list[models.Product] | None = None,
+    recommendation_note: dict | None = None,
 ) -> str:
     """LLM-grounded reply; falls back to the deterministic template on mock/error."""
     if provider.name == "mock":
@@ -131,6 +149,7 @@ async def generate_reply(
         ],
         "currentUnderstanding": state_summary or {},
         "conflictExplanation": conflict_explanation,
+        "recommendationNote": recommendation_note,
         "draftTemplate": template_text,
     }
     try:
@@ -152,17 +171,19 @@ async def rerank_by_intent(
     provider: LLMProvider,
     scored: list[ScoredProduct],
     intent_context: dict,
-) -> tuple[list[ScoredProduct], dict[str, dict]]:
+) -> tuple[list[ScoredProduct], dict[str, dict], dict[str, str]]:
     """사용자 가치·동기로 후보를 재정렬 (LLM4Rerank WWW'25식 Goal-기반 listwise rerank).
     임베딩이 추려준 후보(scored, 임베딩 순)를, 추출된 의도(intent_context)에 맞춰 순위를 다시 매긴다.
 
     intent_context = {scenario, recentUtterances, topics[{label,description,quotes}],
                       values(TCV5 raw), motivations(raw)}  — 점수→자연어 하드코딩 변환 안 함.
-    반환: (재정렬된 scored, {productId: {reason,matched,weak}}) — 카드텍스트 흡수(card_rationale 대체).
-    mock/실패 시 입력 순서 그대로 + 사실기반 폴백 카드 (재현성).
+    반환: (재정렬된 scored, {productId: {reason,matched,weak}}, {productId: 제외 이유}).
+    제외는 **명시 exclude:true만** 인정 — ranking 누락은 아래 append-back으로 살아나며
+    제외가 아니다(생략≠제외; 노출 억제는 반드시 명시 채널로만, 2026-07-07 ② 부분 정직).
+    mock/실패 시 입력 순서 그대로 + 빈 제외 셋 + 사실기반 폴백 카드 (재현성).
     """
     if not scored:
-        return scored, {}
+        return scored, {}, {}
 
     from app.products import profiles
 
@@ -193,10 +214,14 @@ async def rerank_by_intent(
 
     order: list[int] = []
     card_texts: dict[str, dict] = {}
+    excluded: dict[str, str] = {}
     try:
         raw = await provider.generate_json(
             [LLMMessage(role="user", content=render_user_context(context))],
             task="rerank", context=context,
+            # 집행 레이어는 최대 결정론 — temp 0.1에서도 전멸 풀(준수후보 0)의 exclude
+            # 판정이 런마다 뒤집혔다 (2026-07-07 eval r7: 동일 입력 1.0↔0.0).
+            temperature=0.0,
         )
         for item in (raw or {}).get("ranking", []):
             idx = item.get("index")
@@ -208,10 +233,13 @@ async def rerank_by_intent(
                     "matched": [m for m in (item.get("matched") or []) if isinstance(m, str)][:2],
                     "weak": [w for w in (item.get("weak") or []) if isinstance(w, str)][:2],
                 }
-    except Exception:  # noqa: BLE001 — 폴백: 입력 순서 유지
+                if item.get("exclude") is True:
+                    excluded[pid] = (item.get("excludeReason") or "").strip()
+    except Exception:  # noqa: BLE001 — 폴백: 입력 순서 유지, 제외 없음
         order = []
+        excluded = {}
 
-    # 누락된 후보는 원래(임베딩) 순서로 뒤에 붙임 (재현성·완전성)
+    # 누락된 후보는 원래(임베딩) 순서로 뒤에 붙임 (재현성·완전성; 제외 아님)
     for i in range(len(scored)):
         if i not in order:
             order.append(i)
@@ -221,7 +249,7 @@ async def rerank_by_intent(
     for sp in reranked:
         if sp.product.id not in card_texts or not card_texts[sp.product.id]["reason"]:
             card_texts[sp.product.id] = _fallback_card(sp.product)
-    return reranked, card_texts
+    return reranked, card_texts, excluded
 
 
 _FALLBACK_SUGGESTIONS = {

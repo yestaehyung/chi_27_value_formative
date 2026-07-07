@@ -33,6 +33,42 @@ def _stated_and_confirmed_criteria(db: DbSession, session_id: str) -> list[dict]
     return out
 
 
+def select_shown(
+    reranked: list[ScoredProduct],
+    excluded: dict[str, str],
+    top_k: int,
+    near_miss_cap: int = 3,
+) -> tuple[list[ScoredProduct], dict[str, str]]:
+    """노출 셋 확정 (② 부분 정직, 2026-07-07 — 버뮤다 진단 후속).
+
+    rerank의 exclude는 LLM의 판단 **출력 사실**이고, 여기서는 그 사실에만 반응한다:
+    준수 후보 [:top_k] — top_k 미만이면 그만큼만(위반품으로 채우는 fill-5 금지).
+    준수 후보가 0이면 근접 대안(rerank 순위 상위 = 요청과 가장 가까운 순)
+    near_miss_cap개를 이유와 함께 노출한다 — "없다"는 사실을 숨기지도(fill-5),
+    빈손으로 끝내지도(완전 공백) 않는 중간 경로. cap=3은 표시 상수: 전부 위반인
+    세트를 5칸 가득 보여주면 고지가 있어도 정상 추천처럼 읽히기 때문.
+    반환: (노출 셋, {productId: 요청과 다른 점}) — 두 번째가 비어 있지 않으면
+    노출 전체가 근접 대안이라는 뜻이다."""
+    compliant = [sp for sp in reranked if sp.product.id not in excluded]
+    if compliant:
+        return compliant[:top_k], {}
+    shown = reranked[:near_miss_cap]
+    return shown, {sp.product.id: excluded.get(sp.product.id, "") for sp in shown}
+
+
+def merge_near_miss_into_cards(card_texts: dict[str, dict], near_miss: dict[str, str]) -> None:
+    """근접 대안의 '요청과 다른 점'을 해당 카드 weak 맨 앞에 병합 — 고지가 챗 버블만이
+    아니라 카드 단위에도 남게 한다(impression으로 영속 → FS1 분석 가능). in-place."""
+    for pid, reason in near_miss.items():
+        if not reason:
+            continue
+        card = card_texts.get(pid)
+        if card is None:
+            continue
+        rest = [w for w in card.get("weak") or [] if w != reason]
+        card["weak"] = ([reason] + rest)[:3]
+
+
 def build_rerank_context(
     db: DbSession,
     session: models.Session,
@@ -78,13 +114,14 @@ async def run_recommendation(
         pool_size=pool_size,
     )
     intent_context = build_rerank_context(db, session, recent_turns, constraints_note)
-    reranked, card_texts = await rg.rerank_by_intent(provider, pool, intent_context)
-    # 노출 셋 = rerank 상위 top_k 그대로 (2026-07-02: select_tradeoff_set 제거).
+    reranked, card_texts, excluded = await rg.rerank_by_intent(provider, pool, intent_context)
+    # 노출 셋 = 준수 후보 상위 top_k, 전멸 시 근접 대안(② 부분 정직 — select_shown).
     # 셋의 대비(관측 도구 속성 — 강점이 서로 다른 후보들)는 rerank 프롬프트의 구성 원칙으로,
-    # mock에서는 결정론 priceCue 스프레드로 처리한다. 옛 버킷 규칙은 아마존 풀에서
-    # 88%가 단일 버킷으로 형해화됐고, 희소 버킷을 순위 깊은 곳에서 끌어올려 제약 위반품을
-    # 승격시키는 부작용만 남았다(유선 이어폰 누수).
-    scored = reranked[:top_k]
+    # mock에서는 결정론 priceCue 스프레드로 처리한다(mock은 exclude를 내지 않으므로
+    # 기존 데모 경로 그대로). 옛 버킷 규칙은 아마존 풀에서 88%가 단일 버킷으로 형해화됐고,
+    # 희소 버킷을 순위 깊은 곳에서 끌어올려 제약 위반품을 승격시키는 부작용만 남았다.
+    scored, near_miss = select_shown(reranked, excluded, top_k)
+    merge_near_miss_into_cards(card_texts, near_miss)
     diag = {
         "searchText": search_text,
         "constraintsNote": constraints_note,
@@ -93,6 +130,8 @@ async def run_recommendation(
                   "title": (sp.product.title or "")[:60], "score": round(sp.score, 4)}
                  for sp in pool],
         "rerankContext": intent_context,
+        "excludedIds": {pid: reason for pid, reason in excluded.items()},
+        "nearMiss": near_miss,
         "shownIds": [sp.product.id for sp in scored],
     }
     return scored, card_texts, diag
