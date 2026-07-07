@@ -39,7 +39,7 @@ class _ToolStubProvider:
         if self.tool_args is not None:
             result = await execute_tool("search_and_rank", self.tool_args)
             trace.append({"name": "search_and_rank", "args": self.tool_args, "result": result})
-            return "도구 결과를 반영한 추천 답변입니다", trace
+            return "**도구 결과**를 반영한 추천 답변입니다", trace
         return "어떤 상품을 찾고 계세요?", trace
 
     async def generate_json(self, messages, task=None, context=None, **kwargs):
@@ -71,6 +71,7 @@ def test_run_turn_with_tool_call_produces_shown_set(client):
             session, _FakeCommit(), "운동 좋아하는 친구 선물로 스마트워치 찾아요",
             recent_turns=[],
         ))
+        # 마크다운은 챗 버블에서 스트립 (파이프라인 렌더러와 동일 계약)
         assert result.text == "도구 결과를 반영한 추천 답변입니다"
         assert result.scored, "도구 호출이 노출 셋을 만들어야 함"
         assert result.rec_diag and result.rec_diag["searchText"] == "스마트워치"

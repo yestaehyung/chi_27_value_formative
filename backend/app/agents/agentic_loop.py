@@ -161,8 +161,12 @@ async def run_turn(
     if not text.strip():
         raise RuntimeError("agentic loop returned empty text")
     logging.info("agentic_loop.tool_calls=%d", len(trace))
+    # 챗 버블은 일반 텍스트 렌더 — 파이프라인 렌더러와 동일한 스트립 적용
+    # (2026-07-07 로컬 실측: pro가 프롬프트 지침에도 **볼드**를 냄)
+    from app.agents.response_generator import _strip_markdown
+
     return AgenticResult(
-        text=text.strip(),
+        text=_strip_markdown(text.strip()),
         scored=holder.get("scored") or [],
         card_texts=holder.get("cards") or {},
         rec_diag=holder.get("diag"),
