@@ -29,6 +29,7 @@ os.environ.setdefault("VC_SEED_DIR", str(BACKEND / "seed_amazon"))
 os.environ.setdefault("VC_DB_PATH", os.path.join(tempfile.mkdtemp(prefix="vc_rrk_"), "r.db"))
 
 LABEL = os.environ.get("LABEL", "run")
+POOL = int(os.environ.get("POOL", "30"))  # 풀 크기 A/B용 (2026-07-08: 30 vs 50)
 
 
 def _txt(p, prof):
@@ -91,7 +92,7 @@ def main():
 
     async def one(cid, pool_q, ctx, is_violation, desc):
         pool = search_products(db, query=pool_q, category=None, hard_constraints=[],
-                               return_pool=True, pool_size=30, alpha=0.3)
+                               return_pool=True, pool_size=POOL, alpha=0.3)
         compliant = sum(1 for sp in pool if not is_violation(sp.product, profiles.get(sp.product.id)))
         reranked, cards, excluded = await rg.rerank_by_intent(provider, pool, ctx)
         # 노출은 프로덕션 경로 그대로 (② select_shown) — 죄는 '비공지 위반'만:
@@ -116,7 +117,7 @@ def main():
     avg = sum(r["score"] for r in scored) / max(len(scored), 1)
     print(f"\n[{LABEL}] 평균 {avg:.3f} | 총 위반노출 {sum(r['violationsShown'] for r in rows)}")
     for r in rows:
-        print(f"  {r['cid']}: 위반 {r['violationsShown']}/5 (풀내 준수후보 {r['compliantInPool']}/30) → {r['score']}"
+        print(f"  {r['cid']}: 위반 {r['violationsShown']}/5 (풀내 준수후보 {r['compliantInPool']}/{POOL}) → {r['score']}"
               + (f"  예: {r['violTitles'][0]}" if r["violTitles"] else ""))
     out = BACKEND / "data" / f"rerank_eval_{LABEL}.json"
     out.write_text(json.dumps({"label": LABEL, "avg": avg, "rows": rows}, ensure_ascii=False, indent=1),
