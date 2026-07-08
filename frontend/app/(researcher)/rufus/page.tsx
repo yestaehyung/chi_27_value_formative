@@ -210,6 +210,47 @@ export default function RufusTestPage() {
                       </div>
                     )}
                   </div>
+                ) : log.task === "rerank" ? (
+                  (() => {
+                    // 풀 카테고리 분포 — searchText 오염 판독용 (쿼리가 끌어온 풀이
+                    // 단일 카테고리면 무해, 잡종이면 오염 실재)
+                    const pool = (log.request?.pool || []) as { category?: string }[];
+                    const counts: Record<string, number> = {};
+                    for (const p of pool) {
+                      const c = p.category || "?";
+                      counts[c] = (counts[c] || 0) + 1;
+                    }
+                    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+                    return (
+                      <div className="space-y-1 text-[11px]">
+                        <div className="font-mono text-gray-800">
+                          q: {log.request?.searchText}
+                        </div>
+                        {log.request?.constraintsNote && (
+                          <div className="font-mono text-gray-500">
+                            note: {log.request.constraintsNote}
+                          </div>
+                        )}
+                        <div className="text-gray-500">
+                          풀 {pool.length} · 노출 {(log.response?.shownIds || []).length} · 카테고리:
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {sorted.map(([cat, n], k) => (
+                            <span
+                              key={cat}
+                              className={`rounded border px-1.5 py-0.5 font-mono ${
+                                k === 0
+                                  ? "border-indigo-200 bg-indigo-50 text-indigo-700"
+                                  : "border-amber-200 bg-amber-50 text-amber-700"
+                              }`}
+                            >
+                              {cat} {n}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()
                 ) : (
                   <pre className="max-h-48 overflow-auto whitespace-pre-wrap font-mono text-[11px] text-gray-600">
                     {JSON.stringify(log.response, null, 1)}
