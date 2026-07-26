@@ -52,13 +52,6 @@ class LLMProvider:
     async def embed(self, texts: List[str]) -> List[List[float]]:
         raise NotImplementedError
 
-    async def generate_with_tools(self, messages: list[dict], tools: list[dict],
-                                  execute_tool, max_rounds: int = 3,
-                                  temperature: float = 0.2, max_tokens: int = 900):
-        """OpenAI-호환 function-calling 루프 (축 2 agentic 턴 루프 전용, 2026-07-07).
-        mock은 미구현 — agentic 경로는 mock에서 파이프라인으로 폴백한다."""
-        raise NotImplementedError
-
 
 class MockLLMProvider(LLMProvider):
     """Deterministic demo responses (gift smartwatch scenario first, spec §27)."""
@@ -168,75 +161,22 @@ class OpenAIProvider(LLMProvider):
             resp.raise_for_status()
             return [d["embedding"] for d in resp.json()["data"]]
 
-    async def generate_with_tools(self, messages: list[dict], tools: list[dict],
-                                  execute_tool, max_rounds: int = 3,
-                                  temperature: float = 0.2, max_tokens: int = 900):
-        """OpenAI-호환 function-calling 루프 (축 2 agentic, 2026-07-07).
-
-        messages는 raw dict 리스트(도구 프로토콜 때문에 LLMMessage 대신) —
-        assistant tool_calls·tool 결과 메시지를 그대로 이어붙인다.
-        execute_tool(name, args) -> JSON 직렬화 가능 dict 코루틴.
-        반환: (최종 텍스트, [{name, args, result}] 도구 호출 trace).
-        max_rounds 소진 시 도구 없이 마지막 답변을 강제한다(무한 루프 방지 —
-        루프 상한은 판단이 아니라 자원 가드)."""
-        import httpx
-
-        model = MODEL_OVERRIDE.get() or self.model
-        msgs = list(messages)
-        trace: list[dict] = []
-
-        def _payload(with_tools: bool) -> Dict[str, Any]:
-            p: Dict[str, Any] = {"model": model, "messages": msgs,
-                                 self.max_tokens_param: max(max_tokens * 3, 4000)}
-            if model.startswith("gpt-5"):
-                p["reasoning_effort"] = settings.openai_reasoning_effort
-            else:
-                p["temperature"] = temperature
-            if with_tools:
-                p["tools"] = tools
-            self._augment_payload(p)
-            return p
-
-        async with httpx.AsyncClient(timeout=120) as client:
-            for round_i in range(max_rounds + 1):
-                with_tools = round_i < max_rounds
-                resp = await client.post(
-                    self.api_url,
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                    json=_payload(with_tools),
-                )
-                resp.raise_for_status()
-                msg = resp.json()["choices"][0]["message"]
-                tool_calls = msg.get("tool_calls") or []
-                if not tool_calls:
-                    return (msg.get("content") or "").strip(), trace
-                msgs.append(msg)
-                for tc in tool_calls:
-                    name = (tc.get("function") or {}).get("name") or ""
-                    try:
-                        args = json.loads((tc.get("function") or {}).get("arguments") or "{}")
-                    except Exception:  # noqa: BLE001
-                        args = {}
-                    result = await execute_tool(name, args)
-                    trace.append({"name": name, "args": args, "result": result})
-                    msgs.append({"role": "tool", "tool_call_id": tc.get("id") or "",
-                                 "content": json.dumps(result, ensure_ascii=False)})
-        return "", trace  # 도달 불가(마지막 라운드는 tools 없음 → 텍스트 반환)
-
 
 class DeepSeekProvider(OpenAIProvider):
-    """DeepSeek — OpenAI-compatible chat completions (https://api.deepseek.com).
+    """DeepSeek — OpenAI-compatible chat completions.
     Reuses OpenAIProvider's message/JSON handling; differs only in endpoint, key,
     model, and the max-tokens parameter name (standard `max_tokens`).
+    Endpoint base comes from VC_DEEPSEEK_BASE_URL (기본 공식 API; SSH 터널로
+    랩 서버 OpenAI 호환 서빙을 쓸 때 http://localhost:8001/v1 로 교체).
     """
 
     name = "deepseek"
-    api_url = "https://api.deepseek.com/chat/completions"
     max_tokens_param = "max_tokens"
 
     def __init__(self) -> None:
         self.api_key = settings.deepseek_api_key
         self.model = settings.deepseek_model
+        self.api_url = settings.deepseek_base_url.rstrip("/") + "/chat/completions"
         if not self.api_key:
             raise RuntimeError("DEEPSEEK_API_KEY is not set")
 

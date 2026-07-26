@@ -16,7 +16,12 @@ export function middleware(req: NextRequest) {
   return NextResponse.rewrite(new URL("/__study-blocked", req.url));
 }
 
-// matcher에 걸리는 경로에서만 실행 — /study/* 와 /api/* 프록시는 건드리지 않는다.
+// matcher에 걸리는 경로에서만 실행 — 참가자용 /study/* 와 /api/* 프록시는 건드리지 않는다.
+// 예외: /study/compare 와 세션 UI 수정안(/study/session/*/v/*)은 연구자용 프로토타입 표면이라 차단.
 export const config = {
-  matcher: ["/", "/simulate/:path*", "/research/:path*", "/pscon/:path*", "/rufus/:path*"],
+  matcher: [
+    "/", "/simulate/:path*", "/research/:path*", "/pscon/:path*",
+    "/study/compare/:path*", "/study/session/:sessionId/v/:path*", "/study/session/:sessionId/compare/:path*",
+    "/study/vdemo/:path*",
+  ],
 };

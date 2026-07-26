@@ -32,11 +32,11 @@ const entries = [
     desc: "PSCon 실제 쇼핑 대화 648건 — 발화·명료화·추천·좋아요/싫어요를 그대로 시각화.",
   },
   {
-    href: "/rufus",
+    href: "/study/compare",
     index: "05",
     role: "연구자",
-    title: "Rufus형 호스트 테스트",
-    desc: "도구 호출 trace가 보이는 개발용 채팅 — agentic 턴 루프(search/details/profile 도구) 검증. 백엔드 VC_TURN_LOOP=agentic 필요.",
+    title: "UI 수정안 비교",
+    desc: "지금 버전 vs 수정안 1(채팅 인라인) vs 수정안 2(채팅+접힌 요약) vs 수정안 3(경량 패널) vs 수정안 D(솔리드 카드) vs 수정안 E(에이전트 능동 질문) — 같은 세션을 한 페이지에서 버튼으로 전환.",
   },
 ];
 

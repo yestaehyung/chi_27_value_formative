@@ -48,13 +48,12 @@ class Settings:
         # 기본 0.3 — A/B 실측(scripts/ab_hybrid_retrieval.py, 24케이스): 풀 카테고리 정합
         # 0.800→0.906, 선물 맥락어 오염(주얼리→생일캔들 4/30→30/30) 소멸, 0.5는 어휘 과잉으로 열화.
         self.hybrid_alpha = float(os.environ.get("VC_HYBRID_ALPHA", "0.3"))
-        # 턴 루프 아키텍처 (축 2 실험, 2026-07-07): "pipeline"(기본 — planner→recommender
-        # →renderer 3분리) | "agentic"(대화 에이전트 하나가 search_and_rank를 도구로 호출,
-        # 해석·행동결정·문장화가 한 컨텍스트 — app/agents/agentic_loop.py). 기존 경로
-        # 무접촉: agentic은 mock provider에선 비활성(파이프라인 그대로)이라 테스트·데모 불변.
-        self.turn_loop = os.environ.get("VC_TURN_LOOP", "pipeline").lower()
         # DeepSeek — OpenAI-compatible API (https://api.deepseek.com)
         self.deepseek_api_key = os.environ.get("DEEPSEEK_API_KEY")
+        # 요청 base URL — 기본은 DeepSeek 공식 API. SSH 터널로 랩 서버의 OpenAI 호환
+        # 서빙을 쓸 때는 .env에서 http://localhost:8001/v1 로 덮어쓴다.
+        # (provider가 base + "/chat/completions"로 최종 URL을 조립)
+        self.deepseek_base_url = os.environ.get("VC_DEEPSEEK_BASE_URL", "https://api.deepseek.com")
         # 모델: "deepseek-v4-flash"(284B/13B) | "deepseek-v4-pro"(1.6T/49B), 둘 다 1M ctx.
         # (legacy "deepseek-chat"/"deepseek-reasoner"는 2026-07-24 폐기 예정 alias → flash 비추론/추론.)
         self.deepseek_model = os.environ.get("VC_DEEPSEEK_MODEL", "deepseek-v4-flash")

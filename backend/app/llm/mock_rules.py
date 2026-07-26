@@ -967,7 +967,7 @@ def product_profile(ctx: dict) -> dict:
 
 
 def generic_text(_prompt: str) -> str:
-    return "확인했어요. 제가 이해한 기준이 맞는지 오른쪽 패널에서 확인해 주세요."
+    return "확인했어요. 제가 이해한 기준이 맞는지 함께 확인해 주세요."
 
 
 TASK_HANDLERS = {

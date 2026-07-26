@@ -108,11 +108,16 @@ def conflict_session(client):
     out = feedback(client, sid, "watch_low_001", "dislike",
                    reason_code="too_cheap_looking",
                    reason_text="선물인데 너무 저렴해 보이면 좀 그래요.")
-    return sid, out
+    # chosen-rejected pair는 같은 노출 셋(같은 turn)의 like+dislike로 만들어진다. 충돌 해소는
+    # 이제 갱신 기준으로 재추천(새 turn)하므로, pair를 만드는 like는 해소 이전·같은 노출 셋에서
+    # 해야 한다(현실 워크플로와 일치). 그래서 fixture에서 dislike 직후 같은 셋에 like를 준다.
+    pair_out = feedback(client, sid, "watch_trust_002", "like",
+                        reason_text="한달 사용 리뷰 비율이 높은 게 마음에 들어요.")
+    return sid, out, pair_out
 
 
 def test_3_conflict_detection(client, conflict_session):
-    _sid, out = conflict_session
+    _sid, out, _ = conflict_session
     conflicts = out["newConflicts"]
     assert len(conflicts) >= 1
     conflict = conflicts[0]
@@ -127,7 +132,7 @@ def test_3_conflict_detection(client, conflict_session):
 # Test 4. Conflict resolution (merge: keep budget cap, exclude too-cheap-looking)
 # ---------------------------------------------------------------------------
 def test_4_conflict_resolution(client, conflict_session):
-    sid, out = conflict_session
+    sid, out, _ = conflict_session
     conflict = out["newConflicts"][0]
     r = client.post(f"/api/conflicts/{conflict['id']}/resolve",
                     json={"optionId": "merge_price_cap_and_gift_appropriateness"})
@@ -150,9 +155,8 @@ def test_4_conflict_resolution(client, conflict_session):
 # Test 5. Chosen-rejected pair
 # ---------------------------------------------------------------------------
 def test_5_chosen_rejected_pair(client, conflict_session):
-    sid, _ = conflict_session
-    out = feedback(client, sid, "watch_trust_002", "like",
-                   reason_text="한달 사용 리뷰 비율이 높은 게 마음에 들어요.")
+    # like(watch_trust_002)는 fixture에서 dislike와 같은 노출 셋(해소 전)에 했으므로 pair가 이미 형성됨
+    sid, _, out = conflict_session
     pairs = out["chosenRejectedPairsCreated"]
     assert len(pairs) >= 1
     pair = next(p for p in pairs if p["chosenId"] == "watch_trust_002"

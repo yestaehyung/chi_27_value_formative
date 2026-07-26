@@ -29,8 +29,9 @@ export default function ProductCard({
   const realPrice = discountPct > 0 ? Math.round((p.price * (1 - p.discountRate!)) / 10) * 10 : p.price;
 
   return (
-    <div className="msg-in flex h-full flex-col gap-2">
-      {/* 상품 정보 박스 (테두리) — flex-1 로 3개 카드 높이 맞춤 */}
+    // 등장 스태거: index×80ms — 카드들이 왼쪽부터 차례로 떠오름 (동시 fadeUp의 '쏟아지는' 느낌 제거)
+    <div className="msg-in flex h-full flex-col gap-2" style={{ animationDelay: `${index * 80}ms` }}>
+      {/* 상품 정보 박스 (테두리) — flex-1 로 카드 높이 맞춤 */}
       <div className="card flex flex-1 flex-col overflow-hidden transition-colors duration-150 hover:border-[#4f46e5]">
         {/* 상품 이미지 (네이버 검색 API enrichment) — 없으면 헤더의 레터마크로 폴백 */}
         {p.imageUrl && (

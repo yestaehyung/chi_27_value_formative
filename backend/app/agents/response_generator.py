@@ -26,8 +26,7 @@ def recommend_text(scored: list[ScoredProduct]) -> str:
         f"말씀해주신 기준에 맞춰 서로 다른 방향의 상품 {n}가지를 골라봤어요. "
         "가격·신뢰·특별함처럼 강조점이 다른 후보들이라, 어떤 쪽이 더 끌리는지 보시면 "
         "기준을 더 정확히 잡아드릴 수 있어요.\n\n"
-        "각 카드의 설명을 보고 좋아요/싫어요로 반응해주세요. "
-        "제가 이해한 기준은 오른쪽 패널에서 언제든 바꿔주실 수 있어요."
+        "각 카드의 설명을 보고 좋아요·싫어요로 반응해주시면 돼요."
     )
 
 
@@ -98,7 +97,7 @@ def detail_text(p: models.Product, prof: dict | None = None) -> str:
 
 def conflict_text(conflict: models.PreferenceConflict) -> str:
     base = conflict.explanation_for_user or "말씀해주신 기준 사이에 충돌이 있는 것 같아요."
-    return f"기준이 바뀐 것 같아요.\n\n{base}\n\n아래 카드에서 어떻게 반영할지 선택해 주세요."
+    return f"기준이 바뀐 것 같아요.\n\n{base}\n\n어느 쪽을 우선할지 알려주세요."
 
 
 async def generate_reply(
@@ -321,5 +320,5 @@ def close_text(product: models.Product | None) -> str:
         return "결정을 도와드려서 기뻤어요. 필요하시면 언제든 다시 찾아주세요."
     return (
         f"'{product.title}'(으)로 결정하셨네요. 좋은 선택이에요! "
-        "이번 대화에서 제가 이해한 기준은 오른쪽 패널에 남아 있으니, 다르게 이해한 부분이 있었다면 알려주세요."
+        "이번 대화에서 제가 이해한 기준이 다르게 느껴진 부분이 있었다면 알려주세요."
     )

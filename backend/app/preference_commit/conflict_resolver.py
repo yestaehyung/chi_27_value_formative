@@ -64,8 +64,9 @@ def resolve_conflict(
 
     if action == "accept_new":
         if old_topic:
-            old_topic.priority = "low"
-            old_topic.status = "corrected_by_user"
+            # 새 기준을 '대신' 택한 것이므로 옛(반대) 기준은 비활성화 — 목록에서 빠진다
+            # (state_builder.get_active_topics가 inactive를 제외). 약화만 원하면 downgrade_priority.
+            old_topic.status = "inactive"
         if new_topic:
             new_topic.status = "confirmed"
             new_topic.confidence = 1.0
