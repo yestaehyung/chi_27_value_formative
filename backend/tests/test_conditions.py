@@ -68,21 +68,31 @@ def test_same_participant_keeps_condition_across_tasks(client):
     assert conditions == {assigned}
 
 
-def test_assignment_balances_across_started_participants(client):
-    """과제를 시작한 참가자 기준으로 조건이 고르게 퍼진다 (조건당 최대 1명 차이)."""
+def test_consecutive_enrollments_get_different_conditions(client):
+    """**아무도 과제를 시작하기 전에** 연달아 등록해도 조건이 갈려야 한다.
+
+    랩 세션/온라인 배치에서 참가자 여럿이 동시에 설문을 내는 건 정상 상황이다.
+    배정을 '과제를 시작한 인원'으로 세면 이때 카운트가 전부 0이라 전원 같은 조건을
+    받아버린다 (2026-07-28 라이브 스모크에서 실제로 3명 전원 baseline이 나왔다).
+    """
+    got = [enroll(client, f"cond-batch-{i}")["studyCondition"] for i in range(3)]
+    assert len(set(got)) == 3, f"세 명이 서로 다른 조건을 받아야 한다: {got}"
+
+
+def test_assignment_balances_across_participants(client):
+    """배정된 참가자 기준으로 조건이 고르게 퍼진다 (조건당 최대 1명 차이)."""
     for i in range(9):
         body = enroll(client, f"cond-bal-{i}")
         start_task(client, body["participantId"])
 
     balance = client.get("/api/research/condition-balance").json()
-    started = {c["condition"]: c["started"] for c in balance["conditions"]}
-    assert set(started) == set(STUDY_CONDITIONS)
-    assert max(started.values()) - min(started.values()) <= 1, started
-    assert balance["totalStarted"] >= 9
+    assigned = {c["condition"]: c["assigned"] for c in balance["conditions"]}
+    assert set(assigned) == set(STUDY_CONDITIONS)
+    assert max(assigned.values()) - min(assigned.values()) <= 1, assigned
 
 
-def test_survey_only_participant_counts_as_dropped(client):
-    """설문만 내고 과제를 시작하지 않으면 균형 계산에서 빠진다 (이탈이 배정을 영구 왜곡하지 않게)."""
+def test_dropout_is_visible_but_still_holds_a_slot(client):
+    """설문만 내고 이탈하면 assigned에는 남고 started에는 안 잡힌다 — 과모집 판단 근거."""
     before = client.get("/api/research/condition-balance").json()
     enroll(client, "cond-dropout")  # 세션을 만들지 않는다
     after = client.get("/api/research/condition-balance").json()

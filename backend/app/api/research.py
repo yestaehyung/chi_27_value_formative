@@ -212,14 +212,12 @@ def list_participants(db: DbSession = Depends(get_db)):
 @router.get("/condition-balance")
 def condition_balance(db: DbSession = Depends(get_db)):
     """조건별 배정 현황 — 모집 중 균형을 눈으로 확인하는 용도.
-    `started`는 과제를 실제 시작한 참가자(배정 균형의 기준), `assigned`는 설문만 낸 사람 포함."""
-    from app.core.conditions import STUDY_CONDITIONS, condition_counts
+    `assigned`는 배정된 전원(=배정 알고리즘의 기준), `started`는 과제를 실제 시작한 인원.
+    둘의 차이가 이탈이며, 특정 조건에 이탈이 몰리면 그만큼 과모집해야 한다."""
+    from app.core.conditions import STUDY_CONDITIONS, assigned_counts, started_counts
 
-    started = condition_counts(db)
-    assigned = {c: 0 for c in STUDY_CONDITIONS}
-    for p in db.query(models.Participant).filter(models.Participant.study_condition.isnot(None)).all():
-        if p.study_condition in assigned:
-            assigned[p.study_condition] += 1
+    assigned = assigned_counts(db)
+    started = started_counts(db)
     return {
         "conditions": [
             {"condition": c, "assigned": assigned[c], "started": started[c]}
