@@ -100,13 +100,9 @@ def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Depends(g
     }
 
 
-@router.get("/topics/{topic_id}/evidence")
-def topic_evidence(topic_id: str, db: DbSession = Depends(get_db)):
-    """Evidence drawer: why did the system infer this criterion? (spec §18.6)"""
-    topic = db.get(models.IntentionTopic, topic_id)
-    if topic is None:
-        raise HTTPException(404, "topic not found")
-
+def build_topic_evidence(db: DbSession, topic: models.IntentionTopic) -> list[dict]:
+    """topic이 어떤 발화·피드백에서 추론됐는지 풀어낸다 (spec §18.6).
+    evidence drawer와 본실험 기준별 검증 설문이 같은 근거를 봐야 하므로 공유한다."""
     stored = {e["id"]: e for e in (topic.hints or {}).get("evidence", [])}
     # D1 evidence edges: per-evidence channel + explicitness (없으면 구 데이터 — 노드 라벨 폴백)
     edges = {
@@ -139,7 +135,17 @@ def topic_evidence(topic_id: str, db: DbSession = Depends(get_db)):
         if stored.get(ev_id, {}).get("type") == "product_cue":
             entry["type"] = "product_cue"
         items.append(entry)
+    return items
 
+
+@router.get("/topics/{topic_id}/evidence")
+def topic_evidence(topic_id: str, db: DbSession = Depends(get_db)):
+    """Evidence drawer: why did the system infer this criterion? (spec §18.6)"""
+    topic = db.get(models.IntentionTopic, topic_id)
+    if topic is None:
+        raise HTTPException(404, "topic not found")
+
+    items = build_topic_evidence(db, topic)
     anchors = db.query(models.AnchorMapping).filter(models.AnchorMapping.topic_id == topic.id).all()
     concepts = [
         serializers.concept_to_dict(db.get(models.Concept, link.concept_id))

@@ -36,6 +36,8 @@ def export_all(db: DbSession) -> dict[str, int]:
         ("feature_clusters.jsonl", models.FeatureCluster, serializers.cluster_to_dict),
         ("correction_events.jsonl", models.CorrectionEvent, serializers.correction_to_dict),
         ("observation_markers.jsonl", models.ObservationMarker, serializers.marker_to_dict),
+        ("criterion_validations.jsonl", models.CriterionValidation,
+         serializers.criterion_validation_to_dict),
     ]
     counts: dict[str, int] = {}
     for filename, model, serialize in spec:

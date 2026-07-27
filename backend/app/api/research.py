@@ -202,9 +202,33 @@ def list_participants(db: DbSession = Depends(get_db)):
             "specVersion": p.spec_version or 0,
             "hasSurvey": bool(answers),
             "surveyCount": len(answers),
+            "studyCondition": p.study_condition,
+            "hasPostStudy": bool(survey.get("postStudy")),
             "createdAt": serializers.iso(p.created_at),
         })
     return {"participants": out}
+
+
+@router.get("/condition-balance")
+def condition_balance(db: DbSession = Depends(get_db)):
+    """조건별 배정 현황 — 모집 중 균형을 눈으로 확인하는 용도.
+    `started`는 과제를 실제 시작한 참가자(배정 균형의 기준), `assigned`는 설문만 낸 사람 포함."""
+    from app.core.conditions import STUDY_CONDITIONS, condition_counts
+
+    started = condition_counts(db)
+    assigned = {c: 0 for c in STUDY_CONDITIONS}
+    for p in db.query(models.Participant).filter(models.Participant.study_condition.isnot(None)).all():
+        if p.study_condition in assigned:
+            assigned[p.study_condition] += 1
+    return {
+        "conditions": [
+            {"condition": c, "assigned": assigned[c], "started": started[c]}
+            for c in STUDY_CONDITIONS
+        ],
+        "totalStarted": sum(started.values()),
+        # 설문만 내고 과제를 시작하지 않은 인원 — 이탈 규모
+        "dropped": sum(assigned.values()) - sum(started.values()),
+    }
 
 
 @router.get("/participants/{participant_id}/spec")
@@ -235,6 +259,8 @@ def participant_survey(participant_id: str, db: DbSession = Depends(get_db)):
         "label": p.label,
         "answers": survey.get("answers", {}) or {},
         "profile": survey.get("profile", {}) or {},
+        # 본실험 전체 종료 후 설문 (해석 이해가능성·근거·수정 사용성) — 없으면 None
+        "postStudy": survey.get("postStudy"),
         "createdAt": serializers.iso(p.created_at),
     }
 

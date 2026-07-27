@@ -351,6 +351,20 @@ def marker_to_dict(m: models.ObservationMarker) -> dict:
     }
 
 
+def criterion_validation_to_dict(c: models.CriterionValidation) -> dict:
+    return {
+        "id": c.id,
+        "sessionId": c.session_id,
+        "topicId": c.topic_id,
+        "topicLabel": c.topic_label,
+        "matches": c.matches,
+        "importance": c.importance,
+        "evidenceSupports": c.evidence_supports,
+        "formation": c.formation,
+        "createdAt": iso(c.created_at),
+    }
+
+
 def resolution_to_dict(r: models.ConflictResolutionEvent) -> dict:
     return {
         "id": r.id,

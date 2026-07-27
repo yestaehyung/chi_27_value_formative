@@ -137,11 +137,45 @@ export const api = {
       body: JSON.stringify({ answers, profile }),
     }),
 
-  // FS1 사전 설문 → 참가자 생성(설문 저장)
+  // FS1 사전 설문 → 참가자 생성(설문 저장). 본실험 사전 설문도 같은 채널을 쓴다(문항 id만 다름).
   submitSurvey: (answers: Record<string, unknown>, profile: Record<string, number>, label?: string) =>
-    request<{ participantId: string; label: string }>("/api/study/survey", {
+    request<{ participantId: string; label: string; studyCondition?: string }>("/api/study/survey", {
       method: "POST",
       body: JSON.stringify({ answers, profile, label }),
+    }),
+
+  // ── 본실험(메인 스터디) 설문 ─────────────────────────────────────────
+  // 과제 직전 — 상품군 지식·경험 + 구매 기준 명확성(사전). 직후 응답과 짝지어 Δ를 낸다.
+  submitPreTaskSurvey: (
+    sessionId: string,
+    answers: Record<string, unknown>,
+    profile: Record<string, number>,
+    category?: string,
+  ) =>
+    request<{ ok: boolean }>(`/api/study/sessions/${sessionId}/pre-task-survey`, {
+      method: "PUT",
+      body: JSON.stringify({ answers, profile, category }),
+    }),
+
+  // 전체 과제 종료 후 — 참가자 단위 회고(해석 이해가능성·근거·수정 사용성)
+  submitPostStudySurvey: (
+    participantId: string,
+    answers: Record<string, unknown>,
+    profile: Record<string, number>,
+  ) =>
+    request<{ ok: boolean }>(`/api/study/participants/${participantId}/post-study-survey`, {
+      method: "PUT",
+      body: JSON.stringify({ answers, profile }),
+    }),
+
+  // 기준별 검증에 제시할 주요 기준 3–5개 + 각 기준의 근거
+  criterionCandidates: (sessionId: string, limit = 5) =>
+    request<any>(`/api/study/sessions/${sessionId}/criterion-candidates?limit=${limit}`),
+
+  submitCriterionValidations: (sessionId: string, items: unknown[]) =>
+    request<{ saved: number }>(`/api/study/sessions/${sessionId}/criterion-validations`, {
+      method: "POST",
+      body: JSON.stringify({ items }),
     }),
 
   // RIG — Relational Intention Graph (메타경로 기반 예측·설명)

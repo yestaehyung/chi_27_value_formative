@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DbSession
 
+from app.core.conditions import ensure_condition
 from app.core.ids import new_id
 from app.db import models, serializers
 from app.db.database import get_db
@@ -29,12 +30,17 @@ def create_session(req: CreateSessionRequest, db: DbSession = Depends(get_db)):
             raise HTTPException(404, f"unknown scenario: {req.scenarioId}")
     # 참가자 단위 — trait 가치/자연어 명세가 세션을 넘어 누적된다 (2층 모델).
     participant_id = req.participantId
-    if participant_id:
-        if db.get(models.Participant, participant_id) is None:
-            db.add(models.Participant(id=participant_id))
-    else:
-        participant_id = new_id("part")
-        db.add(models.Participant(id=participant_id))
+    participant = db.get(models.Participant, participant_id) if participant_id else None
+    if participant is None:
+        participant_id = participant_id or new_id("part")
+        participant = models.Participant(id=participant_id)
+        db.add(participant)
+    # 조건은 **참가자에 붙은 값이 요청값을 이긴다**. 프론트가 무엇을 보내든 한 사람의
+    # 3개 과제가 같은 조건으로 묶이고, 클라이언트 실수로 조건이 갈릴 여지가 없다.
+    # (시뮬레이션은 조건 설계 밖이라 요청값을 그대로 쓴다.)
+    study_condition = req.studyCondition
+    if req.mode == "manual":
+        study_condition = ensure_condition(db, participant)
     session = models.Session(
         id=new_id("sess"),
         mode=req.mode,
@@ -44,7 +50,7 @@ def create_session(req: CreateSessionRequest, db: DbSession = Depends(get_db)):
         current_stage="exploration",
         status="active",
         meta={
-            "studyCondition": req.studyCondition,
+            "studyCondition": study_condition,
             "category": scenario.get("targetCategory"),
             "shoppingGoal": scenario.get("title"),
             **({"customScenario": scenario} if req.scenarioId == "custom" else {}),

@@ -42,6 +42,10 @@ class Participant(Base):
     spec_version: Mapped[int] = mapped_column(Integer, default=0)
     # FS1 사전 설문 응답 (raw answers + 파생 profile) — 참가자 프로파일링용
     survey: Mapped[dict | None] = mapped_column(JSON, default=None)
+    # 본실험 between-subjects 조건. 참가자에 붙는 이유: 한 사람의 3개 과제가 반드시
+    # 같은 조건이어야 한다(세션마다 지정하면 중간에 갈릴 수 있다).
+    # baseline | explanation_only | correctable
+    study_condition: Mapped[str | None] = mapped_column(String, default=None)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 
@@ -387,6 +391,33 @@ class ObservationMarker(Base):
     tag: Mapped[str | None] = mapped_column(String)  # trust|distrust|confusion|correction_wish|inspect_evidence
     note: Mapped[str | None] = mapped_column(Text)
     topic_id: Mapped[str | None] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class CriterionValidation(Base):
+    """추론된 구매 기준별 직접 검증 (본실험 설문 §5) — 과제 직후 주요 기준 3–5개를 제시하고
+    참가자가 기준 단위로 답한다. 회상 인터뷰 ground-truth(sessions.meta)가 세션 전체를
+    자유표현으로 받는 것과 달리, 이쪽은 **시스템이 실제로 추론한 topic에 1:1로 붙는다**.
+
+    `formation`이 이 연구의 핵심 측정치다: '처음부터 있었지만 표현하지 않았다'는 숨은 의도의
+    회수(recovery)를, '대화 중 새롭게 형성되었다'는 선호 구성(construction)을 가리킨다 —
+    둘은 같은 topic이라도 이론적 의미가 반대라 반드시 분리해서 세야 한다.
+    """
+
+    __tablename__ = "criterion_validations"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id"))
+    topic_id: Mapped[str] = mapped_column(ForeignKey("intention_topics.id"))
+    # 제시 시점의 라벨을 박제한다 — 이후 사용자가 topic을 수정해도 무엇에 답했는지 보존
+    topic_label: Mapped[str] = mapped_column(String, nullable=False)
+    # 일치한다 | 부분적으로 일치한다 | 일치하지 않는다
+    matches: Mapped[str | None] = mapped_column(String)
+    importance: Mapped[int | None] = mapped_column(Integer)  # 1–7
+    # 뒷받침한다 | 부분적으로 뒷받침한다 | 뒷받침하지 않는다
+    evidence_supports: Mapped[str | None] = mapped_column(String)
+    # 처음부터_미표현 | 대화중_명확해짐 | 대화중_새로형성
+    formation: Mapped[str | None] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 

@@ -3,10 +3,15 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { LIKERT_MIN, LIKERT_MID, LIKERT_MAX, SurveyQuestion } from "@/lib/survey";
+// 본실험 사전 설문 (2026-07-27). FS1의 A–F 설문은 fs1-frozen 브랜치에 그대로 남아 있다 —
+// 본실험은 3조건 비교가 목적이라 TCV/동기 프로파일링(D·E)을 재지 않는다.
 import {
-  SURVEY, SURVEY_INTRO, REQUIRED_IDS, computeProfile,
-  LIKERT_MIN, LIKERT_MID, LIKERT_MAX, SurveyQuestion,
-} from "@/lib/survey";
+  PRE_STUDY as SURVEY,
+  PRE_STUDY_INTRO as SURVEY_INTRO,
+  PRE_STUDY_REQUIRED_IDS as REQUIRED_IDS,
+  computePreStudyProfile as computeProfile,
+} from "@/lib/mainSurvey";
 
 type Answers = Record<string, string | string[]>;
 
@@ -46,7 +51,10 @@ export default function SurveyPage() {
     try {
       const profile = computeProfile(answers);
       const res = await api.submitSurvey(answers, profile); // 비어 있어도 참가자 생성(흐름 동일)
-      router.push(`/study/tutorial?pid=${res.participantId}`);
+      // 배정된 조건을 튜토리얼에 넘긴다 — 조건별로 안내할 단계가 다르다
+      // (기준을 안 보여주는 조건에 '기준 확인'을 설명하면 조작이 깨진다)
+      const cond = res.studyCondition ? `&cond=${res.studyCondition}` : "";
+      router.push(`/study/tutorial?pid=${res.participantId}${cond}`);
     } catch (e) {
       console.error(e);
       setSubmitting(false);
@@ -61,7 +69,7 @@ export default function SurveyPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-5 pb-32">
       <div>
-        <h1 className="text-xl font-bold">Formative Study 사전 설문</h1>
+        <h1 className="text-xl font-bold">사전 설문</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-500">{SURVEY_INTRO}</p>
       </div>
 

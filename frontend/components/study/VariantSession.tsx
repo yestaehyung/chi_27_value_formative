@@ -34,7 +34,12 @@ import ConflictCard from "@/components/preference/ConflictCard";
 import ChipTypeBadge from "@/components/preference/ChipTypeBadge";
 import EvidenceDrawer from "@/components/preference/EvidenceDrawer";
 import SimpleUnderstandingPanel from "@/components/preference/SimpleUnderstandingPanel";
-import PostSurveyModal from "@/components/study/PostSurveyModal";
+import SurveyModal from "@/components/study/SurveyModal";
+import CriterionCheckModal, { type CriterionCandidate } from "@/components/study/CriterionCheckModal";
+import {
+  CRITERION_CHECK_MAX, POST_TASK, PRE_TASK, fillTemplate, postStudySectionsFor,
+  type StudyCondition,
+} from "@/lib/mainSurvey";
 
 export type UiVariant = "a" | "b" | "c" | "d" | "e";
 
@@ -83,6 +88,14 @@ export default function VariantSession({
   const [postSurveyOpen, setPostSurveyOpen] = useState(false);
   const [postSubmitting, setPostSubmitting] = useState(false);
   const [finished, setFinished] = useState(false);
+  // 본실험 설문 흐름: 과제직전 → (대화) → 과제직후 → 기준별 검증 → 완료 → (전체종료 설문)
+  const [taskCategory, setTaskCategory] = useState("");
+  // between-subjects 조건 — 백엔드가 참가자에 배정한 값 (요청값은 무시된다)
+  const [condition, setCondition] = useState<StudyCondition | null>(null);
+  const [preTaskOpen, setPreTaskOpen] = useState(false);
+  const [criterionOpen, setCriterionOpen] = useState(false);
+  const [criteria, setCriteria] = useState<CriterionCandidate[]>([]);
+  const [postStudyOpen, setPostStudyOpen] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false); // 초기 로드 1회 가드 — 늦게 온 getSession이 낙관적 첫 발화를 덮어쓰는 레이스 방지
@@ -115,6 +128,11 @@ export default function VariantSession({
       setFeedbackByProduct(fb);
       if (study) {
         setParticipantId(d.session?.participantId ?? "");
+        setTaskCategory(d.scenario?.targetCategory ?? "");
+        setCondition((d.session?.metadata?.studyCondition as StudyCondition) ?? null);
+        // 과제 직전 설문은 대화가 시작되기 전에 받아야 한다 — 에이전트가 이미 추천을 하면
+        // '지금 내 기준이 얼마나 명확한가'가 오염돼서 Δ(사전→사후) 자체가 무의미해진다.
+        if (!d.session?.metadata?.preTaskSurvey) setPreTaskOpen(true);
         // 시작 화면(session/new)에서 넘긴 첫 발화 — 빈 세션이면 자동 전송 (새로고침엔 재전송 안 됨)
         const first = sessionStorage.getItem(`vc_first_${sessionId}`);
         if (first && d.turns.length === 0) {
@@ -269,14 +287,16 @@ export default function VariantSession({
   }, [turns, impressionsByTurn, scenarioTitle]);
 
   // 첫 발화 자동 전송 (시작 화면에서 넘어온 것) — dev StrictMode 이중 실행 가드
+  // 과제 직전 설문이 떠 있는 동안은 보류 — 설문을 내는 사이에 에이전트가 추천을 끝내면
+  // 사전 측정이 사후 측정이 되어버린다.
   const sentFirstRef = useRef(false);
   useEffect(() => {
-    if (pendingFirst && !sentFirstRef.current) {
+    if (pendingFirst && !preTaskOpen && !sentFirstRef.current) {
       sentFirstRef.current = true;
       setPendingFirst(null);
       sendMessage(pendingFirst);
     }
-  }, [pendingFirst, sendMessage]);
+  }, [pendingFirst, preTaskOpen, sendMessage]);
 
   // ----- derived ------------------------------------------------------------
   const chips = state?.userVisibleSummary.chips ?? [];
@@ -605,23 +625,96 @@ export default function VariantSession({
         </div>
       )}
 
+      {study && preTaskOpen && (
+        <SurveyModal
+          title="쇼핑을 시작하기 전에"
+          desc={`${taskCategory || "이 상품군"}에 대한 지금의 생각을 알려주세요. 대화가 끝난 뒤 같은 질문을 한 번 더 드립니다.`}
+          sections={fillTemplate(PRE_TASK, { category: taskCategory || "이 상품군" })}
+          submitLabel="쇼핑 시작하기"
+          submitting={postSubmitting}
+          onSubmit={async (answers, profile) => {
+            setPostSubmitting(true);
+            try {
+              await api.submitPreTaskSurvey(sessionId, answers, profile, taskCategory);
+              setPreTaskOpen(false);
+            } catch (e) {
+              console.error(e);
+              showToast("설문 저장에 실패했어요 — 다시 시도해 주세요.");
+            } finally {
+              setPostSubmitting(false);
+            }
+          }}
+        />
+      )}
+
       {study && postSurveyOpen && (
-        <PostSurveyModal
+        <SurveyModal
+          title="이번 쇼핑은 어떠셨나요?"
+          desc="방금 마친 대화를 떠올리며 답해 주세요."
+          sections={POST_TASK}
+          submitLabel="다음으로"
           submitting={postSubmitting}
           onSubmit={async (answers, profile) => {
             setPostSubmitting(true);
             try {
               await api.submitPostSurvey(sessionId, answers, profile);
               setPostSurveyOpen(false);
-              setFinished(true);
+              // 이어서 기준별 검증 — 제시할 기준이 없으면(짧은 세션) 건너뛴다
+              const res = await api.criterionCandidates(sessionId, CRITERION_CHECK_MAX);
+              const list = (res?.criteria ?? []) as CriterionCandidate[];
+              if (list.length > 0) { setCriteria(list); setCriterionOpen(true); }
+              else setFinished(true);
             } catch (e) {
               console.error(e);
-              showToast("설문 저장에 실패했어요 — 다시 제출하거나 건너뛸 수 있어요.");
+              showToast("설문 저장에 실패했어요 — 다시 제출해 주세요.");
+              setPostSurveyOpen(true);
             } finally {
               setPostSubmitting(false);
             }
           }}
-          onSkip={() => { setPostSurveyOpen(false); setFinished(true); }}
+        />
+      )}
+
+      {study && criterionOpen && (
+        <CriterionCheckModal
+          candidates={criteria}
+          submitting={postSubmitting}
+          onSubmit={async (items) => {
+            setPostSubmitting(true);
+            try {
+              await api.submitCriterionValidations(sessionId, items);
+              setCriterionOpen(false);
+              setFinished(true);
+            } catch (e) {
+              console.error(e);
+              showToast("저장에 실패했어요 — 다시 제출해 주세요.");
+            } finally {
+              setPostSubmitting(false);
+            }
+          }}
+        />
+      )}
+
+      {study && postStudyOpen && (
+        <SurveyModal
+          title="마지막으로 전체 경험에 대해"
+          desc="오늘 진행한 쇼핑 전체를 떠올리며 답해 주세요. 이 설문을 마치면 연구가 종료됩니다."
+          sections={postStudySectionsFor(condition)}
+          submitLabel="제출하고 종료"
+          submitting={postSubmitting}
+          onSubmit={async (answers, profile) => {
+            setPostSubmitting(true);
+            try {
+              if (participantId) await api.submitPostStudySurvey(participantId, answers, profile);
+              setPostStudyOpen(false);
+              router.push("/study/done");
+            } catch (e) {
+              console.error(e);
+              showToast("설문 저장에 실패했어요 — 다시 제출해 주세요.");
+            } finally {
+              setPostSubmitting(false);
+            }
+          }}
         />
       )}
 
@@ -637,8 +730,16 @@ export default function VariantSession({
             >
               다음 쇼핑으로 넘어가기
             </button>
-            <button onClick={() => router.push("/")} className="mt-2 text-xs text-slate-400 hover:text-slate-600">
-              오늘은 여기까지
+            <button
+              onClick={() => {
+                setFinished(false);
+                // 이 조건에 물을 섹션이 하나도 없으면(기준을 안 보여준 조건) 설문을 건너뛴다
+                if (postStudySectionsFor(condition).length === 0) router.push("/study/done");
+                else setPostStudyOpen(true);
+              }}
+              className="mt-2 text-xs text-slate-400 hover:text-slate-600"
+            >
+              모든 쇼핑을 마쳤어요
             </button>
           </div>
         </div>
