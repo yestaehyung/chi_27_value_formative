@@ -12,7 +12,9 @@
 //   5 첫 번째 좋은데 비쌈 → recommend (숨은 의도: 예산 상한)
 //   6 대기업 중 저렴하게  → 충돌 카드 → 해소 → 재추천 (핵심 기여)
 
-import type { Conflict, Impression, PreferenceChip, Product, Turn } from "@/lib/types";
+import type {
+  Conflict, Impression, PreferenceChip, PreferenceState, Product, Turn, ValueAnchor,
+} from "@/lib/types";
 
 const T0 = "2026-01-01T00:00:00Z";
 
@@ -221,13 +223,126 @@ export const DEMO_CONFLICT: Conflict = {
 };
 
 // ─────────────────────────────────────────────────────────────────────
+// 가치·동기 점수 (예전 UI의 레이더 그래프용)
+//
+// FS1 참가자가 본 화면에는 우측 패널에 가치(TCV 5)·동기 레이더가 있었다. 대화가 쌓일수록
+// 또렷해지는 게 그 화면의 핵심이라, 단계마다 점수를 손으로 정해 진행을 보여준다.
+// breakdown의 confirmedScore는 '직접 말한 것'만 반영 — 레이더의 진한 영역이 그것이다.
+// ─────────────────────────────────────────────────────────────────────
+export type Scores = {
+  anchors: Partial<Record<ValueAnchor, number>>;
+  confirmed: Partial<Record<ValueAnchor, number>>;
+  motivation: Record<string, number>;
+  quotes?: Record<string, string[]>;
+};
+
+const S = (
+  anchors: Partial<Record<ValueAnchor, number>>,
+  confirmed: Partial<Record<ValueAnchor, number>>,
+  motivation: Record<string, number>,
+  quotes?: Record<string, string[]>,
+): Scores => ({ anchors, confirmed, motivation, quotes });
+
+export const SCORES: Record<string, Scores> = {
+  // 1턴 — 용도(연구실·세로)만 나온 상태. 상황 의존 효용이 먼저 뜬다.
+  s1: S({ Functional: 0.45, Conditional: 0.52, Emotional: 0.15, Social: 0.05, Epistemic: 0.20 },
+        { Functional: 0.40, Conditional: 0.48 },
+        { Utilitarian: 0.55, Idea: 0.18, Adventure: 0.12, BargainValue: 0.10 },
+        { Utilitarian: ["연구실에서 사용할 세로 모니터 하나 사려고"] }),
+  // 2턴 — 4K 요구 = 성능 축 상승
+  s2: S({ Functional: 0.68, Conditional: 0.55, Emotional: 0.18, Social: 0.05, Epistemic: 0.25 },
+        { Functional: 0.62, Conditional: 0.50 },
+        { Utilitarian: 0.62, Idea: 0.22, Adventure: 0.12, BargainValue: 0.10 },
+        { Utilitarian: ["4k 지원되는 모니터로 다시 추천해줄래"] }),
+  // 3턴 — 정보를 묻는 행위 자체가 Epistemic 신호
+  s3: S({ Functional: 0.70, Conditional: 0.60, Emotional: 0.20, Social: 0.05, Epistemic: 0.48 },
+        { Functional: 0.62, Conditional: 0.55, Epistemic: 0.40 },
+        { Utilitarian: 0.62, Idea: 0.35, Adventure: 0.15, BargainValue: 0.10 },
+        { Idea: ["몇 인치 정도가 적당하지?"] }),
+  // 4턴 — 심플한 디자인 = 감정/사회 축 등장
+  s4: S({ Functional: 0.72, Conditional: 0.62, Emotional: 0.45, Social: 0.22, Epistemic: 0.48 },
+        { Functional: 0.68, Conditional: 0.58, Emotional: 0.40, Epistemic: 0.40 },
+        { Utilitarian: 0.65, Idea: 0.35, Adventure: 0.18, Gratification: 0.28, BargainValue: 0.12 }),
+  // 5턴 — 가격 언급 = 가성비 동기 급등
+  s5: S({ Functional: 0.78, Conditional: 0.62, Emotional: 0.48, Social: 0.25, Epistemic: 0.48 },
+        { Functional: 0.72, Conditional: 0.58, Emotional: 0.42, Epistemic: 0.40 },
+        { Utilitarian: 0.68, BargainValue: 0.58, Idea: 0.35, Gratification: 0.28, Adventure: 0.18 },
+        { BargainValue: ["가격이 조금 비싼거같아"] }),
+  // 6턴 — 대기업 선호 = 사회적 이미지 + 실패 회피(감정)
+  s6: S({ Functional: 0.80, Conditional: 0.62, Emotional: 0.62, Social: 0.48, Epistemic: 0.48 },
+        { Functional: 0.75, Conditional: 0.58, Emotional: 0.55, Social: 0.42, Epistemic: 0.40 },
+        { Utilitarian: 0.70, BargainValue: 0.62, Idea: 0.35, Gratification: 0.28, Adventure: 0.18 },
+        { BargainValue: ["그중에서 가격 괜찮은걸로 다시 추천해줘"],
+          Utilitarian: ["대기업 제품을 우선적으로 고려하고 싶은데"] }),
+};
+
+const SUMMARY: Record<string, string> = {
+  s1: "연구실 책상에서 세로로 세워 쓸 모니터를 찾고 계신 것 같아요.",
+  s2: "세로 배치에 4K 화질까지 갖춘 모니터를 원하시는 것 같아요.",
+  s3: "책상 크기에 맞는 적정 화면 크기를 함께 따져보고 계세요.",
+  s4: "27인치 4K에, 책상에서 튀지 않는 심플한 디자인을 중요하게 보고 계신 것 같아요.",
+  s5: "조건은 유지하되 가격 부담을 줄이고 싶어 하시는 것 같아요.",
+  s6: "대기업 제품 안에서 가격이 합리적인 쪽을 찾고 계신 것 같아요.",
+};
+
+/** 칩 + 단계 점수로 예전 UI 패널이 요구하는 PreferenceState를 조립한다 */
+export function buildState(
+  chips: PreferenceChip[],
+  key: string,
+  turnIndex: number,
+): PreferenceState {
+  const sc = SCORES[key] ?? SCORES.s1;
+  const breakdown: PreferenceState["anchorBreakdown"] = {};
+  for (const [anchor, confirmedScore] of Object.entries(sc.confirmed)) {
+    breakdown[anchor] = {
+      confirmedScore: confirmedScore as number,
+      contributors: chips
+        .filter((c) => c.status === "confirmed")
+        .slice(0, 2)
+        .map((c) => ({
+          topicLabel: c.label,
+          intensity: 0.7,
+          confidence: "confirmed",
+          evidenceStrength: "strong",
+          decisionImpact: "high",
+          temporalStatus: "active",
+          contribution: Math.round(((confirmedScore as number) / 2) * 100) / 100,
+        })),
+    };
+  }
+  return {
+    id: `demo_snap_${key}`,
+    turnIndex,
+    stage: "exploration",
+    activeTopicIds: chips.map((c) => c.id),
+    anchorScores: sc.anchors as Record<ValueAnchor, number>,
+    anchorBreakdown: breakdown,
+    motivationScores: sc.motivation,
+    motivationEvidence: Object.fromEntries(
+      Object.entries(sc.quotes ?? {}).map(([k, q]) => [k, { best: "clear", count: q.length, quotes: q }]),
+    ),
+    hardConstraints: chips.filter((c) => c.type === "must_have").map((c) => c.label),
+    softPreferences: chips.filter((c) => c.type === "important").map((c) => c.label),
+    avoidances: [],
+    priorityOrder: chips.map((c) => c.label),
+    uncertainty: { unresolvedQuestions: [], ambiguousTopics: [], conflictIds: [] },
+    userVisibleSummary: {
+      chips,
+      oneSentenceSummary: SUMMARY[key] ?? "",
+      needsConfirmation: chips.some((c) => c.status === "inferred"),
+    },
+    createdAt: T0,
+  } as PreferenceState;
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // 재생 비트 — 플레이어가 순서대로 적용한다
 // ─────────────────────────────────────────────────────────────────────
 export type Beat =
   | { t: "user"; text: string; ms: number }
   | { t: "thinking"; ms: number }
   | { t: "agent"; text: string; action: string; set?: string; ms: number }
-  | { t: "chips"; add: PreferenceChip[]; ms: number }
+  | { t: "chips"; add: PreferenceChip[]; scores?: string; ms: number }
   | { t: "confirm"; ms: number }            // 순차 기준 확인 위젯 등장
   | { t: "confirmAnswer"; ms: number }      // 사용자가 '맞아요'
   | { t: "conflict"; ms: number }
@@ -242,14 +357,14 @@ export const BEATS: Beat[] = [
   { t: "thinking", ms: 1400 },
   { t: "agent", action: "recommend", set: "pivot",
     text: "연구실에서 세로로 세워 쓰실 모니터군요. 피벗(세로 회전)이 되는 제품으로 세 가지를 서로 다른 방향에서 골라봤어요. 마음에 드는 쪽에 반응해주시면 기준을 더 좁혀볼게요.", ms: 1600 },
-  { t: "chips", add: [C.pivot, C.lab], ms: 1200 },
+  { t: "chips", add: [C.pivot, C.lab], scores: "s1", ms: 1200 },
 
   // ── 2턴 ──
   { t: "user", text: "4k 지원되는 모니터로 다시 추천해줄래", ms: 1600 },
   { t: "thinking", ms: 1300 },
   { t: "agent", action: "recommend", set: "fourk",
     text: "4K로 좁혀서 다시 골랐어요. 세로 배치 조건은 그대로 유지했습니다.", ms: 1500 },
-  { t: "chips", add: [C.fourk], ms: 1100 },
+  { t: "chips", add: [C.fourk], scores: "s2", ms: 1100 },
 
   // ── 3턴 — answer (재검색 없음) ──
   { t: "user", text: "일반적으로 학교에서 쓰는 사무용 책상에서 쓰려면 몇 인치 정도가 적당하지?", ms: 1900 },
@@ -258,11 +373,12 @@ export const BEATS: Beat[] = [
     text: "학교 사무용 책상은 깊이가 보통 60~70cm입니다. 이 거리(약 60cm)에서는 27인치가 화면 전체를 눈만 움직여 보기에 편해요. 32인치는 세로로 세우면 위쪽을 올려다보게 돼서, 책상이 얕으면 목이 불편해질 수 있습니다.", ms: 2600 },
 
   // ── 4턴 — 추천 + 말하지 않은 기준 확인 ──
+  { t: "chips", add: [], scores: "s3", ms: 900 },
   { t: "user", text: "그럼 27인치로 하고, 디자인은 심플했으면 좋겠어.", ms: 1700 },
   { t: "thinking", ms: 1400 },
   { t: "agent", action: "recommend", set: "simple",
     text: "27인치 4K 중에서 장식이 적고 베젤이 얇은 쪽으로 골랐어요.", ms: 1500 },
-  { t: "chips", add: [C.size, C.simple], ms: 1000 },
+  { t: "chips", add: [C.size, C.simple], scores: "s4", ms: 1000 },
   { t: "confirm", ms: 1800 },
   { t: "confirmAnswer", ms: 2400 },
 
@@ -271,12 +387,12 @@ export const BEATS: Beat[] = [
   { t: "thinking", ms: 1400 },
   { t: "agent", action: "recommend", set: "value",
     text: "첫 번째(LG 27UP650, 48.9만원)의 화이트·무베젤 느낌은 살리면서 가격을 낮춘 쪽으로 다시 골랐어요.", ms: 1700 },
-  { t: "chips", add: [C.budget], ms: 1200 },
+  { t: "chips", add: [C.budget], scores: "s5", ms: 1200 },
 
   // ── 6턴 — 충돌 → 해소 → 재추천 ──
   { t: "user", text: "dell, lg 처럼 대기업 제품을 우선적으로 고려하고 싶은데 그중에서 가격 괜찮은걸로 다시 추천해줘", ms: 2100 },
   { t: "thinking", ms: 1500 },
-  { t: "chips", add: [C.brand], ms: 700 },
+  { t: "chips", add: [C.brand], scores: "s6", ms: 700 },
   { t: "conflict", ms: 2200 },
   { t: "resolve", optionId: "opt_merge", ms: 2600 },
   { t: "end", ms: 1200 },
