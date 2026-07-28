@@ -21,6 +21,47 @@ const T0 = "2026-01-01T00:00:00Z";
 // ─────────────────────────────────────────────────────────────────────
 // 상품
 // ─────────────────────────────────────────────────────────────────────
+// ── 상품 이미지 ──────────────────────────────────────────────────────
+// 외부 호스트를 타지 않는 인라인 SVG(data URI). 발표 중 네트워크 실패로 이미지가
+// 깨지는 경우를 원천 차단하고, 실제 제품 사진을 위조하지도 않는다 — 제품군을
+// 구분해서 보여주는 일러스트다. 카드 이미지 영역(h-36 · object-contain)에 맞춰 가로형.
+type Bezel = "white" | "silver" | "black" | "navy";
+type Stand = "base" | "ergo";
+
+const BEZEL: Record<Bezel, { frame: string; edge: string; screen: [string, string] }> = {
+  white:  { frame: "#f2f3f5", edge: "#d8dbe0", screen: ["#e8ecf6", "#cbd4ea"] },
+  silver: { frame: "#dfe2e6", edge: "#b9bec4", screen: ["#e4e9f2", "#c3cddf"] },
+  black:  { frame: "#2f3237", edge: "#1c1e21", screen: ["#3b4250", "#232833"] },
+  navy:   { frame: "#2b3550", edge: "#1a2137", screen: ["#38445f", "#212a3d"] },
+};
+
+function monitorImage(bezel: Bezel, wide = false, stand: Stand = "base"): string {
+  const b = BEZEL[bezel];
+  // wide=32인치급은 가로로 더 길게 — 카드에서 크기 차이가 눈에 보이게 한다
+  const w = wide ? 300 : 258;
+  const h = wide ? 176 : 166;
+  const x = (400 - w) / 2;
+  const y = 26;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 268">
+<defs><linearGradient id="s" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="${b.screen[0]}"/><stop offset="1" stop-color="${b.screen[1]}"/>
+</linearGradient></defs>
+<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="9" fill="${b.frame}" stroke="${b.edge}" stroke-width="2"/>
+<rect x="${x + 7}" y="${y + 7}" width="${w - 14}" height="${h - 22}" rx="4" fill="url(#s)"/>
+<rect x="${x + 22}" y="${y + 24}" width="${(w - 44) * 0.5}" height="7" rx="3.5" fill="#ffffff" opacity="0.34"/>
+<rect x="${x + 22}" y="${y + 39}" width="${(w - 44) * 0.72}" height="7" rx="3.5" fill="#ffffff" opacity="0.22"/>
+<rect x="${x + 22}" y="${y + 54}" width="${(w - 44) * 0.36}" height="7" rx="3.5" fill="#ffffff" opacity="0.22"/>
+${stand === "ergo"
+    // 기둥이 받침대 위에 정확히 서도록 — 받침대 y는 기둥 끝(y+h+38)에 맞춘다
+    ? `<rect x="196" y="${y + h}" width="8" height="40" rx="4" fill="${b.edge}"/>
+       <rect x="150" y="${y + h + 38}" width="100" height="9" rx="4.5" fill="${b.edge}"/>
+       <circle cx="200" cy="${y + h + 5}" r="7" fill="${b.frame}" stroke="${b.edge}" stroke-width="2"/>`
+    : `<path d="M188 ${y + h} h24 l7 34 h-38 z" fill="${b.frame}" stroke="${b.edge}" stroke-width="2"/>
+       <rect x="152" y="${y + h + 34}" width="96" height="10" rx="5" fill="${b.frame}" stroke="${b.edge}" stroke-width="2"/>`}
+</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg.replace(/\s+/g, " "))}`;
+}
+
 type Cue = Product["cueSummary"];
 const cue = (
   priceCue: Cue["priceCue"],
@@ -38,67 +79,69 @@ const p = (
   attributes: Product["attributes"],
   description: string,
   c: Cue,
+  img: [Bezel, boolean?, Stand?] = ["black"],
 ): Product => ({
   id, title, brand, price, rating, reviewCount, attributes, description,
   category: "모니터", deliveryFee: 0, sellerName: `${brand} 공식스토어`, sellerGrade: "빅파워",
   longTermReviewRatio: 0.38, recentSalesCount: 210, cueSummary: c,
+  imageUrl: monitorImage(img[0], img[1], img[2]),
 });
 
 const PRODUCTS: Record<string, Product> = {
   // 1턴 — 세로 회전(피벗) 지원
   m_pivot_1: p("m_pivot_1", "삼성 S32A600 32인치 QHD 피벗 스탠드", "삼성", 379000, 4.5, 1820,
     { 크기: "32인치", 해상도: "QHD (2560×1440)", 피벗: true, 패널: "VA" },
-    "높이·피벗 조절 스탠드를 갖춘 32인치 QHD. 세로 배치가 기본 지원됩니다.", cue("mid")),
+    "높이·피벗 조절 스탠드를 갖춘 32인치 QHD. 세로 배치가 기본 지원됩니다.", cue("mid"), ["black", true]),
   m_pivot_2: p("m_pivot_2", "LG 27QN880 27인치 QHD 에르고 스탠드", "LG", 429000, 4.7, 2410,
     { 크기: "27인치", 해상도: "QHD (2560×1440)", 피벗: true, 패널: "IPS" },
-    "클램프형 에르고 스탠드로 세로 전환과 높이 조절이 자유롭습니다.", cue("high")),
+    "클램프형 에르고 스탠드로 세로 전환과 높이 조절이 자유롭습니다.", cue("high"), ["black", false, "ergo"]),
   m_pivot_3: p("m_pivot_3", "한성컴퓨터 TFG27Q 27인치 QHD 피벗", "한성컴퓨터", 249000, 4.3, 940,
     { 크기: "27인치", 해상도: "QHD (2560×1440)", 피벗: true, 패널: "IPS" },
-    "피벗 스탠드를 갖춘 가성비 QHD 모니터.", cue("low", "medium", "moderate")),
+    "피벗 스탠드를 갖춘 가성비 QHD 모니터.", cue("low", "medium", "moderate"), ["black"]),
 
   // 2턴 — 4K
   m_4k_1: p("m_4k_1", "LG 27UP850 27인치 4K IPS USB-C", "LG", 549000, 4.7, 3120,
     { 크기: "27인치", 해상도: "4K (3840×2160)", 피벗: true, USB_C: "90W 충전" },
-    "USB-C 한 케이블로 노트북 연결·충전이 되는 4K IPS.", cue("high")),
+    "USB-C 한 케이블로 노트북 연결·충전이 되는 4K IPS.", cue("high"), ["black"]),
   m_4k_2: p("m_4k_2", "삼성 U28R550 28인치 4K", "삼성", 389000, 4.4, 2050,
     { 크기: "28인치", 해상도: "4K (3840×2160)", 피벗: true, 패널: "IPS" },
-    "28인치 4K 기본기에 충실한 사무용 모니터.", cue("mid")),
+    "28인치 4K 기본기에 충실한 사무용 모니터.", cue("mid"), ["navy"]),
   m_4k_3: p("m_4k_3", "벤큐 EW2780U 27인치 4K HDRi", "벤큐", 619000, 4.6, 780,
     { 크기: "27인치", 해상도: "4K (3840×2160)", HDR: "HDRi", 스피커: "2.1채널" },
-    "밝기 자동 조절과 내장 스피커를 갖춘 27인치 4K.", cue("very_high", "high", "moderate")),
+    "밝기 자동 조절과 내장 스피커를 갖춘 27인치 4K.", cue("very_high", "high", "moderate"), ["black", true]),
 
   // 4턴 — 27인치 + 심플 디자인
   m_simple_1: p("m_simple_1", "LG 27UP650 27인치 4K 무결점 화이트", "LG", 489000, 4.6, 1640,
     { 크기: "27인치", 해상도: "4K (3840×2160)", 색상: "화이트", 베젤: "3면 무베젤" },
-    "군더더기 없는 화이트 3면 무베젤. 책상 위에서 시각적으로 조용합니다.", cue("high")),
+    "군더더기 없는 화이트 3면 무베젤. 책상 위에서 시각적으로 조용합니다.", cue("high"), ["white"]),
   m_simple_2: p("m_simple_2", "델 S2722QC 27인치 4K USB-C", "델", 529000, 4.7, 2280,
     { 크기: "27인치", 해상도: "4K (3840×2160)", 색상: "실버", USB_C: "65W 충전" },
-    "은색 미니멀 스탠드에 USB-C 도킹을 겸하는 27인치 4K.", cue("high")),
+    "은색 미니멀 스탠드에 USB-C 도킹을 겸하는 27인치 4K.", cue("high"), ["silver"]),
   m_simple_3: p("m_simple_3", "필립스 27E1N1900AE 27인치 4K", "필립스", 379000, 4.3, 610,
     { 크기: "27인치", 해상도: "4K (3840×2160)", 색상: "블랙", 패널: "IPS" },
-    "장식 없는 무광 블랙 마감의 27인치 4K.", cue("mid", "medium", "moderate")),
+    "장식 없는 무광 블랙 마감의 27인치 4K.", cue("mid", "medium", "moderate"), ["black"]),
 
   // 5턴 — 첫 번째(LG 27UP650)와 비슷하되 가격을 낮춘 대안
   m_value_1: p("m_value_1", "필립스 27E1N1900AE 27인치 4K 화이트", "필립스", 359000, 4.3, 610,
     { 크기: "27인치", 해상도: "4K (3840×2160)", 색상: "화이트", 베젤: "3면 무베젤" },
-    "첫 번째와 같은 화이트·무베젤 계열이면서 13만원 저렴합니다.", cue("mid", "medium", "moderate")),
+    "첫 번째와 같은 화이트·무베젤 계열이면서 13만원 저렴합니다.", cue("mid", "medium", "moderate"), ["white"]),
   m_value_2: p("m_value_2", "한성컴퓨터 ULTRON 2799U 27인치 4K", "한성컴퓨터", 329000, 4.2, 1130,
     { 크기: "27인치", 해상도: "4K (3840×2160)", 색상: "블랙", 패널: "IPS" },
-    "27인치 4K 최저가대. 스탠드는 기울기 조절만 됩니다.", cue("low", "medium", "moderate")),
+    "27인치 4K 최저가대. 스탠드는 기울기 조절만 됩니다.", cue("low", "medium", "moderate"), ["black"]),
   m_value_3: p("m_value_3", "알파스캔 IPS275U 27인치 4K", "알파스캔", 299000, 4.1, 720,
     { 크기: "27인치", 해상도: "4K (3840×2160)", 색상: "블랙", 패널: "IPS" },
-    "가장 저렴한 27인치 4K. 피벗은 미지원입니다.", cue("very_low", "low", "niche")),
+    "가장 저렴한 27인치 4K. 피벗은 미지원입니다.", cue("very_low", "low", "niche"), ["black"]),
 
   // 6턴 해소 후 — 대기업 중 가격이 괜찮은 것
   m_brand_1: p("m_brand_1", "삼성 U28R550 28인치 4K", "삼성", 389000, 4.4, 2050,
     { 크기: "28인치", 해상도: "4K (3840×2160)", 피벗: true, 색상: "다크블루" },
-    "대기업 4K 중 가장 낮은 가격대. 피벗도 지원합니다.", cue("mid")),
+    "대기업 4K 중 가장 낮은 가격대. 피벗도 지원합니다.", cue("mid"), ["navy"]),
   m_brand_2: p("m_brand_2", "델 S2721QS 27인치 4K", "델", 449000, 4.6, 1980,
     { 크기: "27인치", 해상도: "4K (3840×2160)", 피벗: true, 색상: "실버" },
-    "27인치를 유지하면서 델 제품 중 가장 저렴한 4K입니다.", cue("mid")),
+    "27인치를 유지하면서 델 제품 중 가장 저렴한 4K입니다.", cue("mid"), ["silver"]),
   m_brand_3: p("m_brand_3", "LG 27UP650 27인치 4K 무결점 화이트", "LG", 489000, 4.6, 1640,
     { 크기: "27인치", 해상도: "4K (3840×2160)", 색상: "화이트", 베젤: "3면 무베젤" },
-    "처음 마음에 들어 하셨던 제품. 참고용으로 함께 둡니다.", cue("high")),
+    "처음 마음에 들어 하셨던 제품. 참고용으로 함께 둡니다.", cue("high"), ["white"]),
 };
 
 // ─────────────────────────────────────────────────────────────────────
