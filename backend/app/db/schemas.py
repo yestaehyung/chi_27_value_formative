@@ -5,7 +5,10 @@ from pydantic import BaseModel, Field
 
 
 class CreateSessionRequest(BaseModel):
-    mode: Literal["manual", "simulation"] = "manual"
+    # demo = 상품 풀·추천 품질을 눈으로 확인하는 용도. manual이 아니므로 조건 배정을 받지 않고
+    # (sessions.py) 조건 균형 집계에도 안 잡힌다 (conditions.started_counts) — 데모가 실험
+    # 데이터에 섞이는 경로를 구조적으로 없앤다.
+    mode: Literal["manual", "simulation", "demo"] = "manual"
     scenarioId: str = "gift_for_other"  # "custom" = 회상 인터뷰 기반 자유 시나리오 (FS1)
     studyCondition: Literal["baseline", "explanation_only", "correctable"] = "correctable"
     participantId: Optional[str] = None

@@ -27,16 +27,21 @@ export const api = {
     scenarioId: string,
     studyCondition = "correctable",
     custom?: { title?: string; context?: string },
-    participantId?: string
+    participantId?: string,
+    // "demo" = 상품 풀 확인용. 조건 배정을 받지 않고 조건 균형 집계에도 안 잡힌다.
+    mode: "manual" | "demo" = "manual",
   ) =>
     request<{ sessionId: string }>("/api/sessions", {
       method: "POST",
       body: JSON.stringify({
-        mode: "manual", scenarioId, studyCondition,
+        mode, scenarioId, studyCondition,
         customTitle: custom?.title, customContext: custom?.context,
         participantId,
       }),
     }),
+
+  // 데모용 상품 풀 요약 (카테고리별 개수) — "새 상품이 실제로 들어왔나"를 눈으로 확인
+  productPoolSummary: () => request<any>("/api/meta/product-pool"),
 
   participants: () => request<any>("/api/research/participants"),
   participantSurvey: (id: string) => request<any>(`/api/research/participants/${id}/survey`),

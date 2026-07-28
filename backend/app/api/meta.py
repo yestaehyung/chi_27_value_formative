@@ -31,3 +31,22 @@ def personas():
 @router.get("/products")
 def products(db: DbSession = Depends(get_db)):
     return {"products": [serializers.product_to_dict(p) for p in db.query(models.Product).all()]}
+
+
+@router.get("/product-pool")
+def product_pool(db: DbSession = Depends(get_db)):
+    """카테고리별 상품 수 — 데모 화면에서 '새 상품이 실제로 DB에 들어왔는지'를 확인한다.
+    시드 파일을 바꿔도 `load_seed_products`가 기존 상품이 있으면 스킵하므로(VC_SEED_UPSERT 필요),
+    파일이 아니라 **DB 기준**으로 세는 이 값이 실제로 추천될 수 있는 풀이다."""
+    from sqlalchemy import func
+
+    rows = (
+        db.query(models.Product.category, func.count(models.Product.id))
+        .group_by(models.Product.category)
+        .order_by(func.count(models.Product.id).desc())
+        .all()
+    )
+    return {
+        "total": sum(n for _, n in rows),
+        "categories": [{"category": c or "(미분류)", "count": n} for c, n in rows],
+    }

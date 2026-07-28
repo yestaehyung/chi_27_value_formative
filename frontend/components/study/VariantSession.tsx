@@ -126,6 +126,13 @@ export default function VariantSession({
         (fb[f.productId] ??= []).push(f.type);
       }
       setFeedbackByProduct(fb);
+      // 시작 화면(session/new · /demo)에서 넘긴 첫 발화 — 빈 세션이면 자동 전송
+      // (새로고침엔 재전송 안 됨). study 밖에 두는 이유: 데모도 같은 핸드오프를 쓴다.
+      const first = sessionStorage.getItem(`vc_first_${sessionId}`);
+      if (first && d.turns.length === 0) {
+        sessionStorage.removeItem(`vc_first_${sessionId}`);
+        setPendingFirst(first);
+      }
       if (study) {
         setParticipantId(d.session?.participantId ?? "");
         setTaskCategory(d.scenario?.targetCategory ?? "");
@@ -133,12 +140,6 @@ export default function VariantSession({
         // 과제 직전 설문은 대화가 시작되기 전에 받아야 한다 — 에이전트가 이미 추천을 하면
         // '지금 내 기준이 얼마나 명확한가'가 오염돼서 Δ(사전→사후) 자체가 무의미해진다.
         if (!d.session?.metadata?.preTaskSurvey) setPreTaskOpen(true);
-        // 시작 화면(session/new)에서 넘긴 첫 발화 — 빈 세션이면 자동 전송 (새로고침엔 재전송 안 됨)
-        const first = sessionStorage.getItem(`vc_first_${sessionId}`);
-        if (first && d.turns.length === 0) {
-          sessionStorage.removeItem(`vc_first_${sessionId}`);
-          setPendingFirst(first);
-        }
       }
     }).catch(console.error);
   }, [sessionId, study]);

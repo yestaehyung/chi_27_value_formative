@@ -18,6 +18,7 @@ export function middleware(req: NextRequest) {
 
 // matcher에 걸리는 경로에서만 실행 — 참가자용 /study/* 와 /api/* 프록시는 건드리지 않는다.
 // 예외: /study/compare 와 세션 UI 수정안(/study/session/*/v/*)은 연구자용 프로토타입 표면이라 차단.
+// /demo는 matcher에 없다 = study 모드에서도 열린다 (상품 풀 확인용, mode="demo"라 실험 데이터와 분리).
 export const config = {
   matcher: [
     "/", "/simulate/:path*", "/research/:path*", "/pscon/:path*",
