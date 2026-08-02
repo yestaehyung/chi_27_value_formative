@@ -140,7 +140,23 @@ class OpenAIProvider(LLMProvider):
             )
             resp.raise_for_status()
             data = resp.json()
-            return data["choices"][0]["message"]["content"] or ""
+            choice = data["choices"][0]
+            # 토큰 예산 소진은 **예외가 아니라 빈 문자열**로 온다 — _safe()는 예외만 잡으므로
+            # 파이프라인 단계가 조용히 "결과 0건"으로 통과해 버린다. 추론 모델은 reasoning
+            # 토큰이 같은 예산에서 나가므로 특히 잘 터진다(실측: v4-flash thinking=on이
+            # max_tokens 1500을 전부 추론에 쓰고 content=''). 실패를 눈에 보이게 남긴다.
+            if choice.get("finish_reason") == "length":
+                import logging
+
+                usage = data.get("usage") or {}
+                logging.getLogger("llm").warning(
+                    "LLM output truncated (finish_reason=length) model=%s budget=%s "
+                    "completion=%s reasoning=%s — 결과가 비어 단계가 조용히 스킵될 수 있음",
+                    model, payload.get(self.max_tokens_param),
+                    usage.get("completion_tokens"),
+                    (usage.get("completion_tokens_details") or {}).get("reasoning_tokens"),
+                )
+            return choice["message"]["content"] or ""
 
     async def generate_text(self, messages, temperature=0.7, max_tokens=1000) -> str:
         msgs = self._prepare_messages(messages, None, None, json_mode=False)
