@@ -90,6 +90,32 @@ def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Depends(g
             manual_label=req.manualLabel,
         ))
 
+    # 칩 확인·거부가 그 토픽에 걸린 **ambiguous 충돌도 닫는다** (2026-08-02).
+    #
+    # ambiguous 충돌은 참가자에게 카드로 띄우지 않으므로(serializers.participant_conflicts)
+    # 사용자가 풀 방법이 없었다 — FS1 42개 전부 `open`으로 남아 있었다. 그런데 그 토픽들은
+    # 이미 칩으로 보이고 있고(84개 중 73개) 사용자는 거기서 "맞아요"를 누르고 있었다.
+    # 즉 확인 행동은 있는데 그게 아무것도 바꾸지 않는 상태였다. FS1이 관찰하려는 것이
+    # 바로 '수정 행동'이므로, 그 행동에 효과를 준다.
+    # direct는 건드리지 않는다 — 그건 전용 충돌 카드로 명시적으로 해소해야 한다.
+    if req.action in ("confirm", "reject", "edit_label"):
+        from datetime import datetime, timezone
+
+        related = (
+            db.query(models.PreferenceConflict)
+            .filter(models.PreferenceConflict.session_id == session.id)
+            .filter(models.PreferenceConflict.severity == "ambiguous")
+            .filter(models.PreferenceConflict.status.in_(["open", "shown_to_user"]))
+            .filter(
+                (models.PreferenceConflict.old_topic_id == topic.id)
+                | (models.PreferenceConflict.new_topic_id == topic.id)
+            )
+            .all()
+        )
+        for c in related:
+            c.status = "manually_resolved"
+            c.resolved_at = datetime.now(timezone.utc)
+
     db.flush()
     snapshot = build_snapshot(db, session)
     db.commit()

@@ -154,8 +154,21 @@ def build_snapshot(
         .filter(models.PreferenceConflict.status.in_(["open", "shown_to_user"]))
         .all()
     )
+    # 값 계산에서 빼는 건 **direct 충돌뿐**이다 (2026-08-02).
+    #
+    # 이전엔 ambiguous도 함께 뺐는데, 그러면 같은 severity가 두 곳에서 다르게 해석된다:
+    # 화면은 direct만 카드로 띄우고(serializers.participant_conflicts) 값은 둘 다 뺐다.
+    # ambiguous는 LLM이 스스로 "충돌인지 확신 못 함"이라 매긴 것인데(프롬프트: "애매하면
+    # ambiguous로 분류한다"), 그 불확실한 판정을 근거로 값을 확정적으로 지우는 건 앞뒤가
+    # 맞지 않는다. 실제로 FS1 26세션 중 12세션이 **끝까지 전 축 0**이었고, 원인은 전부
+    # ambiguous였다 (해소된 ambiguous는 0개 — 사용자에게 안 띄우니 풀 방법이 없었다).
+    # 특히 scope_change(용도·상황 구체화)에서 많이 발생해 Conditional 축이 계통적으로 지워졌다.
     conflict_topic_ids = {
-        tid for c in open_conflicts for tid in (c.old_topic_id, c.new_topic_id) if tid
+        tid
+        for c in open_conflicts
+        if c.severity == "direct"
+        for tid in (c.old_topic_id, c.new_topic_id)
+        if tid
     }
 
     concept_ids = [
