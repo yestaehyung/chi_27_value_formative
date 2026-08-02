@@ -339,7 +339,6 @@ FORMAT_BY_TASK = {
 
 confidenceLevel 기준: directly_stated(기준이 발화에 그대로 등장) /
 strong_inference(인용 스팬에서 맥락상 명확히 추론) / weak_inference(약한 힌트뿐).
-숫자 점수는 내지 않는다 — 시스템이 레벨에서 산출한다.
 
 예시 — 입력 turn(id=turn_x1)이 "운동 좋아하는 친구에게 줄 스마트워치를 찾고 있어요. 브랜드는 잘 몰라요."일 때:
 {"topics":[
@@ -371,7 +370,6 @@ anchor 값은 반드시 다음 5개(TCV 가치) 중 정확히 하나만: Functio
 - evidenceStrength: low(약한 행동 신호) / medium / high(명시적 발화)
 - decisionImpact: low / medium / high(선택·거절에 직접 영향)
 - temporalStatus: emerging(이번에 새로 등장) / active / weakened / resolved
-- 숫자 점수는 내지 않는다 — 강도는 위 범주에서 시스템이 산출한다.
 
 예시 — topic "선물로 너무 저렴해 보이지 않기" (싫어요+이유 발화에서 추출된 경우):
 {"mappings":[{"topicLabel":"선물로 너무 저렴해 보이지 않기","anchors":[
