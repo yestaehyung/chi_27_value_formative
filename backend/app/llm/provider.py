@@ -6,6 +6,7 @@ Pipeline stages call `generate_json(messages, schema=..., task=..., context=...)
 - AnthropicProvider: sends the rendered messages and parses JSON from the reply.
 """
 import json
+import logging
 from contextvars import ContextVar
 from typing import Any, Dict, List, Optional
 
@@ -88,6 +89,17 @@ class OpenAIProvider(LLMProvider):
     api_url = "https://api.openai.com/v1/chat/completions"
     max_tokens_param = "max_completion_tokens"  # gpt-5 family naming
 
+    #: 추론 토큰은 출력 예산에서 나간다. 공식 문서가 "추론+출력에 최소 25,000 토큰을
+    #: 확보하라"고 권고한다 — 부족하면 **보이는 출력 없이** 잘려서(finish_reason=length)
+    #: 파이프라인 단계가 조용히 빈 결과로 통과한다.
+    #: (cap일 뿐이므로 실제 생성분만 과금된다 — 넉넉히 잡는 데 비용이 들지 않는다.)
+    min_output_budget = 25_000
+
+    #: reasoning_effort 유효값(공식 문서). **지원 범위는 모델마다 다르다** —
+    #: 예: gpt-5.6은 'minimal'을 거부하고 400을 낸다. 모델별 표를 코드에 박으면 곧 낡으므로,
+    #: 값이 이 집합에 없으면 보내지 않고, 400을 만나면 파라미터를 빼고 한 번 재시도한다.
+    REASONING_EFFORTS = frozenset({"none", "minimal", "low", "medium", "high", "xhigh", "max"})
+
     def __init__(self) -> None:
         self.api_key = settings.openai_api_key
         self.model = settings.openai_model
@@ -121,12 +133,20 @@ class OpenAIProvider(LLMProvider):
         payload: Dict[str, Any] = {
             "model": model,
             "messages": msgs,
-            # reasoning tokens come out of this budget — keep it generous
-            self.max_tokens_param: max(max_tokens * 3, 4000),
+            # 추론 토큰이 이 예산에서 나간다 — min_output_budget 주석 참조
+            self.max_tokens_param: max(max_tokens * 3, self.min_output_budget),
         }
         if model.startswith("gpt-5"):
-            # gpt-5 family: fixed temperature, tunable reasoning effort
-            payload["reasoning_effort"] = settings.openai_reasoning_effort
+            # gpt-5 계열: temperature 고정, reasoning_effort로 추론량 조절.
+            # 설정값이 유효 집합 밖이면 아예 보내지 않는다(모델 기본값 사용).
+            effort = (settings.openai_reasoning_effort or "").strip().lower()
+            if effort in self.REASONING_EFFORTS:
+                payload["reasoning_effort"] = effort
+            elif effort:
+                logging.getLogger("llm").warning(
+                    "unknown reasoning_effort=%r — 전송하지 않고 모델 기본값을 쓴다 (유효값: %s)",
+                    effort, sorted(self.REASONING_EFFORTS),
+                )
         else:
             payload["temperature"] = temperature
         if json_mode:
@@ -138,6 +158,19 @@ class OpenAIProvider(LLMProvider):
                 headers={"Authorization": f"Bearer {self.api_key}"},
                 json=payload,
             )
+            # 이 모델이 해당 effort를 지원하지 않으면 400이 온다(모델별 지원 범위가 다르다).
+            # 파라미터를 빼고 한 번만 재시도 — 모델별 표를 하드코딩하지 않기 위한 대응.
+            if resp.status_code == 400 and "reasoning_effort" in payload:
+                logging.getLogger("llm").warning(
+                    "model=%s rejected reasoning_effort=%r — 빼고 재시도한다",
+                    model, payload["reasoning_effort"],
+                )
+                payload.pop("reasoning_effort")
+                resp = await client.post(
+                    self.api_url,
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    json=payload,
+                )
             resp.raise_for_status()
             data = resp.json()
             choice = data["choices"][0]
@@ -146,8 +179,6 @@ class OpenAIProvider(LLMProvider):
             # 토큰이 같은 예산에서 나가므로 특히 잘 터진다(실측: v4-flash thinking=on이
             # max_tokens 1500을 전부 추론에 쓰고 content=''). 실패를 눈에 보이게 남긴다.
             if choice.get("finish_reason") == "length":
-                import logging
-
                 usage = data.get("usage") or {}
                 logging.getLogger("llm").warning(
                     "LLM output truncated (finish_reason=length) model=%s budget=%s "
@@ -249,6 +280,10 @@ class DeepSeekProvider(OpenAIProvider):
     name = "deepseek"
     api_url = "https://api.deepseek.com/chat/completions"
     max_tokens_param = "max_tokens"
+    #: DeepSeek도 thinking 토큰이 max_tokens에서 나간다. 실측(2026-08-02, v4-flash
+    #: thinking=on, topic_extraction): 1500 → 전량 추론 소진·출력 0 / 4000 → 정상 /
+    #: 8000 → 추론 5,066. 여유를 두되 OpenAI 권고치(25k)만큼은 필요 없다.
+    min_output_budget = 12_000
 
     def __init__(self) -> None:
         self.api_key = settings.deepseek_api_key

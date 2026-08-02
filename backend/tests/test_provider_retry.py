@@ -16,11 +16,15 @@ from app.llm.provider import OpenAIProvider
 
 
 class _FakeResp:
+    # 실제 httpx.Response는 항상 status_code를 갖는다 — provider가 400(effort 미지원)을
+    # 분기하므로 가짜도 이 속성을 가져야 한다.
+    status_code = 200
+
     def raise_for_status(self):
         pass
 
     def json(self):
-        return {"choices": [{"message": {"content": "{}"}}]}
+        return {"choices": [{"message": {"content": "{}"}, "finish_reason": "stop"}]}
 
 
 def test_call_retries_on_transient_error(monkeypatch):
