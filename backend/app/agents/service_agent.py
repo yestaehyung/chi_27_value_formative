@@ -131,6 +131,82 @@ async def _classify_dialogue_acts(provider, content: str) -> list[str]:
         return []
 
 
+async def recommend_after_resolution(
+    db: DbSession, session: models.Session, snapshot: models.PreferenceStateSnapshot,
+) -> tuple[models.Turn, list[models.ProductImpression], list[models.Product]]:
+    """충돌 해소로 기준이 바뀐 직후 갱신된 기준으로 바로 재추천한다(해소가 dead-end가
+    되지 않게). resolve_conflict가 이미 commit한 뒤(락 해제) 호출되므로 LLM-first-write-last
+    유지 — LLM(추천·렌더)을 먼저 돌리고 마지막에 짧은 트랜잭션으로 turn·impression을 쓴다."""
+    provider = get_provider()
+    category = (session.meta or {}).get("category")
+    prev_shown = _last_recommended_products(db, session.id)
+    recent_turns = (
+        db.query(models.Turn)
+        .filter(models.Turn.session_id == session.id)
+        .order_by(models.Turn.turn_index)
+        .all()
+    )
+    has_recommendations = (
+        db.query(models.ProductImpression)
+        .filter(models.ProductImpression.session_id == session.id)
+        .count() > 0
+    )
+    pred = None
+    try:
+        from app import rig
+        pred = rig.top_predicted_concept(db, session.id)
+    except Exception:  # noqa: BLE001
+        pred = None
+    planner_context = planner.build_planner_context(
+        recent_turns[-6:], snapshot, has_recommendations,
+        _last_agent_action(db, session.id), pred,
+        (session.meta or {}).get("shoppingGoal") or category or "",
+        db=db, session=session, last_shown=prev_shown,
+    )
+    # 해소 직후엔 재추천이 목적 — 플래너 searchText를 쓰되 없으면 최근 사용자 발화로 폴백,
+    # 액션과 무관하게 recommend를 실행한다(갱신된 기준으로 상품을 바로 보여주는 게 목적).
+    last_user = next((t.content for t in reversed(recent_turns) if t.role == "user"), "")
+    decision = await planner.fetch_plan(provider, planner_context, fallback_search_text=last_user)
+    search_text = decision.search_text or last_user or ((session.meta or {}).get("shoppingGoal") or "")
+    scored, card_texts, rec_diag = await recommender.run_recommendation(
+        db, provider, session, search_text=search_text,
+        constraints_note=decision.constraints_note, recent_turns=recent_turns, snapshot=snapshot,
+    )
+    products = [sp.product for sp in scored]
+    state_for_llm = snapshot.user_visible_summary if snapshot else None
+    near_miss = (rec_diag or {}).get("nearMiss") or {}
+    rec_note = None
+    if near_miss or not scored:
+        rec_note = {
+            "noExactMatch": True,
+            "nearestAlternatives": [
+                {"title": p.title, "differsHow": near_miss.get(p.id, "")} for p in products
+            ],
+        }
+        template = rg.near_miss_text(scored)
+    else:
+        template = rg.recommend_text(scored)
+    text = await rg.generate_reply(
+        provider, action="recommend", template_text=template, recent_turns=recent_turns,
+        products=products, state_summary=state_for_llm, conflict_explanation=None,
+        must_ask_question=None, previously_shown=prev_shown, recommendation_note=rec_note,
+    )
+    agent_turn = models.Turn(
+        id=new_id("turn"), session_id=session.id,
+        turn_index=_next_turn_index(db, session.id), role="service_agent",
+        content=text, agent_action="recommend",
+        related_product_ids=[p.id for p in products],
+    )
+    db.add(agent_turn)
+    db.flush()
+    scored_by_id = {sp.product.id: sp for sp in scored}
+    impressions = _create_impressions(
+        db, session, agent_turn, [scored_by_id[p.id] for p in products], card_texts
+    )
+    db.commit()
+    return agent_turn, impressions, products
+
+
 async def handle_user_turn(db: DbSession, session: models.Session, content: str,
                            role: str = "user") -> AgentTurnResult:
     provider = get_provider()

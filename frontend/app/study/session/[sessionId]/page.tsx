@@ -159,12 +159,22 @@ export default function StudySessionPage() {
       setConflicts((prev) => prev.filter((c) => c.id !== conflictId));
       setState(res.newPreferenceState);
       // 해소 발화는 서버가 Turn으로 영속화해 돌려준다(새로고침·replay 생존). 구버전 응답 폴백 유지.
-      setTurns((prev) => [...prev, res.turn ?? {
-        id: `local_${Date.now()}`,
-        sessionId, turnIndex: prev.length, role: "service_agent",
-        content: res.message, dialogueActs: [], relatedProductIds: [],
-        agentAction: "resolution", createdAt: new Date().toISOString(),
-      } as Turn]);
+      // 기준이 바뀐 해소면 서버가 갱신된 기준으로 바로 재추천해 돌려준다 — 해소가
+      // "앞으로 반영할게요"로 끝나고 아무것도 안 보여주는 dead-end가 되지 않게.
+      setTurns((prev) => {
+        const resolutionTurn: Turn = res.turn ?? ({
+          id: `local_${Date.now()}`,
+          sessionId, turnIndex: prev.length, role: "service_agent",
+          content: res.message, dialogueActs: [], relatedProductIds: [],
+          agentAction: "resolution", createdAt: new Date().toISOString(),
+        } as Turn);
+        return [...prev, resolutionTurn, ...(res.recommendTurn ? [res.recommendTurn] : [])];
+      });
+      if (res.recommendTurn && res.recommendedProducts?.length) {
+        setImpressionsByTurn((prev) => ({
+          ...prev, [res.recommendTurn.id]: res.recommendedProducts,
+        }));
+      }
     } catch (e) {
       console.error(e);
       showToast("충돌 해결에 실패했어요.");
