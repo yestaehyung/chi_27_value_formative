@@ -48,6 +48,25 @@ def test_heading_removal_keeps_the_text():
     assert _strip_markdown("## 비교해볼게요") == "비교해볼게요"
 
 
+def test_prompt_never_names_a_screen_direction():
+    """프롬프트에 방향 어휘가 들어가면 모델이 그걸 집어 쓴다.
+
+    2026-08-06 실측: 규칙4가 금지 예시로 '오른쪽 패널'을 적고 있었는데, 그 단어가
+    컨텍스트에 들어가는 바람에 모델이 "오른쪽 카드에서 확인해 주세요"(심지어 "왼쪽"도)를
+    12%(5/40) 확률로 냈다. 카드는 말풍선 **아래**에 붙으므로 전부 오안내다.
+    금지 예시를 지우고 "아래"를 알려주자 0/40이 됐다.
+
+    금지 규칙이 아니라 오염원 제거다 — 프롬프트 어디에도 방향 어휘가 없어야 한다.
+    """
+    from app.llm.prompts import AGENT_REPLY_SYSTEM
+
+    for word in ("오른쪽", "왼쪽", "우측", "좌측", "사이드"):
+        assert word not in AGENT_REPLY_SYSTEM, (
+            f"프롬프트에 '{word}'가 있으면 모델이 그 방향을 안내한다"
+        )
+    assert "아래" in AGENT_REPLY_SYSTEM, "카드가 어디 있는지는 알려줘야 한다"
+
+
 def test_prompt_describes_the_four_supported_forms():
     """프롬프트와 렌더러가 같은 문법 집합을 가리켜야 한다.
 
