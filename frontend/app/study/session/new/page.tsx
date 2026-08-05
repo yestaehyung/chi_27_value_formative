@@ -57,7 +57,8 @@ export default function NewSessionPage() {
           ? undefined
           : { title: "자유 대화" };
       const scenarioId = customOpen && customContext.trim() ? "custom" : selected?.id ?? "custom";
-      const res = await api.createSession(scenarioId, "correctable", custom, participantId || undefined);
+      // 조건은 보내지 않는다 — 서버가 참가자 단위로 균형 배정한다(core/conditions.py).
+      const res = await api.createSession(scenarioId, undefined, custom, participantId || undefined);
       sessionStorage.setItem(`vc_first_${res.sessionId}`, firstMsg.trim());
       router.push(`/study/session/${res.sessionId}`);
     } catch (e) {

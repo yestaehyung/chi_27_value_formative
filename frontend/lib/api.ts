@@ -1,4 +1,5 @@
 // Thin API client — all calls proxied via Next.js rewrite to the FastAPI backend.
+import type { CategoryOption, Familiarity } from "@/lib/types";
 
 // 연구자 키 (스터디 분리, 2026-07-02): 라이브 백엔드의 research/exports API는
 // X-Research-Key를 요구한다. 로컬 프론트를 라이브 백엔드에 물려 모니터링할 때
@@ -25,7 +26,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   createSession: (
     scenarioId: string,
-    studyCondition = "correctable",
+    // 기본은 **미지정** — 서버가 균형 배정한다. 예전에는 "correctable"을 하드코딩해
+    // 보냈는데, 서버가 그걸 무시하고 배정하고 있어서 실제 조건과 어긋나 보였다.
+    // 값을 주는 경우는 테스트·데모가 조건을 고정할 때뿐이다.
+    studyCondition?: "baseline1" | "baseline2" | "ours",
     custom?: { title?: string; context?: string },
     participantId?: string,
     // "demo" = 상품 풀 확인용. 조건 배정을 받지 않고 조건 균형 집계에도 안 잡힌다.
@@ -83,6 +87,22 @@ export const api = {
 
   scenarios: () => request<any>("/api/meta/scenarios"),
   personas: () => request<any>("/api/meta/personas"),
+
+  /** 참가자가 고를 수 있는 쇼핑 카테고리 — DB에 상품이 실제로 있는 것만 온다. */
+  categories: () =>
+    request<{ categories: CategoryOption[] }>("/api/meta/categories"),
+
+  /** 본실험 세션 생성 — 시나리오 대신 카테고리 + 참가자가 매긴 친숙도로 연다. */
+  createCategorySession: (
+    category: string,
+    familiarity: Familiarity,
+    participantId?: string,
+  ) =>
+    request<{ sessionId: string }>("/api/sessions", {
+      method: "POST",
+      // studyCondition은 보내지 않는다 — 서버가 참가자 단위로 균형 배정한다.
+      body: JSON.stringify({ mode: "manual", category, familiarity, participantId }),
+    }),
 
   runSimulation: (scenarioId: string, userAgentProfileId: string, maxTurns = 8) =>
     request<any>("/api/simulations/run", {

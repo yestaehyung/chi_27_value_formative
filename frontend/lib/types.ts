@@ -289,3 +289,14 @@ export type EvidenceItem = {
 };
 
 export type Snapshot = PreferenceState;
+
+/** 참가자가 스스로 매긴 카테고리 친숙도 — 본실험의 within-subjects 요인. */
+export type Familiarity = "familiar" | "unfamiliar";
+
+/** 카테고리 선택 화면의 한 항목 (`GET /api/meta/categories`). */
+export type CategoryOption = {
+  category: string;
+  count: number;   // 풀 깊이 — 연구자 확인용, 참가자에게는 표시하지 않는다
+  emoji: string;
+  blurb: string;
+};

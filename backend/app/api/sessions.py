@@ -15,7 +15,25 @@ router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 @router.post("")
 def create_session(req: CreateSessionRequest, db: DbSession = Depends(get_db)):
-    if req.scenarioId == "custom":
+    # 본실험 경로(2026-08-06~): 시나리오 대신 카테고리로 과제를 연다. 상품 풀을 본실험용으로
+    # 재구성하면서 옛 시나리오(태블릿·코트…)의 카테고리에 상품이 0개가 됐고, 시나리오를
+    # 유지하면 그 어긋남이 계속 재발한다. 카테고리는 DB에서 직접 확인하므로 어긋날 수 없다.
+    # (시나리오 경로는 시뮬레이션·합성이 계속 쓰므로 아래에 그대로 남긴다.)
+    if req.category:
+        available = {
+            c for (c,) in db.query(models.Product.category)
+            .filter(models.Product.category.isnot(None)).distinct()
+        }
+        if req.category not in available:
+            raise HTTPException(404, f"unknown category: {req.category}")
+        scenario = {
+            "id": f"cat:{req.category}",
+            "title": req.category,
+            "initialUserNeed": "",
+            "targetCategory": req.category,
+            "context": "참가자 선택 카테고리",
+        }
+    elif req.scenarioId == "custom":
         # 회상 인터뷰 결과를 초기 맥락으로 사용 (FS1, weekly deck S55)
         scenario = {
             "id": "custom",
@@ -35,16 +53,19 @@ def create_session(req: CreateSessionRequest, db: DbSession = Depends(get_db)):
         participant_id = participant_id or new_id("part")
         participant = models.Participant(id=participant_id)
         db.add(participant)
-    # 조건은 **참가자에 붙은 값이 요청값을 이긴다**. 프론트가 무엇을 보내든 한 사람의
-    # 3개 과제가 같은 조건으로 묶이고, 클라이언트 실수로 조건이 갈릴 여지가 없다.
+    # 조건 우선순위: ① 참가자에 이미 붙은 값 → ② 요청이 명시한 값(신규 참가자만) → ③ 균형 배정.
+    # ①이 최우선인 이유는 한 사람의 여러 과제가 반드시 같은 조건이어야 하기 때문이다.
+    # ②는 테스트·데모가 조건을 고정하는 통로 — 본실험 프론트는 값을 보내지 않으므로 ③으로 간다.
     # (시뮬레이션은 조건 설계 밖이라 요청값을 그대로 쓴다.)
     study_condition = req.studyCondition
     if req.mode == "manual":
+        if participant.study_condition is None and req.studyCondition:
+            participant.study_condition = req.studyCondition
         study_condition = ensure_condition(db, participant)
     session = models.Session(
         id=new_id("sess"),
         mode=req.mode,
-        scenario_id=req.scenarioId,
+        scenario_id=scenario["id"] if req.category else req.scenarioId,
         user_agent_id=req.userAgentId,
         participant_id=participant_id,
         current_stage="exploration",
@@ -53,7 +74,9 @@ def create_session(req: CreateSessionRequest, db: DbSession = Depends(get_db)):
             "studyCondition": study_condition,
             "category": scenario.get("targetCategory"),
             "shoppingGoal": scenario.get("title"),
-            **({"customScenario": scenario} if req.scenarioId == "custom" else {}),
+            # 참가자가 스스로 매긴 친숙도 — within-subjects 요인이라 세션에 남겨야 분석된다.
+            **({"familiarity": req.familiarity} if req.familiarity else {}),
+            **({"customScenario": scenario} if req.scenarioId == "custom" and not req.category else {}),
         },
     )
     db.add(session)
