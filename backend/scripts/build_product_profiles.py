@@ -24,8 +24,10 @@ from app.llm.prompts import SYSTEM_BY_TASK, render_user_context  # noqa: E402
 
 SEED_DIR = Path(os.environ["VC_SEED_DIR"])
 OUT = SEED_DIR / "product_profiles.json"
-CONCURRENCY = 8
-CHECKPOINT_EVERY = 25
+#: 유료 API 레이트리밋 시절 기본값 8. 자체 호스팅 엔드포인트(VC_DEEPSEEK_BASE_URL)에서는
+#: 64까지 선형 확장이 실측됐다 (3.4 → 20.8 req/s, 2026-07-28). CONC 환경변수로 올린다.
+CONCURRENCY = int(os.environ.get("CONC", "8"))
+CHECKPOINT_EVERY = int(os.environ.get("CHECKPOINT_EVERY", "25"))
 
 REQUIRED_KEYS = ("profile", "productType", "audience", "keyAttributes", "caveats")
 

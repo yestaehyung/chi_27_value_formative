@@ -45,3 +45,11 @@ backend/seed_naver/products_naver.json
 # ── Logs / OS ─────────────────────────────────
 *.log
 .DS_Store
+
+# 본실험 전 상품 풀(구 28카테고리) 백업 — 62MB. 로컬 보관만 한다.
+# 커밋하면 저장소가 그만큼 커지고 Railway 빌드가 매번 이걸 내려받는다.
+# 복원이 필요하면 scripts/archive_nonstudy_categories.py --restore 를 로컬에서 돌린다.
+backend/seed_amazon/archive_28cat_*.json
+backend/seed_amazon/archive_28cat_*.json.gz
+backend/seed_amazon/*.bak-*
+backend/seed_amazon/*.pre-profile.bak
