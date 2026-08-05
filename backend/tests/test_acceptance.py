@@ -20,7 +20,7 @@ def client():
 
 def new_session(client, scenario="gift_for_other"):
     r = client.post("/api/sessions", json={"mode": "manual", "scenarioId": scenario,
-                                           "studyCondition": "correctable"})
+                                           "studyCondition": "ours"})
     assert r.status_code == 200, r.text
     return r.json()["sessionId"]
 

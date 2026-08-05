@@ -19,9 +19,10 @@ function TutorialInner() {
   const pid = params.get("pid");
   const raw = params.get("cond");
   const condition: StudyCondition =
-    raw && raw in SHOWS_CRITERIA ? (raw as StudyCondition) : "correctable";
+    raw && raw in SHOWS_CRITERIA ? (raw as StudyCondition) : "ours";
 
-  const done = () => router.push(pid ? `/study/session/new?pid=${pid}` : "/study/session/new");
+  // 튜토리얼 다음은 카테고리 선택 — 시나리오 선택(/study/session/new)을 대체했다(2026-08-06).
+  const done = () => router.push(pid ? `/study/categories?pid=${pid}` : "/study/categories");
   return <TutorialDemo onDone={done} onSkip={done} condition={condition} />;
 }
 

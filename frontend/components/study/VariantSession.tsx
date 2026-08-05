@@ -37,9 +37,11 @@ import SimpleUnderstandingPanel from "@/components/preference/SimpleUnderstandin
 import SurveyModal from "@/components/study/SurveyModal";
 import CriterionCheckModal, { type CriterionCandidate } from "@/components/study/CriterionCheckModal";
 import {
-  CRITERION_CHECK_MAX, POST_TASK, PRE_TASK, fillTemplate, postStudySectionsFor,
+  ALLOWS_CORRECTION, CRITERION_CHECK_MAX, INFERS_INTENTION, POST_TASK, PRE_TASK,
+  SHOWS_CRITERIA, fillTemplate, postStudySectionsFor,
   type StudyCondition,
 } from "@/lib/mainSurvey";
+import { completeTask, nextTask } from "@/lib/taskQueue";
 
 export type UiVariant = "a" | "b" | "c" | "d" | "e";
 
@@ -92,6 +94,17 @@ export default function VariantSession({
   const [taskCategory, setTaskCategory] = useState("");
   // between-subjects 조건 — 백엔드가 참가자에 배정한 값 (요청값은 무시된다)
   const [condition, setCondition] = useState<StudyCondition | null>(null);
+  // 조건별 UI 게이트. study 모드가 아니면(UI 수정안 비교·데모) 조건 설계 밖이므로 전부 보인다.
+  // condition이 아직 안 들어온 첫 렌더에서도 기준을 노출하지 않도록 기본값은 false로 둔다
+  // — baseline 참가자에게 한 프레임이라도 기준이 스치면 조건이 오염된다.
+  const showsCriteria = !study || (condition ? SHOWS_CRITERIA[condition] : false);
+  const allowsCorrection = !study || (condition ? ALLOWS_CORRECTION[condition] : false);
+  const infersIntention = !study || (condition ? INFERS_INTENTION[condition] : false);
+  // 과제 큐 — 카테고리 선택 화면이 세운 4과제 계획의 남은 개수 (lib/taskQueue.ts)
+  const [queueLeft, setQueueLeft] = useState(0);
+  const [startingNext, setStartingNext] = useState(false);
+  // 완료 표시는 한 번만. finished가 껐다 켜져도(전체종료 설문 취소 등) 큐가 두 칸 가면 안 된다.
+  const advancedRef = useRef(false);
   const [preTaskOpen, setPreTaskOpen] = useState(false);
   const [criterionOpen, setCriterionOpen] = useState(false);
   const [criteria, setCriteria] = useState<CriterionCandidate[]>([]);
@@ -103,6 +116,30 @@ export default function VariantSession({
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
+  };
+
+  // 과제를 마치면 큐를 한 칸 전진 — "남은 쇼핑 N번" 표시와 다음 버튼 노출의 근거가 된다.
+  useEffect(() => {
+    if (!study || !finished || advancedRef.current) return;
+    advancedRef.current = true;
+    setQueueLeft(completeTask());
+  }, [study, finished]);
+
+  /** 큐의 다음 카테고리로 새 세션을 열고 이동한다. */
+  const startNextTask = async () => {
+    const task = nextTask(participantId || undefined);
+    if (!task || startingNext) return;
+    setStartingNext(true);
+    try {
+      const res = await api.createCategorySession(
+        task.category, task.familiarity, participantId || undefined,
+      );
+      router.push(`/study/session/${res.sessionId}`);
+    } catch (e) {
+      console.error(e);
+      showToast("다음 쇼핑을 열지 못했어요 — 다시 눌러 주세요.");
+      setStartingNext(false);
+    }
   };
 
   // ----- initial load (1회만) — StrictMode 이중 실행/재렌더로 두 번째 getSession이
@@ -350,7 +387,8 @@ export default function VariantSession({
           </>
         )}
       </div>
-      {editingChip !== chip.id && (
+      {/* 수정은 ours 조건에서만 — 기준을 보여주기만 하는 조건과 구분되는 지점이다 */}
+      {allowsCorrection && editingChip !== chip.id && (
         <button
           className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-[#9aa0a6] transition-colors hover:text-[#4f46e5]"
           onClick={() => { setEditingChip(chip.id); setEditText(chip.label); }}
@@ -481,7 +519,7 @@ export default function VariantSession({
             {/* 안 E — 순차 확인: '물어볼 것(추론/불확실 기준)'이 있을 때만 띄운다.
                 충돌이 열려 있으면(conflicts>0) 충돌 해소가 곧 기준 정리이므로 확인 위젯을
                 겹쳐 띄우지 않는다 — '충돌+기준확인' 이중 질문 방지. */}
-            {variant === "e" && t.id === latestAgentTurnId && eAskable.length > 0 && !busy && conflicts.length === 0 && (
+            {variant === "e" && showsCriteria && t.id === latestAgentTurnId && eAskable.length > 0 && !busy && conflicts.length === 0 && (
               <div className="msg-in mt-3">
                 <SequentialCriteriaConfirm
                   askable={eAskable}
@@ -508,7 +546,7 @@ export default function VariantSession({
           </div>
         ))}
         {/* 안 E — conflict 발화 + 옵션 칩 (ConflictUtterance — ConflictCard 비사용, manual_edit 제외) */}
-        {variant === "e" && conflicts.map((c) => (
+        {variant === "e" && showsCriteria && conflicts.map((c) => (
           <div key={c.id} className="msg-in">
             <ConflictUtterance
               conflict={c}
@@ -524,7 +562,7 @@ export default function VariantSession({
 
       {/* 안 B·E — 입력창 위 접힌 한 줄 앵커: "이해한 기준: 착용감 · 가성비 ▾".
           사이드바 없이 '지금 전체 이해'를 한눈에(Q2). E는 확인 상태(✓)까지 앵커에 반영. */}
-      {(variant === "b" || variant === "e") && core.length > 0 && (
+      {(variant === "b" || variant === "e") && showsCriteria && core.length > 0 && (
         <div className="border-t border-[#f0f2f4] bg-[#fafbfc] px-5 py-2">
           <button
             onClick={() => { setAnchorOpen((v) => !v); setShowAllCriteria(false); }}
@@ -660,9 +698,13 @@ export default function VariantSession({
             try {
               await api.submitPostSurvey(sessionId, answers, profile);
               setPostSurveyOpen(false);
-              // 이어서 기준별 검증 — 제시할 기준이 없으면(짧은 세션) 건너뛴다
-              const res = await api.criterionCandidates(sessionId, CRITERION_CHECK_MAX);
-              const list = (res?.criteria ?? []) as CriterionCandidate[];
+              // 이어서 기준별 검증 — 제시할 기준이 없으면(짧은 세션) 건너뛴다.
+              // baseline1은 의도 추론 자체를 하지 않으므로 검증할 기준이 생성되지 않는다;
+              // 호출도 하지 않고 바로 완료로 보낸다.
+              const list = infersIntention
+                ? (((await api.criterionCandidates(sessionId, CRITERION_CHECK_MAX))?.criteria ??
+                    []) as CriterionCandidate[])
+                : [];
               if (list.length > 0) { setCriteria(list); setCriterionOpen(true); }
               else setFinished(true);
             } catch (e) {
@@ -724,13 +766,20 @@ export default function VariantSession({
           <div className="card max-w-sm p-6 text-center">
             <AgentAvatar className="mx-auto block h-12 w-12" />
             <h2 className="mt-3 text-lg font-bold text-[#191919]">이 쇼핑을 마쳤어요</h2>
-            <p className="mt-1 text-sm text-slate-500">이어서 다음 쇼핑을 진행할게요.</p>
-            <button
-              onClick={() => router.push(participantId ? `/study/session/new?pid=${participantId}` : "/study/session/new")}
-              className="btn btn-primary mt-4 w-full py-2"
-            >
-              다음 쇼핑으로 넘어가기
-            </button>
+            <p className="mt-1 text-sm text-slate-500">
+              {queueLeft > 0 ? `남은 쇼핑 ${queueLeft}번이 있어요.` : "예정된 쇼핑을 모두 마쳤어요."}
+            </p>
+            {/* 큐에 다음 과제가 있으면 그 카테고리로 바로 연다 — 참가자가 매번 고르면
+                자기선택 편향이 친숙도 요인과 교락되므로 순서는 설계가 정한다. */}
+            {queueLeft > 0 && (
+              <button
+                onClick={startNextTask}
+                disabled={startingNext}
+                className="btn btn-primary mt-4 w-full py-2"
+              >
+                {startingNext ? "여는 중…" : "다음 쇼핑으로 넘어가기"}
+              </button>
+            )}
             <button
               onClick={() => {
                 setFinished(false);
@@ -738,7 +787,9 @@ export default function VariantSession({
                 if (postStudySectionsFor(condition).length === 0) router.push("/study/done");
                 else setPostStudyOpen(true);
               }}
-              className="mt-2 text-xs text-slate-400 hover:text-slate-600"
+              className={queueLeft > 0
+                ? "mt-2 text-xs text-slate-400 hover:text-slate-600"
+                : "btn btn-primary mt-4 w-full py-2"}
             >
               모든 쇼핑을 마쳤어요
             </button>

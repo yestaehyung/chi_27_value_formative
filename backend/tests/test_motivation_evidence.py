@@ -25,7 +25,7 @@ def client():
 
 def test_motivation_evidence_quotes_exposed_to_participant(client):
     r = client.post("/api/sessions", json={"mode": "manual", "scenarioId": "gift_for_other",
-                                           "studyCondition": "correctable"})
+                                           "studyCondition": "ours"})
     sid = r.json()["sessionId"]
     # "빨리/필요해" = mock motivation_detection의 Utilitarian cue → quote가 잡힌다
     out = client.post(f"/api/sessions/{sid}/turns",

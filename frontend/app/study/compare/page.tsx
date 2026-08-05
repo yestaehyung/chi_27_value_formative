@@ -20,7 +20,7 @@ export default function CompareEntryPage() {
     setCreating(true);
     setError(null);
     try {
-      const r = await api.createSession("custom", "correctable", { title: "UI 수정안 비교", context: "" });
+      const r = await api.createSession("custom", "ours", { title: "UI 수정안 비교", context: "" });
       go(r.sessionId);
     } catch (e) {
       setError(String(e));

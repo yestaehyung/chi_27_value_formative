@@ -10,11 +10,20 @@ class CreateSessionRequest(BaseModel):
     # 데이터에 섞이는 경로를 구조적으로 없앤다.
     mode: Literal["manual", "simulation", "demo"] = "manual"
     scenarioId: str = "gift_for_other"  # "custom" = 회상 인터뷰 기반 자유 시나리오 (FS1)
-    studyCondition: Literal["baseline", "explanation_only", "correctable"] = "correctable"
+    #: None이면 서버가 균형 배정한다(본실험 참가자의 정상 경로). 값을 주면 **신규 참가자에
+    #: 한해** 그대로 쓴다 — 테스트·데모가 특정 조건을 고정하기 위한 통로다. 기존 참가자는
+    #: 언제나 자기에게 붙은 조건이 이긴다(한 사람의 여러 과제는 같은 조건이어야 하므로).
+    studyCondition: Literal["baseline1", "baseline2", "ours"] | None = None
     participantId: Optional[str] = None
     userAgentId: Optional[str] = None
     customTitle: Optional[str] = None
     customContext: Optional[str] = None  # 회상 인터뷰에서 추출한 초기 쇼핑 맥락
+    #: 본실험(2026-08-06~) 경로 — 시나리오 대신 **카테고리**로 과제를 연다. 값이 있으면
+    #: scenarioId를 보지 않는다. 시나리오는 시뮬레이션·합성에서 계속 쓰이므로 남겨둔다.
+    category: Optional[str] = None
+    #: 참가자가 스스로 매긴 그 카테고리에 대한 친숙도. 본실험의 within-subjects 요인이다
+    #: (친근 2 + 비친근 2). 시나리오에 고정할 수 없는, 참가자가 선택 시점에 주는 값이다.
+    familiarity: Optional[Literal["familiar", "unfamiliar"]] = None
 
 
 class TurnRequest(BaseModel):

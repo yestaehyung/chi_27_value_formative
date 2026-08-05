@@ -16,7 +16,26 @@ os.environ["VC_LLM_PROVIDER"] = "mock"
 import pytest
 from fastapi.testclient import TestClient
 
+from app.db import models
+from app.db.database import SessionLocal
 from app.main import app
+
+
+def force_condition(participant_id: str, condition: str) -> None:
+    """참가자의 조건을 고정한다.
+
+    사전 설문(`/api/study/survey`)이 조건을 균형 배정하고, 세션 생성은 **참가자에 붙은
+    값이 요청값을 이긴다**(한 사람의 여러 과제가 갈리지 않도록). 그래서 요청에
+    studyCondition을 실어도 소용이 없다. 이 테스트는 기준 추론이 도는 조건이 필요하므로
+    배정 결과와 무관하게 직접 고정한다.
+    """
+    db = SessionLocal()
+    try:
+        p = db.get(models.Participant, participant_id)
+        p.study_condition = condition
+        db.commit()
+    finally:
+        db.close()
 
 
 @pytest.fixture(scope="module")
@@ -37,10 +56,11 @@ def task_session(client):
     })
     assert r.status_code == 200, r.text
     pid = r.json()["participantId"]
+    force_condition(pid, "ours")  # 기준 추론·외재화가 모두 도는 조건이어야 ⑤를 검증할 수 있다
 
     r = client.post("/api/sessions", json={
         "mode": "manual", "scenarioId": "gift_for_other",
-        "studyCondition": "correctable", "participantId": pid,
+        "studyCondition": "ours", "participantId": pid,
     })
     assert r.status_code == 200, r.text
     sid = r.json()["sessionId"]

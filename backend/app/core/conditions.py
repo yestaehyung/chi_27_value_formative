@@ -1,25 +1,50 @@
 """본실험 between-subjects 조건 배정.
 
-세 조건은 '외재화의 어느 부분이 효과를 내는가'를 분해한다:
-  baseline          — 추론한 기준을 보여주지 않음 (일반 쇼핑 챗봇)
-  explanation_only  — 기준을 보여주되 수정 불가        ← baseline 대비 차이 = *가시성*의 효과
-  correctable       — 기준을 보여주고 수정 가능 (Ours) ← explanation_only 대비 = *수정 가능성*의 효과
+세 조건은 '숨은 의도를 다루는 세 단계'를 분해한다:
+  baseline1 — 의도 추론 없음. 발화를 그대로 LLM에 넘겨 추천한다 (일반 쇼핑 챗봇).
+  baseline2 — 의도를 추론해 추천에 쓴다. 다만 **외재화하지 않는다**   ← b1 대비 = *추론*의 효과
+  ours      — 추론 + 외재화 + 사용자 수정 가능                        ← b2 대비 = *외재화*의 효과
 
-**세 조건 모두 백엔드는 동일하게 추론한다.** 안 보여줄 뿐이다. 그래야 추론 품질이
-조건과 무관한 상수가 되고, 과제 직후 '기준별 검증' 설문을 세 조건 전부에서 물을 수 있다
-(baseline 참가자는 화면에서 본 적 없는 기준을 판정하므로 앵커링 없는 가장 깨끗한 측정이다).
+세 조건의 차이를 읽는 법:
+  baseline1 → baseline2   의도 추론이 추천 품질을 얼마나 올리는가
+  baseline2 → ours        추론을 보여주고 고치게 하는 것이 무엇을 더 주는가
+
+**baseline1은 추론 자체를 하지 않는다.** 그래서 과제 직후 '기준별 검증' 설문(⑤)을
+baseline1에서는 물을 수 없다 — 검증할 기준이 생성되지 않기 때문이다. b2/ours에서만 측정한다.
+
+**baseline2는 추론한 기준을 사용자 확인 없이 그대로 쓴다.** 이것이 evidence-purity 규칙
+(`agents/recommender.py`: 확인된 기준만 리랭크에 투입)의 예외다. 그 규칙은 *확인 경로가 있는*
+조건을 전제로 만들어졌는데 baseline2에는 확인 UI가 없으므로, 규칙을 그대로 적용하면 추론이
+추천에 영원히 닿지 못해 baseline1과 구분이 사라진다. `USES_UNCONFIRMED_INFERENCE`가 그 분기다.
 """
 from sqlalchemy import func
 from sqlalchemy.orm import Session as DbSession
 
 from app.db import models
 
-STUDY_CONDITIONS: tuple[str, ...] = ("baseline", "explanation_only", "correctable")
+STUDY_CONDITIONS: tuple[str, ...] = ("baseline1", "baseline2", "ours")
 
-#: 이 조건에서 추론한 기준을 화면에 보여주는가
-SHOWS_CRITERIA = {"baseline": False, "explanation_only": True, "correctable": True}
-#: 이 조건에서 기준을 수정·확인할 수 있는가
-ALLOWS_CORRECTION = {"baseline": False, "explanation_only": False, "correctable": True}
+#: 이 조건에서 사용자 모델(의도 추론 파이프라인)을 돌리는가.
+#: False면 `run_preference_commit`을 건너뛴다 — 의도 토픽/앵커/충돌이 생성되지 않는다.
+INFERS_INTENTION = {"baseline1": False, "baseline2": True, "ours": True}
+#: 추론한 기준을 화면에 보여주는가 (칩 확인·충돌 발화·앵커바).
+SHOWS_CRITERIA = {"baseline1": False, "baseline2": False, "ours": True}
+#: 기준을 확인·수정할 수 있는가.
+ALLOWS_CORRECTION = {"baseline1": False, "baseline2": False, "ours": True}
+#: 사용자 확인을 거치지 않은 추론 기준도 추천 리랭크에 넣는가.
+#: baseline2는 확인 UI가 없으므로 넣지 않으면 추론이 추천에 반영될 길이 없다(위 docstring).
+USES_UNCONFIRMED_INFERENCE = {"baseline1": False, "baseline2": True, "ours": False}
+
+#: 폐기·개명된 옛 슬러그 → 현재 슬러그. `database.py::_migrate`와 조건 조회가 함께 쓴다.
+#: explanation_only(표시하되 수정 불가)는 2026-08-06 설계에서 폐기 — 매핑 없이 재배정된다.
+LEGACY_CONDITIONS = {"baseline": "baseline2", "correctable": "ours"}
+
+
+def normalize_condition(value: str | None) -> str | None:
+    """옛 슬러그를 현재 슬러그로 옮긴다. 모르는 값은 None (→ 재배정 대상)."""
+    if value in STUDY_CONDITIONS:
+        return value
+    return LEGACY_CONDITIONS.get(value or "")
 
 
 def assigned_counts(db: DbSession) -> dict[str, int]:
@@ -40,8 +65,9 @@ def assigned_counts(db: DbSession) -> dict[str, int]:
     )
     counts = {c: 0 for c in STUDY_CONDITIONS}
     for cond, n in rows:
-        if cond in counts:
-            counts[cond] = n
+        slug = normalize_condition(cond)
+        if slug in counts:
+            counts[slug] += n
     return counts
 
 
@@ -57,8 +83,9 @@ def started_counts(db: DbSession) -> dict[str, int]:
     )
     counts = {c: 0 for c in STUDY_CONDITIONS}
     for cond, n in rows:
-        if cond in counts:
-            counts[cond] = n
+        slug = normalize_condition(cond)
+        if slug in counts:
+            counts[slug] += n
     return counts
 
 
@@ -70,8 +97,10 @@ def assign_condition(db: DbSession) -> str:
 
 def ensure_condition(db: DbSession, participant: models.Participant) -> str:
     """참가자에게 조건이 없으면 지금 배정한다. 이미 있으면 그대로 — **재배정하지 않는다**
-    (한 사람의 3개 과제는 반드시 같은 조건이어야 한다)."""
-    if participant.study_condition in STUDY_CONDITIONS:
-        return participant.study_condition
+    (한 사람의 여러 과제는 반드시 같은 조건이어야 한다). 옛 슬러그는 현재 슬러그로 옮긴다."""
+    slug = normalize_condition(participant.study_condition)
+    if slug is not None:
+        participant.study_condition = slug
+        return slug
     participant.study_condition = assign_condition(db)
     return participant.study_condition

@@ -19,10 +19,26 @@ from app.agents.question_strategy import (
     build_value_question,
 )
 from app.agents import response_generator as rg
+from app.core.conditions import INFERS_INTENTION, normalize_condition
 from app.ontology.state_builder import build_snapshot
-from app.preference_commit.commit_engine import run_preference_commit
+from app.preference_commit.commit_engine import PreferenceCommitResult, run_preference_commit
 from app.products.search import ScoredProduct
 from app.wimhf.pair_builder import build_pairs_for_feedback
+
+
+def infers_intention(session: models.Session) -> bool:
+    """이 세션의 조건이 사용자 모델(의도 추론)을 돌리는가.
+
+    조건이 없는 세션(데모·시뮬레이션·로컬 개발)은 **추론한다**로 본다 — 조건 설계는 본실험
+    참가자에게만 적용되고, 나머지는 종래대로 전체 파이프라인이 돌아야 한다.
+    """
+    slug = normalize_condition((session.meta or {}).get("studyCondition"))
+    return INFERS_INTENTION.get(slug, True) if slug else True
+
+
+async def _no_commit() -> PreferenceCommitResult:
+    """baseline1용 빈 커밋 결과. asyncio.gather에 넣기 위해 코루틴이어야 한다."""
+    return PreferenceCommitResult()
 
 
 @dataclass
@@ -229,12 +245,14 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
 
     # 2-3. 화행 분류와 preference commit는 서로 의존이 없다(둘 다 발화만 읽음) → 병렬로 1 RT 절약.
     #      _classify_dialogue_acts는 DB를 만지지 않으므로 commit과 같은 session을 동시 사용해도 안전.
+    #      baseline1은 의도 추론 자체가 없는 조건이므로 commit을 건너뛴다 — 빈 결과(토픽·충돌
+    #      없음, snapshot None)로 이후 단계가 그대로 흐른다(§조건 설계: core/conditions.py).
     t_pipe = time.perf_counter()
     dialogue_acts, commit = await asyncio.gather(
         _classify_dialogue_acts(provider, content),
         run_preference_commit(
             db, provider, session, turn_ids=[user_turn.id], feedback_ids=[], source="user_utterance",
-        ),
+        ) if infers_intention(session) else _no_commit(),
     )
     user_turn.dialogue_acts = dialogue_acts
     db.commit()
@@ -496,9 +514,10 @@ async def handle_feedback(
     # chosen-rejected pairs within the same recommendation turn (spec §10, §11 Phase A)
     pairs = await build_pairs_for_feedback(db, provider, session, fb)
 
-    # preference commit on the feedback evidence
-    commit = await run_preference_commit(
-        db, provider, session, turn_ids=[], feedback_ids=[fb.id], source="feedback",
+    # preference commit on the feedback evidence (baseline1은 추론 없음 — 위와 동일)
+    commit = await (
+        run_preference_commit(db, provider, session, turn_ids=[], feedback_ids=[fb.id], source="feedback")
+        if infers_intention(session) else _no_commit()
     )
 
     if feedback_type == "purchase":

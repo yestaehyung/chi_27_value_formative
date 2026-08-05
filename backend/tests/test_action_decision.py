@@ -84,7 +84,7 @@ def test_free_chat_honors_explicit_recommend_no_infinite_clarify():
 
     with TestClient(app) as c:
         sid = c.post("/api/sessions", json={
-            "mode": "manual", "scenarioId": "custom", "studyCondition": "correctable",
+            "mode": "manual", "scenarioId": "custom", "studyCondition": "ours",
         }).json()["sessionId"]
         c.post(f"/api/sessions/{sid}/turns", json={
             "role": "user", "content": "운동 좋아하는 친구 줄 무선 이어폰 찾아요. 브랜드는 몰라요.",

@@ -6,20 +6,37 @@
 evidence-purity 규칙: rerank가 읽는 것은 **stated(명시 발화) + confirmed(사용자
 확인 기준)뿐** — 미확인 배후 추론(anchor/motivation 원점수)은 랭킹에 넣지 않는다.
 (1) 미확인 추론이 추천에 들어가면 피드백 증거가 오염되고, (2) 칩 수정→confirmed→
-다음 추천 반영이라는 correctable 조건의 인과 경로가 이 필터로 구조적으로 보장된다.
+다음 추천 반영이라는 ours 조건의 인과 경로가 이 필터로 구조적으로 보장된다.
 이론층(가치·동기)이 추천에 닿는 유일한 경로는 플래너의 가설 확인 질문을 거쳐
 confirmed가 되는 것(가설 경로).
+
+**baseline2는 이 규칙의 의도된 예외다.** 그 조건에는 확인 UI 자체가 없어서 추론 기준이
+confirmed로 갈 길이 없다 — 규칙을 그대로 적용하면 "추론은 하되 추천엔 못 쓰는" 상태가 되어
+baseline1과 구분이 사라진다. baseline2의 정의가 "추론한 기준을 사용자 확인 없이 그대로
+쓴다"이므로, 그 조건에서만 미확인 추론 토픽도 통과시킨다(`USES_UNCONFIRMED_INFERENCE`).
 """
 from sqlalchemy.orm import Session as DbSession
 
+from app.core.conditions import USES_UNCONFIRMED_INFERENCE, normalize_condition
 from app.db import models
 from app.agents import response_generator as rg
 from app.products.search import ScoredProduct, search_products
 
 
-def _stated_and_confirmed_criteria(db: DbSession, session_id: str) -> list[dict]:
+def _uses_unconfirmed(session: models.Session | None) -> bool:
+    """이 세션의 조건이 미확인 추론 기준까지 리랭크에 넣는가 (baseline2만 True)."""
+    slug = normalize_condition((session.meta or {}).get("studyCondition")) if session else None
+    return USES_UNCONFIRMED_INFERENCE.get(slug, False) if slug else False
+
+
+def _stated_and_confirmed_criteria(
+    db: DbSession, session_id: str, include_unconfirmed: bool = False
+) -> list[dict]:
     """추천이 읽어도 되는 기준: 명시 발화에서 온 토픽(explicit) 또는 사용자가 확인한
-    토픽(confirmed/corrected_by_user). 거부·비활성은 제외."""
+    토픽(confirmed/corrected_by_user). 거부·비활성은 제외.
+
+    include_unconfirmed=True(baseline2)면 미확인 추론 토픽도 포함한다 — 위 docstring 참조.
+    """
     topics = (
         db.query(models.IntentionTopic)
         .filter(models.IntentionTopic.session_id == session_id)
@@ -28,7 +45,9 @@ def _stated_and_confirmed_criteria(db: DbSession, session_id: str) -> list[dict]
     )
     out = []
     for t in topics:
-        if t.explicitness == "explicit" or t.status in ("confirmed", "corrected_by_user"):
+        if (include_unconfirmed
+                or t.explicitness == "explicit"
+                or t.status in ("confirmed", "corrected_by_user")):
             out.append({"label": t.label, "description": t.description})
     return out
 
@@ -84,7 +103,9 @@ def build_rerank_context(
             t.content for t in recent_turns[-4:] if t.role in ("user", "user_agent")
         ],
         "statedConstraintsNote": constraints_note or "",
-        "criteria": _stated_and_confirmed_criteria(db, session.id),
+        "criteria": _stated_and_confirmed_criteria(
+            db, session.id, include_unconfirmed=_uses_unconfirmed(session)
+        ),
     }
 
 

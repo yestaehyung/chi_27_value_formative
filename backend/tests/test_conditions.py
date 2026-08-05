@@ -32,7 +32,7 @@ def enroll(client, label):
     return r.json()
 
 
-def start_task(client, pid, scenario="gift_for_other", condition="correctable"):
+def start_task(client, pid, scenario="gift_for_other", condition="ours"):
     """프론트가 보내는 studyCondition은 일부러 항상 correctable — 참가자 조건이 이겨야 한다."""
     r = client.post("/api/sessions", json={
         "mode": "manual", "scenarioId": scenario,
@@ -52,7 +52,7 @@ def test_participant_condition_beats_request(client):
     body = enroll(client, "cond-02")
     pid, assigned = body["participantId"], body["studyCondition"]
 
-    out = start_task(client, pid, condition="correctable")
+    out = start_task(client, pid, condition="ours")
     assert out["session"]["metadata"]["studyCondition"] == assigned
 
 
@@ -68,15 +68,35 @@ def test_same_participant_keeps_condition_across_tasks(client):
     assert conditions == {assigned}
 
 
+def _assigned_counts(client) -> dict[str, int]:
+    """지금까지 배정된 조건별 인원 — 테스트가 전역 DB 상태에 기대지 않기 위해 직접 읽는다."""
+    rows = client.get("/api/research/participants").json()["participants"]
+    counts = {c: 0 for c in STUDY_CONDITIONS}
+    for p in rows:
+        if p.get("studyCondition") in counts:
+            counts[p["studyCondition"]] += 1
+    return counts
+
+
 def test_consecutive_enrollments_get_different_conditions(client):
-    """**아무도 과제를 시작하기 전에** 연달아 등록해도 조건이 갈려야 한다.
+    """**아무도 과제를 시작하기 전에** 연달아 등록해도 배정이 계속 갈려야 한다.
 
     랩 세션/온라인 배치에서 참가자 여럿이 동시에 설문을 내는 건 정상 상황이다.
     배정을 '과제를 시작한 인원'으로 세면 이때 카운트가 전부 0이라 전원 같은 조건을
     받아버린다 (2026-07-28 라이브 스모크에서 실제로 3명 전원 baseline이 나왔다).
+
+    "3명이 서로 다른 조건"으로 단언하면 DB가 비어 있을 때만 성립한다. 테스트 모듈들이
+    임시 DB를 공유하는 구조라 다른 모듈이 만든 참가자가 이미 균형을 기울여 놓는다.
+    그래서 실제 불변식 — **매 배정이 그 시점의 최소 조건을 고른다** — 을 직접 검사한다.
+    이게 minimization의 정의이자 원래 버그(모두 같은 조건)를 그대로 잡아낸다.
     """
-    got = [enroll(client, f"cond-batch-{i}")["studyCondition"] for i in range(3)]
-    assert len(set(got)) == 3, f"세 명이 서로 다른 조건을 받아야 한다: {got}"
+    for i in range(len(STUDY_CONDITIONS) * 2):
+        before = _assigned_counts(client)
+        got = enroll(client, f"cond-batch-{i}")["studyCondition"]
+        lowest = min(before.values())
+        assert before[got] == lowest, (
+            f"{i}번째 배정이 최소 조건을 고르지 않았다: {got}(={before[got]}) vs {before}"
+        )
 
 
 def test_assignment_balances_across_participants(client):

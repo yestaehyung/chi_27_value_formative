@@ -84,6 +84,15 @@ def _migrate() -> None:
                 continue  # table will be created by create_all (already new name)
             if old in cols and new not in cols:
                 conn.exec_driver_sql(f"ALTER TABLE {table} RENAME COLUMN {old} TO {new}")
+        # 조건 슬러그 개명 (2026-08-06). baseline은 늘 "추론하되 미표시"였으므로 baseline2와
+        # 의미가 같고, correctable은 ours와 같다. explanation_only(표시하되 수정 불가)는
+        # 설계에서 폐기 — 매핑하지 않고 두면 ensure_condition이 다음 세션에서 재배정한다.
+        if {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(participants)")}:
+            for old_slug, new_slug in (("baseline", "baseline2"), ("correctable", "ours")):
+                conn.exec_driver_sql(
+                    "UPDATE participants SET study_condition = ? WHERE study_condition = ?",
+                    (new_slug, old_slug),
+                )
         conn.commit()
 
 

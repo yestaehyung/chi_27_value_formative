@@ -30,8 +30,10 @@ const DEMO_SCENARIOS = ["운동용 이어폰", "가성비 이어폰", "선물용
 /** 이 단계를 보여줄 조건. 생략하면 전 조건 공통. */
 type Step = SpotStep & { conditions?: StudyCondition[] };
 
-const SHOWS = (["explanation_only", "correctable"] as StudyCondition[]);
-const EDITS = (["correctable"] as StudyCondition[]);
+// 조건 맵에서 파생한다 — 여기에 슬러그를 다시 적으면 conditions.py와 어긋날 여지가 생긴다.
+// 2026-08-06 설계에서는 둘 다 ours 하나뿐이다(baseline1·baseline2 모두 기준을 보여주지 않음).
+const SHOWS = (Object.keys(SHOWS_CRITERIA) as StudyCondition[]).filter((c) => SHOWS_CRITERIA[c]);
+const EDITS = (Object.keys(ALLOWS_CORRECTION) as StudyCondition[]).filter((c) => ALLOWS_CORRECTION[c]);
 
 const ALL_STEPS: Step[] = [
   // ── 1부: 시나리오 선택 화면 ──
@@ -54,9 +56,6 @@ const ALL_STEPS: Step[] = [
   { selector: '[data-tutorial="criteria-confirm"]', title: "이해가 맞는지 물어봐요",
     body: "대화에서 파악한 기준을 하나씩 확인해요.\n맞으면 '맞아요', 아니면 '아니에요'로 알려주세요 — 틀리게 이해했으면 꼭 바로잡아 주세요.",
     conditions: EDITS },
-  { selector: '[data-tutorial="criteria-confirm"]', title: "이해한 내용을 알려드려요",
-    body: "대화에서 파악한 기준을 이렇게 보여드려요.\n어떻게 이해하고 있는지 확인해 보세요.",
-    conditions: (["explanation_only"] as StudyCondition[]) },
   { selector: '[data-tutorial="conflict"]', title: "기준이 부딪힐 때",
     body: "앞에서 말씀하신 기준과 다르게 고르신 것 같을 때, 한 번 더 확인해요.\n어느 쪽을 우선할지 골라주시면 바로 반영할게요.",
     conditions: EDITS },
@@ -79,7 +78,7 @@ export function stepsFor(condition: StudyCondition): Step[] {
 export default function TutorialDemo({
   onDone,
   onSkip,
-  condition = "correctable",
+  condition = "ours",
 }: {
   onDone: () => void;
   onSkip?: () => void;

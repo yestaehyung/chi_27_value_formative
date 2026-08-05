@@ -94,7 +94,7 @@ def test_turn_produces_non_hardcoded_hedged_summary():
 
     with TestClient(app) as c:
         sid = c.post("/api/sessions", json={
-            "mode": "manual", "scenarioId": "gift_for_other", "studyCondition": "correctable",
+            "mode": "manual", "scenarioId": "gift_for_other", "studyCondition": "ours",
         }).json()["sessionId"]
         out = c.post(f"/api/sessions/{sid}/turns", json={
             "role": "user",

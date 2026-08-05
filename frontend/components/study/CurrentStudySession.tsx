@@ -28,7 +28,7 @@ export default function CurrentStudySession() {
   const [busy, setBusy] = useState(false);
   const [evidenceTopic, setEvidenceTopic] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [condition, setCondition] = useState("correctable");
+  const [condition, setCondition] = useState("ours");
   const [scenarioTitle, setScenarioTitle] = useState("");
   const [initialNeed, setInitialNeed] = useState<string | null>(null);
   const [chipSuggestions, setChipSuggestions] = useState<string[] | null>(null);
@@ -54,7 +54,7 @@ export default function CurrentStudySession() {
       setTurns(d.turns);
       setState(d.preferenceState);
       setConflicts(d.conflicts);
-      setCondition((d.session.metadata?.studyCondition as string) ?? "correctable");
+      setCondition((d.session.metadata?.studyCondition as string) ?? "ours");
       setScenarioTitle(d.scenario?.title ?? "");
       setParticipantId(d.session?.participantId ?? "");
       setInitialNeed(d.scenario?.initialUserNeed || null);
@@ -222,8 +222,8 @@ export default function CurrentStudySession() {
     }
   }, [pendingFirst, sendMessage]);
 
-  const correctable = condition === "correctable";
-  const showState = condition !== "baseline";
+  const correctable = condition === "ours";
+  const showState = condition === "ours";
   const latestRecommendTurnId = Object.keys(impressionsByTurn).at(-1);
 
   // 로딩 단계 문구 — 실제 파이프라인 단계(발화 이해 → 가치/기준 파악 → 충돌 검사 → 추천 준비)를

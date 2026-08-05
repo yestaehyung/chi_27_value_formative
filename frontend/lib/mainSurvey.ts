@@ -239,6 +239,20 @@ export const POST_TASK: MSection[] = [
 // ─────────────────────────────────────────────────────────────────────
 export const POST_STUDY: MSection[] = [
   {
+    // 조건 중립 — 세 조건 모두에게 묻는다. 나머지 세 섹션은 전부 '기준을 화면에서 봤다'를
+    // 전제하므로 baseline1·baseline2에서는 필터링돼 사라진다. 그러면 조건을 가로지르는
+    // 종료 측정치가 하나도 남지 않아 between-subjects 비교 자체가 불가능해진다.
+    // 이 섹션이 그 공통 종속변인이다.
+    id: "overall",
+    title: "전반적 경험",
+    questions: [
+      lk("END_O1", "이 에이전트의 추천은 전반적으로 내 마음에 들었다."),
+      lk("END_O2", "이 에이전트는 내가 무엇을 원하는지 잘 파악했다."),
+      lk("END_O3", "이 에이전트를 신뢰할 수 있다고 느꼈다."),
+      lk("END_O4", "실제 쇼핑에서도 이런 에이전트를 사용하고 싶다."),
+    ],
+  },
+  {
     id: "interpretability",
     title: "해석의 이해 가능성",
     questions: [
@@ -270,19 +284,25 @@ export const POST_STUDY: MSection[] = [
 // 조건별 문항 필터 — 없는 기능의 사용성을 물으면 응답 자체가 무의미하다.
 // (통제감 문항 TPOST_U1/U2는 여기서 빼지 않는다: 그건 종속변인이라 baseline에서
 //  낮게 나오는 것이 결과다. "없어서 못 물음"과 "없어서 낮음"은 다르다.)
-export type StudyCondition = "baseline" | "explanation_only" | "correctable";
+export type StudyCondition = "baseline1" | "baseline2" | "ours";
 
+/** 의도 추론을 돌리는가. baseline1은 돌지 않으므로 '기준별 검증'(⑤)을 물을 수 없다. */
+export const INFERS_INTENTION: Record<StudyCondition, boolean> = {
+  baseline1: false,
+  baseline2: true,
+  ours: true,
+};
 /** 추론한 기준을 화면에 보여주는가 (백엔드 app/core/conditions.py와 짝) */
 export const SHOWS_CRITERIA: Record<StudyCondition, boolean> = {
-  baseline: false,
-  explanation_only: true,
-  correctable: true,
+  baseline1: false,
+  baseline2: false,
+  ours: true,
 };
 /** 기준을 확인·수정할 수 있는가 */
 export const ALLOWS_CORRECTION: Record<StudyCondition, boolean> = {
-  baseline: false,
-  explanation_only: false,
-  correctable: true,
+  baseline1: false,
+  baseline2: false,
+  ours: true,
 };
 
 /**
@@ -292,10 +312,11 @@ export const ALLOWS_CORRECTION: Record<StudyCondition, boolean> = {
  * 남는 섹션이 없으면 빈 배열 — 호출부가 설문 자체를 건너뛴다.
  */
 export function postStudySectionsFor(condition: StudyCondition | null | undefined): MSection[] {
-  const c = (condition ?? "correctable") as StudyCondition;
+  const c = (condition ?? "ours") as StudyCondition;
   const shows = SHOWS_CRITERIA[c] ?? true;
   const edits = ALLOWS_CORRECTION[c] ?? true;
   return POST_STUDY.filter((s) => {
+    if (s.id === "overall") return true; // 조건 중립 — 언제나 묻는다
     if (s.id === "edit_usability") return edits;
     return shows; // interpretability / evidence
   });

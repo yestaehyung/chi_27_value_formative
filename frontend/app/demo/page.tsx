@@ -34,7 +34,7 @@ export default function DemoStartPage() {
     setCreating(true);
     setError(null);
     try {
-      const res = await api.createSession(scenarioId, "correctable", custom, undefined, "demo");
+      const res = await api.createSession(scenarioId, "ours", custom, undefined, "demo");
       if (first) sessionStorage.setItem(`vc_first_${res.sessionId}`, first);
       router.push(`/demo/${res.sessionId}`);
     } catch (e) {
