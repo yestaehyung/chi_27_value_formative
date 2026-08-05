@@ -307,11 +307,20 @@ def _fallback_card(p: models.Product) -> dict:
 
 
 def _strip_markdown(text: str) -> str:
-    """Chat bubbles render plain text — remove markdown the LLM may emit anyway."""
+    """말풍선이 **렌더하지 못하는** 문법만 제거한다.
+
+    2026-08-06 이전에는 마크다운을 전부 지웠다(말풍선이 평문 렌더였으므로). 지금은
+    프론트 `StructuredText`가 불릿·번호 목록·표·굵게를 렌더하므로 그 넷은 남긴다 —
+    비교나 조건 정리처럼 구조가 도움이 되는 답변을 표·목록으로 낼 수 있어야 한다.
+
+    남는 제거 대상은 렌더러가 다루지 않는 것들이다. 지우지 않으면 참가자 화면에
+    '### 요약'이나 백틱이 글자 그대로 노출된다.
+    """
     import re
 
-    text = text.replace("**", "").replace("__", "").replace("`", "")
-    text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
+    text = text.replace("__", "").replace("`", "")
+    text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)   # 제목
+    text = re.sub(r"^\s*>\s?", "", text, flags=re.MULTILINE)     # 인용
     return text.strip()
 
 
