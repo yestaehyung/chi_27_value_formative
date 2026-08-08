@@ -171,6 +171,18 @@ def load_personas() -> list[dict]:
 
 
 def get_scenario(scenario_id: str) -> dict | None:
+    # 본실험의 참가자 선택 카테고리 세션(`cat:티셔츠`)은 scenarios.json에 없는 즉석
+    # 시나리오다. 여기서 id로부터 복원해야 세션 생성·조회·연구자 뷰가 전부 같은 모양을
+    # 본다 — 조회 경로가 {}를 돌려주면 프론트 설문 치환이 "이 상품군" 폴백으로 떨어진다.
+    if (scenario_id or "").startswith("cat:"):
+        category = scenario_id[len("cat:"):]
+        return {
+            "id": scenario_id,
+            "title": category,
+            "initialUserNeed": "",
+            "targetCategory": category,
+            "context": "참가자 선택 카테고리",
+        }
     return next((s for s in load_scenarios() if s["id"] == scenario_id), None)
 
 

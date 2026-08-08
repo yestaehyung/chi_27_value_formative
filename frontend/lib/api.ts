@@ -1,5 +1,5 @@
 // Thin API client — all calls proxied via Next.js rewrite to the FastAPI backend.
-import type { CategoryOption, Familiarity } from "@/lib/types";
+import type { CategoryOption } from "@/lib/types";
 
 // 연구자 키 (스터디 분리, 2026-07-02): 라이브 백엔드의 research/exports API는
 // X-Research-Key를 요구한다. 로컬 프론트를 라이브 백엔드에 물려 모니터링할 때
@@ -92,16 +92,13 @@ export const api = {
   categories: () =>
     request<{ categories: CategoryOption[] }>("/api/meta/categories"),
 
-  /** 본실험 세션 생성 — 시나리오 대신 카테고리 + 참가자가 매긴 친숙도로 연다. */
-  createCategorySession: (
-    category: string,
-    familiarity: Familiarity,
-    participantId?: string,
-  ) =>
+  /** 본실험 세션 생성 — 시나리오 대신 카테고리로 연다. 친숙도는 과제 직전
+   *  설문(TPRE_K1/K2)으로 측정하므로 여기서 보내지 않는다 (2026-08-08). */
+  createCategorySession: (category: string, participantId?: string) =>
     request<{ sessionId: string }>("/api/sessions", {
       method: "POST",
       // studyCondition은 보내지 않는다 — 서버가 참가자 단위로 균형 배정한다.
-      body: JSON.stringify({ mode: "manual", category, familiarity, participantId }),
+      body: JSON.stringify({ mode: "manual", category, participantId }),
     }),
 
   runSimulation: (scenarioId: string, userAgentProfileId: string, maxTurns = 8) =>

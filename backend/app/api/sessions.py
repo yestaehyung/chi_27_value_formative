@@ -26,13 +26,8 @@ def create_session(req: CreateSessionRequest, db: DbSession = Depends(get_db)):
         }
         if req.category not in available:
             raise HTTPException(404, f"unknown category: {req.category}")
-        scenario = {
-            "id": f"cat:{req.category}",
-            "title": req.category,
-            "initialUserNeed": "",
-            "targetCategory": req.category,
-            "context": "참가자 선택 카테고리",
-        }
+        # 모양은 get_scenario가 정의한다 — 조회(get_session·연구자 뷰)와 같은 복원 경로.
+        scenario = get_scenario(f"cat:{req.category}")
     elif req.scenarioId == "custom":
         # 회상 인터뷰 결과를 초기 맥락으로 사용 (FS1, weekly deck S55)
         scenario = {
@@ -74,7 +69,8 @@ def create_session(req: CreateSessionRequest, db: DbSession = Depends(get_db)):
             "studyCondition": study_condition,
             "category": scenario.get("targetCategory"),
             "shoppingGoal": scenario.get("title"),
-            # 참가자가 스스로 매긴 친숙도 — within-subjects 요인이라 세션에 남겨야 분석된다.
+            # (구버전 호환) 2026-08-08부터 프론트는 familiarity를 보내지 않는다 —
+            # 친숙도는 과제 직전 설문(TPRE_K1/K2)으로 측정한다.
             **({"familiarity": req.familiarity} if req.familiarity else {}),
             **({"customScenario": scenario} if req.scenarioId == "custom" and not req.category else {}),
         },

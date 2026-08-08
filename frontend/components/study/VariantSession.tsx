@@ -131,9 +131,7 @@ export default function VariantSession({
     if (!task || startingNext) return;
     setStartingNext(true);
     try {
-      const res = await api.createCategorySession(
-        task.category, task.familiarity, participantId || undefined,
-      );
+      const res = await api.createCategorySession(task.category, participantId || undefined);
       router.push(`/study/session/${res.sessionId}`);
     } catch (e) {
       console.error(e);

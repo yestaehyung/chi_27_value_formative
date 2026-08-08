@@ -1,44 +1,33 @@
-// 본실험 과제 큐 (2026-08-06) — 참가자가 고른 카테고리 4개를 순서대로 진행시킨다.
+// 본실험 과제 큐 (2026-08-06, 2026-08-08 무작위 순서로 개편) — 참가자가 고른
+// 카테고리 4개를 순서대로 진행시킨다.
 //
-// 왜 큐가 필요한가: 시나리오를 폐기하고 카테고리 선택으로 바꾸면서, "무엇을 몇 번째로
-// 하는가"가 참가자 자율이 아니라 **설계가 정하는 값**이 됐다. 매번 고르게 두면 자기선택
-// 편향(쉬워 보이는 것부터 고름)이 친숙도 요인과 교락된다.
+// 왜 큐가 필요한가: "무엇을 몇 번째로 하는가"가 참가자 자율이면 자기선택 편향(쉬워
+// 보이는 것부터 고름)이 생긴다. 순서는 설계가 정한다 — 무작위 셔플로 순서 효과를
+// 참가자 간에 상쇄한다.
+//
+// 친숙/비친숙 interleave는 폐기했다 (2026-08-08): 친숙도는 이제 선택 시점의 이분법
+// 자기신고가 아니라 과제 직전 설문(TPRE_K1/K2 "나는 {카테고리}에 대해 잘 알고 있다")
+// 으로 측정하는 값이라, 순서를 친숙도로 짤 근거 자체가 사라졌다.
 //
 // 저장 위치는 sessionStorage다. 서버(Participant)에 두는 편이 견고하지만, 과제 순서는
-// 세션마다 `session.meta.familiarity`로 이미 남으므로 분석에 필요한 정보는 서버에 있다.
+// 세션 생성 시각으로 서버에 이미 남으므로 분석에 필요한 정보는 서버에 있다.
 // 큐는 "다음에 무엇을 열까"라는 진행 상태일 뿐이라 클라이언트에 둔다.
 
-import type { Familiarity } from "@/lib/types";
-
-export type PlannedTask = { category: string; familiarity: Familiarity };
+export type PlannedTask = { category: string };
 
 const KEY = "vc:taskQueue";
 
 type StoredQueue = { participantId: string; tasks: PlannedTask[]; done: number };
 
-/** 친숙/비친숙을 번갈아 배치한다 — 앞뒤 순서 효과가 한쪽 친숙도에 몰리지 않게.
- *
- * 시작 유형은 참가자 id 해시로 정한다(무작위가 아니라 결정적). 참가자 절반은
- * 친숙한 것부터, 절반은 낯선 것부터 시작하므로 순서 효과가 두 수준에 균형 있게 걸린다.
- * 완전한 카운터밸런싱(4! = 24셀)은 표본이 감당 못 하므로, 통제해야 할 축(친숙도 × 순서)
- * 하나만 잡는 절충이다.
- */
-export function interleave(
-  familiar: string[],
-  unfamiliar: string[],
-  participantId: string,
-): PlannedTask[] {
-  const hash = Array.from(participantId).reduce((a, c) => a + c.charCodeAt(0), 0);
-  const familiarFirst = hash % 2 === 0;
-  const a: PlannedTask[] = familiar.map((c) => ({ category: c, familiarity: "familiar" }));
-  const b: PlannedTask[] = unfamiliar.map((c) => ({ category: c, familiarity: "unfamiliar" }));
-  const [first, second] = familiarFirst ? [a, b] : [b, a];
-  const out: PlannedTask[] = [];
-  for (let i = 0; i < Math.max(first.length, second.length); i++) {
-    if (first[i]) out.push(first[i]);
-    if (second[i]) out.push(second[i]);
+/** 과제 순서를 무작위로 정한다 (Fisher–Yates). 참가자마다 다른 순서가 나와
+ * 순서 효과(피로·학습)가 특정 카테고리에 몰리지 않는다. */
+export function randomOrder(categories: string[]): PlannedTask[] {
+  const arr = [...categories];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  return out;
+  return arr.map((category) => ({ category }));
 }
 
 export function saveQueue(participantId: string, tasks: PlannedTask[]): void {

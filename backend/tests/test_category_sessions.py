@@ -7,8 +7,11 @@
 여기서 지키는 것:
   ① 선택지는 DB에 상품이 실제로 있는 카테고리만
   ② 세션이 그 카테고리로 열리고, 검색 범위(meta.category)에 반영된다
-  ③ 참가자가 매긴 친숙도가 세션에 남는다 (within-subjects 요인)
+  ③ cat: 세션을 다시 열어도 scenario가 복원된다 — 과제 직전 설문의 {category} 치환 근거
   ④ 없는 카테고리는 404 — 조용히 빈 세션이 열리지 않는다
+
+(2026-08-08: 선택 시점 친숙도 이분법은 폐기 — 친숙도는 과제 직전 설문 TPRE_K1/K2로
+측정한다. 프론트는 familiarity를 더 보내지 않으므로 여기서도 검증하지 않는다.)
 """
 import os
 import tempfile
@@ -43,9 +46,7 @@ def test_categories_come_from_the_product_pool(client):
 def test_session_opens_on_chosen_category(client):
     """② 고른 카테고리가 세션의 검색 범위가 된다."""
     cat = client.get("/api/meta/categories").json()["categories"][0]["category"]
-    r = client.post("/api/sessions", json={
-        "mode": "manual", "category": cat, "familiarity": "familiar",
-    })
+    r = client.post("/api/sessions", json={"mode": "manual", "category": cat})
     assert r.status_code == 200, r.text
     sid = r.json()["sessionId"]
     meta = client.get(f"/api/sessions/{sid}").json()["session"]["metadata"]
@@ -53,21 +54,25 @@ def test_session_opens_on_chosen_category(client):
     assert meta["shoppingGoal"] == cat
 
 
-def test_familiarity_is_persisted(client):
-    """③ 친숙도는 참가자가 선택 시점에 주는 값이라 세션에 남아야 분석된다."""
+def test_category_scenario_survives_reload(client):
+    """③ cat: 세션을 다시 열어도 scenario가 복원된다.
+
+    cat: id는 scenarios.json에 없어서 조회가 {}를 돌려줬고, 과제 직전 설문의
+    "{category}" 치환이 "이 상품군" 폴백으로 떨어졌다 (2026-08-08 수정).
+    """
     cat = client.get("/api/meta/categories").json()["categories"][0]["category"]
-    for fam in ("familiar", "unfamiliar"):
-        sid = client.post("/api/sessions", json={
-            "mode": "manual", "category": cat, "familiarity": fam,
-        }).json()["sessionId"]
-        meta = client.get(f"/api/sessions/{sid}").json()["session"]["metadata"]
-        assert meta["familiarity"] == fam
+    sid = client.post("/api/sessions", json={
+        "mode": "manual", "category": cat,
+    }).json()["sessionId"]
+    scenario = client.get(f"/api/sessions/{sid}").json()["scenario"]
+    assert scenario.get("targetCategory") == cat, "설문 치환·헤더가 이 값에 걸려 있다"
+    assert scenario.get("title") == cat
 
 
 def test_unknown_category_is_rejected(client):
     """④ 상품이 없는 카테고리로는 세션이 열리지 않는다 — 빈 추천 세션 방지."""
     r = client.post("/api/sessions", json={
-        "mode": "manual", "category": "존재하지않는카테고리", "familiarity": "familiar",
+        "mode": "manual", "category": "존재하지않는카테고리",
     })
     assert r.status_code == 404
 
@@ -82,7 +87,7 @@ def test_category_session_recommends_within_category(client):
     """카테고리 세션에서 실제로 그 카테고리 상품이 추천된다 — 범위가 말뿐이 아님을 확인."""
     cat = client.get("/api/meta/categories").json()["categories"][0]["category"]
     sid = client.post("/api/sessions", json={
-        "mode": "manual", "category": cat, "familiarity": "familiar", "studyCondition": "ours",
+        "mode": "manual", "category": cat, "studyCondition": "ours",
     }).json()["sessionId"]
     out = client.post(f"/api/sessions/{sid}/turns",
                       json={"role": "user", "content": "추천해 주세요."}).json()
