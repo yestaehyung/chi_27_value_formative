@@ -45,7 +45,8 @@ export default function CurrentUnderstandingPanel({
     const isEditing = editing === chip.id;
     const isConfirmed = confirmed[chip.id];
     return (
-      <div key={chip.id} className="rounded-xl border border-[#e8eaed] bg-white px-3 py-2.5">
+      // msg-in: 새로 파악된 기준만 떠오르며 등장한다 — 기존 칩은 key(chip.id)로 유지되어 재생 안 됨
+      <div key={chip.id} className="msg-in rounded-xl border border-[#e8eaed] bg-white px-3 py-2.5">
         {/* 라벨 + 타입 배지 + 근거 수 */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 text-xs leading-snug">
@@ -88,14 +89,14 @@ export default function CurrentUnderstandingPanel({
                 </span>
               ) : (
                 <button
-                  className="btn border-emerald-300 px-2.5 py-1 text-xs text-emerald-700 hover:bg-emerald-50"
+                  className="btn border-emerald-300 px-2.5 py-1.5 text-xs text-emerald-700 hover:bg-emerald-50"
                   onClick={() => { onChipAction(chip.id, "confirm"); setConfirmed((c) => ({ ...c, [chip.id]: true })); }}
                 >
                   ✓ 맞아요
                 </button>
               )}
               <button
-                className="btn border-rose-200 px-2.5 py-1 text-xs text-rose-600 hover:bg-rose-50"
+                className="btn border-rose-200 px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50"
                 onClick={() => onChipAction(chip.id, "reject")}
               >
                 ✗ 아니에요
@@ -103,14 +104,17 @@ export default function CurrentUnderstandingPanel({
             </div>
 
             {/* 보조 — 중요도 / 수정 / 근거. 전부 노출하되 작게/muted 로 위계 구분 */}
-            <div className="-mb-1 mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-[#9aa0a6]">
+            {/* 히트 영역: 작은 텍스트 버튼이지만 패딩으로 터치 타깃을 키운다 (서로 인접해
+                40px 정사각은 겹치므로, 충돌 없는 한도까지). scale은 transition 대상에 포함
+                — 없으면 눌림이 뚝 끊긴다. */}
+            <div className="-mb-1 mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-1 text-[11px] text-[#9aa0a6]">
               <span className="flex items-center gap-0.5">
                 중요도
-                <button className="rounded px-1.5 py-1 transition-colors duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.9]" title="중요도 낮춤" onClick={() => onChipAction(chip.id, "decrease_priority")}>⬇</button>
-                <button className="rounded px-1.5 py-1 transition-colors duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.9]" title="중요도 높임" onClick={() => onChipAction(chip.id, "increase_priority")}>⬆</button>
+                <button className="rounded-md px-2 py-1.5 transition-[color,background-color,scale] duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.96]" title="중요도 낮춤" onClick={() => onChipAction(chip.id, "decrease_priority")}>⬇</button>
+                <button className="rounded-md px-2 py-1.5 transition-[color,background-color,scale] duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.96]" title="중요도 높임" onClick={() => onChipAction(chip.id, "increase_priority")}>⬆</button>
               </span>
-              <button className="rounded px-1.5 py-1 transition-colors duration-150 hover:text-[#4f46e5] active:scale-[0.96]" onClick={() => { setEditing(chip.id); setEditText(chip.label); }}>수정</button>
-              <button className="rounded px-1.5 py-1 transition-colors duration-150 hover:text-[#4f46e5] active:scale-[0.96]" data-tutorial="evidence" onClick={() => onShowEvidence(chip.id)}>근거</button>
+              <button className="rounded-md px-2 py-1.5 transition-[color,scale] duration-150 hover:text-[#4f46e5] active:scale-[0.96]" onClick={() => { setEditing(chip.id); setEditText(chip.label); }}>수정</button>
+              <button className="rounded-md px-2 py-1.5 transition-[color,scale] duration-150 hover:text-[#4f46e5] active:scale-[0.96]" data-tutorial="evidence" onClick={() => onShowEvidence(chip.id)}>근거</button>
             </div>
           </>
         )}

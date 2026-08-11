@@ -32,6 +32,7 @@ import ProductListRow from "@/components/products/ProductListRow";
 import { FeedbackPayload } from "@/components/products/ProductFeedbackButtons";
 import ConflictCard from "@/components/preference/ConflictCard";
 import ChipTypeBadge from "@/components/preference/ChipTypeBadge";
+import CurrentUnderstandingPanel from "@/components/preference/CurrentUnderstandingPanel";
 import EvidenceDrawer from "@/components/preference/EvidenceDrawer";
 import SimpleUnderstandingPanel from "@/components/preference/SimpleUnderstandingPanel";
 import SurveyModal from "@/components/study/SurveyModal";
@@ -100,6 +101,11 @@ export default function VariantSession({
   const showsCriteria = !study || (condition ? SHOWS_CRITERIA[condition] : false);
   const allowsCorrection = !study || (condition ? ALLOWS_CORRECTION[condition] : false);
   const infersIntention = !study || (condition ? INFERS_INTENTION[condition] : false);
+  // 본실험 사이드바 (2026-08-08) — 기준·충돌 외재화가 채팅 인라인(안 E)에서 우측 패널로
+  // 이동했다. ours 조건에서만 켜지고, 켜지면 E의 인라인 위젯(순차확인·충돌발화·앵커바)은
+  // 중복 표면이므로 끈다. baseline1·2는 사이드바 자체가 없다(빈 패널을 보여주면 "뭔가
+  // 숨겨져 있다"는 힌트가 되어 조건이 오염된다).
+  const studySidebar = study && showsCriteria;
   // 과제 큐 — 카테고리 선택 화면이 세운 4과제 계획의 남은 개수 (lib/taskQueue.ts)
   const [queueLeft, setQueueLeft] = useState(0);
   const [startingNext, setStartingNext] = useState(false);
@@ -131,7 +137,9 @@ export default function VariantSession({
     if (!task || startingNext) return;
     setStartingNext(true);
     try {
-      const res = await api.createCategorySession(task.category, participantId || undefined);
+      const res = await api.createCategorySession(
+        task.category, task.familiarity, participantId || undefined,
+      );
       router.push(`/study/session/${res.sessionId}`);
     } catch (e) {
       console.error(e);
@@ -414,7 +422,7 @@ export default function VariantSession({
               onClick={copyConversation}
               disabled={turns.length === 0}
               title="대화 내용을 클립보드에 복사"
-              className="rounded-lg border border-[#e4e8eb] px-2 py-1 text-xs text-[#5f6368] transition-colors hover:border-[#4f46e5] hover:text-[#4f46e5] disabled:opacity-40"
+              className="rounded-lg border border-[#e4e8eb] px-2 py-1.5 text-xs text-[#5f6368] transition-[color,border-color,scale] duration-150 hover:border-[#4f46e5] hover:text-[#4f46e5] active:scale-[0.96] disabled:opacity-40"
             >
               <span className="sm:hidden">📋</span>
               <span className="hidden sm:inline">📋 대화 복사</span>
@@ -517,7 +525,7 @@ export default function VariantSession({
             {/* 안 E — 순차 확인: '물어볼 것(추론/불확실 기준)'이 있을 때만 띄운다.
                 충돌이 열려 있으면(conflicts>0) 충돌 해소가 곧 기준 정리이므로 확인 위젯을
                 겹쳐 띄우지 않는다 — '충돌+기준확인' 이중 질문 방지. */}
-            {variant === "e" && showsCriteria && t.id === latestAgentTurnId && eAskable.length > 0 && !busy && conflicts.length === 0 && (
+            {variant === "e" && showsCriteria && !studySidebar && t.id === latestAgentTurnId && eAskable.length > 0 && !busy && conflicts.length === 0 && (
               <div className="msg-in mt-3">
                 <SequentialCriteriaConfirm
                   askable={eAskable}
@@ -543,8 +551,9 @@ export default function VariantSession({
             />
           </div>
         ))}
-        {/* 안 E — conflict 발화 + 옵션 칩 (ConflictUtterance — ConflictCard 비사용, manual_edit 제외) */}
-        {variant === "e" && showsCriteria && conflicts.map((c) => (
+        {/* 안 E — conflict 발화 + 옵션 칩 (ConflictUtterance — ConflictCard 비사용, manual_edit 제외).
+            본실험 사이드바가 켜져 있으면 충돌은 패널의 ConflictCard가 담당한다. */}
+        {variant === "e" && showsCriteria && !studySidebar && conflicts.map((c) => (
           <div key={c.id} className="msg-in">
             <ConflictUtterance
               conflict={c}
@@ -560,7 +569,7 @@ export default function VariantSession({
 
       {/* 안 B·E — 입력창 위 접힌 한 줄 앵커: "이해한 기준: 착용감 · 가성비 ▾".
           사이드바 없이 '지금 전체 이해'를 한눈에(Q2). E는 확인 상태(✓)까지 앵커에 반영. */}
-      {(variant === "b" || variant === "e") && showsCriteria && core.length > 0 && (
+      {(variant === "b" || variant === "e") && showsCriteria && !studySidebar && core.length > 0 && (
         <div className="border-t border-[#f0f2f4] bg-[#fafbfc] px-5 py-2">
           <button
             onClick={() => { setAnchorOpen((v) => !v); setShowAllCriteria(false); }}
@@ -626,20 +635,46 @@ export default function VariantSession({
     </div>
   );
 
+  // ----- 본실험 사이드 패널 (2026-08-08) — 이전 사이드바 UI(CurrentStudySession)에서
+  // 방사형 그래프 2종(가치·동기)만 뺀 것. 충돌 카드가 위, 기준 칩(맞아요/아니에요·
+  // 중요도·수정·근거)이 아래. 근거 클릭은 EvidenceDrawer + DG3 inspect 로깅.
+  const studyPanel = (
+    <div className="min-h-0 space-y-3 overflow-y-auto pb-4 pr-1">
+      {conflicts.map((c) => (
+        <ConflictCard
+          key={c.id}
+          conflict={c}
+          onResolve={(optionId, manualText) => resolveConflict(c.id, optionId, manualText)}
+          disabled={busy}
+        />
+      ))}
+
+      <CurrentUnderstandingPanel
+        state={state}
+        showRadar={false}
+        editable={allowsCorrection}
+        onChipAction={chipAction}
+        onShowEvidence={(id) => { setEvidenceTopic(id); api.logInspect(sessionId, id).catch(() => {}); }}
+      />
+    </div>
+  );
+
+  const withSidebar = variant === "c" || studySidebar;
+
   return (
     <>
       {/* 카드 높이 = 뷰포트 − 스터디 레이아웃 여백(모바일 py-3=1.5rem, 데스크톱 py-6=3rem).
           헤더가 없으므로 여백만 빼면 카드가 정확히 화면을 채운다(아래 공백 제거). */}
-      {variant === "c" ? (
+      {withSidebar ? (
         <div className="grid h-[calc(100dvh-1.5rem)] grid-cols-1 gap-4 sm:h-[calc(100dvh-3rem)] lg:grid-cols-[minmax(0,1fr)_440px]">
           {chatCard}
-          {lightPanel}
+          {studySidebar ? studyPanel : lightPanel}
         </div>
       ) : (
         <div className="mx-auto flex h-[calc(100dvh-1.5rem)] max-w-5xl flex-col sm:h-[calc(100dvh-3rem)]">{chatCard}</div>
       )}
 
-      {variant === "c" && (
+      {withSidebar && (
         <EvidenceDrawer topicId={evidenceTopic} onClose={() => setEvidenceTopic(null)} />
       )}
 

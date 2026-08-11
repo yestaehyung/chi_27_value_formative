@@ -41,7 +41,7 @@ export function QuestionRow({
                   type="button"
                   onClick={() => onChange(String(n))}
                   aria-pressed={on}
-                  className={`h-9 flex-1 rounded-md border text-xs font-semibold tabular-nums transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] ${
+                  className={`h-10 flex-1 rounded-md border text-xs font-semibold tabular-nums transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] ${
                     on
                       ? "border-[#4f46e5] bg-[#4f46e5] text-white"
                       : "border-[#e4e8eb] text-slate-600 hover:border-[#4f46e5]"

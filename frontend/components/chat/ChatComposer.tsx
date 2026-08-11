@@ -102,7 +102,7 @@ export default function ChatComposer({
             style={{ backgroundColor: brand }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = brandHover)}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = brand)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-[scale] duration-150 active:scale-[0.92]"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-[scale] duration-150 active:scale-[0.96]"
           >
             <span className="block h-3 w-3 rounded-[3px] bg-white" />
           </button>
@@ -114,7 +114,7 @@ export default function ChatComposer({
             style={canSend ? { backgroundColor: brand } : { backgroundColor: "#e4e8eb", color: "#b0b8c1" }}
             onMouseEnter={(e) => canSend && (e.currentTarget.style.backgroundColor = brandHover)}
             onMouseLeave={(e) => canSend && (e.currentTarget.style.backgroundColor = brand)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-[scale] duration-150 enabled:active:scale-[0.92]"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-white transition-[scale] duration-150 enabled:active:scale-[0.96]"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="19" x2="12" y2="5" /><polyline points="6 11 12 5 18 11" />

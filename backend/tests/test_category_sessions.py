@@ -9,9 +9,7 @@
   ② 세션이 그 카테고리로 열리고, 검색 범위(meta.category)에 반영된다
   ③ cat: 세션을 다시 열어도 scenario가 복원된다 — 과제 직전 설문의 {category} 치환 근거
   ④ 없는 카테고리는 404 — 조용히 빈 세션이 열리지 않는다
-
-(2026-08-08: 선택 시점 친숙도 이분법은 폐기 — 친숙도는 과제 직전 설문 TPRE_K1/K2로
-측정한다. 프론트는 familiarity를 더 보내지 않으므로 여기서도 검증하지 않는다.)
+  ⑤ 참가자가 매긴 친숙도(2+2)가 세션에 남는다 — within-subjects 요인
 """
 import os
 import tempfile
@@ -67,6 +65,17 @@ def test_category_scenario_survives_reload(client):
     scenario = client.get(f"/api/sessions/{sid}").json()["scenario"]
     assert scenario.get("targetCategory") == cat, "설문 치환·헤더가 이 값에 걸려 있다"
     assert scenario.get("title") == cat
+
+
+def test_familiarity_is_persisted(client):
+    """⑤ 친숙도는 참가자가 선택 시점에 주는 값이라 세션에 남아야 분석된다."""
+    cat = client.get("/api/meta/categories").json()["categories"][0]["category"]
+    for fam in ("familiar", "unfamiliar"):
+        sid = client.post("/api/sessions", json={
+            "mode": "manual", "category": cat, "familiarity": fam,
+        }).json()["sessionId"]
+        meta = client.get(f"/api/sessions/{sid}").json()["session"]["metadata"]
+        assert meta["familiarity"] == fam
 
 
 def test_unknown_category_is_rejected(client):

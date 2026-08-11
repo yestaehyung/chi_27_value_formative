@@ -2,9 +2,11 @@
 
 // 튜토리얼 본문 — 화면 전환형 코치마크 (재사용 컴포넌트).
 //
-// 2026-07-27: 사이드 패널이 사라진 E UI에 맞춰 2부를 다시 짰다. 이전 버전은 오른쪽 440px
-// 패널(CurrentUnderstandingPanel + ConflictCard + 레이더 그래프)을 설명했는데, 그 화면은
-// 더 이상 존재하지 않는다 — 참가자가 없는 UI를 찾게 되므로 반드시 실제 화면과 같아야 한다.
+// 2026-08-11: 본실험 UI 개편에 맞춰 다시 짰다. 참가자가 실제로 만나는 화면과 반드시
+// 같아야 한다 — 없는 UI를 가르치면 참가자가 그걸 찾다가 길을 잃는다.
+//   1부  카테고리 선택 (2단계: 잘 아는 것 2개 → 잘 모르는 것 2개, 순서는 무작위)
+//   2부  대화 화면 — ours는 채팅 + 우측 사이드바(기준 칩·충돌 카드, 레이더 없음),
+//        baseline1·2는 사이드바 없는 단일 컬럼
 //
 // 조건(between-subjects)별로 보여줄 단계가 다르다. 기준을 안 보여주는 baseline 참가자에게
 // '기준 확인' 단계를 설명하면 조작(manipulation) 자체가 깨진다 — STEPS의 `conditions`로 거른다.
@@ -14,8 +16,8 @@ import ChatComposer from "@/components/chat/ChatComposer";
 import MessageBubble from "@/components/chat/MessageBubble";
 import ProductCard from "@/components/products/ProductCard";
 import ProductCarousel from "@/components/products/ProductCarousel";
-import ConflictUtterance from "@/components/study/ConflictUtterance";
-import SequentialCriteriaConfirm from "@/components/study/SequentialCriteriaConfirm";
+import ConflictCard from "@/components/preference/ConflictCard";
+import CurrentUnderstandingPanel from "@/components/preference/CurrentUnderstandingPanel";
 import Spotlight, { SpotStep } from "@/components/tutorial/Spotlight";
 import { ALLOWS_CORRECTION, SHOWS_CRITERIA, type StudyCondition } from "@/lib/mainSurvey";
 import {
@@ -25,7 +27,13 @@ import {
   tutorialTurns,
 } from "@/lib/tutorialFixtures";
 
-const DEMO_SCENARIOS = ["운동용 이어폰", "가성비 이어폰", "선물용 이어폰", "겨울 코트", "생일 선물"];
+// 카테고리 선택 미리보기 더미 — 실제 풀과 같은 이름을 쓰되, 여기서는 표시만 한다.
+const DEMO_CATEGORIES = [
+  { name: "블루투스 스피커", blurb: "집·야외에서 쓸 무선 스피커", on: true },
+  { name: "티셔츠", blurb: "일상에서 입을 티셔츠", on: true },
+  { name: "책상", blurb: "작업용 책상", on: false },
+  { name: "데스크체어", blurb: "오래 앉아 일할 의자", on: false },
+];
 
 /** 이 단계를 보여줄 조건. 생략하면 전 조건 공통. */
 type Step = SpotStep & { conditions?: StudyCondition[] };
@@ -36,13 +44,11 @@ const SHOWS = (Object.keys(SHOWS_CRITERIA) as StudyCondition[]).filter((c) => SH
 const EDITS = (Object.keys(ALLOWS_CORRECTION) as StudyCondition[]).filter((c) => ALLOWS_CORRECTION[c]);
 
 const ALL_STEPS: Step[] = [
-  // ── 1부: 시나리오 선택 화면 ──
-  { selector: '[data-tutorial="compose"]', title: "직접 입력해서 시작해요",
-    body: "찾으시는 걸 여기에 적어 바로 시작할 수 있어요.\n예: \"운동할 때 쓸 무선 이어폰 추천해줘\"" },
-  { selector: '[data-tutorial="scenarios"]', title: "또는 골라서 시작해요",
-    body: "딱히 떠오르지 않으면, 아래 추천 중 하나를 눌러 시작해도 돼요." },
+  // ── 1부: 카테고리 선택 화면 ──
+  { selector: '[data-tutorial="categories"]', title: "쇼핑할 상품군을 먼저 골라요",
+    body: "평소 잘 아는 상품군 2개 → 잘 모르는 상품군 2개, 두 단계로 골라요.\n고른 4개를 무작위 순서로 한 번씩 쇼핑하게 돼요." },
 
-  // ── 2부: 대화 화면 (E UI — 한 컬럼, 사이드 패널 없음) ──
+  // ── 2부: 대화 화면 ──
   { selector: '[data-tutorial="chat"]', title: "에이전트와 대화해요",
     body: "원하는 걸 대화로 좁혀가요.\n에이전트가 더 묻거나 후보를 추천해줘요. (위는 예시 대화예요)" },
   { selector: '[data-tutorial="products"]', title: "추천 상품",
@@ -52,19 +58,19 @@ const ALL_STEPS: Step[] = [
   { selector: '[data-tutorial="card-feedback"]', title: "카드에 반응해요",
     body: "카드 옆 좋아요·싫어요로 취향을 알려주세요.\n반응할수록 추천이 정확해져요." },
 
-  // 조건 의존 — baseline은 기준을 화면에서 보지 않는다
-  { selector: '[data-tutorial="criteria-confirm"]', title: "이해가 맞는지 물어봐요",
-    body: "대화에서 파악한 기준을 하나씩 확인해요.\n맞으면 '맞아요', 아니면 '아니에요'로 알려주세요 — 틀리게 이해했으면 꼭 바로잡아 주세요.",
-    conditions: EDITS },
-  { selector: '[data-tutorial="conflict"]', title: "기준이 부딪힐 때",
-    body: "앞에서 말씀하신 기준과 다르게 고르신 것 같을 때, 한 번 더 확인해요.\n어느 쪽을 우선할지 골라주시면 바로 반영할게요.",
-    conditions: EDITS },
-  { selector: '[data-tutorial="anchor"]', title: "지금까지 이해한 기준",
-    body: "입력창 위 한 줄에 현재 기준이 모여 있어요.\n펼치면 전체 목록과 '근거'를 볼 수 있어요.",
+  // 조건 의존 — baseline은 기준을 화면에서 보지 않는다 (사이드바 자체가 없음)
+  { selector: '[data-tutorial="panel"]', title: "오른쪽: 제가 이해한 기준",
+    body: "대화에서 파악한 기준이 옆 패널에 실시간으로 쌓여요.\n지금 어떤 기준으로 추천하고 있는지 언제든 확인할 수 있어요.",
     conditions: SHOWS },
-  { selector: '[data-tutorial="anchor"]', title: "왜 그렇게 이해했는지",
+  { selector: '[data-tutorial="criteria"]', title: "맞는지 알려주세요",
+    body: "기준마다 '맞아요/아니에요'로 확인하고, 중요도를 조절하거나 문구를 직접 수정할 수 있어요.\n틀리게 이해했으면 꼭 바로잡아 주세요 — 다음 추천에 바로 반영돼요.",
+    conditions: EDITS },
+  { selector: '[data-tutorial="evidence"]', title: "왜 그렇게 이해했는지",
     body: "'근거'를 누르면, 제가 어떤 말·선택을 보고 그렇게 판단했는지 확인할 수 있어요.",
     conditions: SHOWS },
+  { selector: '[data-tutorial="conflict"]', title: "기준이 부딪힐 때",
+    body: "앞에서 말씀하신 기준과 다르게 고르신 것 같을 때, 패널 위에 확인 카드가 떠요.\n어느 쪽을 우선할지 골라주시면 바로 반영할게요.",
+    conditions: EDITS },
 
   // 전 조건 공통 — 설문 흐름 예고 (모르고 있다가 만나면 이탈 지점이 된다)
   { selector: '[data-tutorial="composer"]', title: "쇼핑을 마치면",
@@ -86,11 +92,10 @@ export default function TutorialDemo({
 }) {
   const [step, setStep] = useState(0);
   const steps = stepsFor(condition);
-  const inSelect = step <= 1; // 0~1 = 시나리오 선택 화면, 2~ = 대화 화면
+  const inSelect = step === 0; // 0 = 카테고리 선택 화면, 1~ = 대화 화면
   const showsCriteria = SHOWS_CRITERIA[condition] ?? true;
   const allowsCorrection = ALLOWS_CORRECTION[condition] ?? true;
 
-  const chips = tutorialPreferenceState.userVisibleSummary.chips;
   const noop = async () => true;
 
   return (
@@ -103,91 +108,94 @@ export default function TutorialDemo({
       </div>
 
       {inSelect ? (
-        /* ── 1부: 시나리오 선택 화면 (더미) ── */
+        /* ── 1부: 카테고리 선택 화면 (더미) — 실제 /study/categories 1단계와 같은 모양 ── */
         <div className="flex min-h-[calc(100dvh-12rem)] flex-col items-center justify-center">
-          <div className="w-full max-w-2xl px-4">
-            <h2 className="text-center text-2xl font-bold tracking-tight text-[#191919]">
-              <span className="text-[#4f46e5]">에이전트와 쇼핑</span>을 시작해 볼까요?
-            </h2>
-            <p className="mt-2 text-center text-sm text-[#9aa0a6]">
-              찾으시는 걸 입력하거나, 아래 추천에서 골라 시작해 보세요.
+          <div className="w-full max-w-2xl px-4" data-tutorial="categories">
+            <div className="text-[11px] font-semibold tabular-nums text-[#9aa0a6]">1단계 / 2단계</div>
+            <h2 className="mt-1 text-xl font-bold text-[#191919]">평소 잘 아는 상품군 2개를 골라 주세요</h2>
+            <p className="mt-2 text-sm leading-relaxed text-[#5f6368]">
+              상품을 고를 때 무엇을 봐야 하는지 스스로 잘 안다고 느끼는 쪽이에요.
             </p>
-            <div className="mt-7" data-tutorial="compose">
-              <ChatComposer onSend={() => {}} disabled placeholder="무엇을 찾고 계세요?" disclaimer={false} />
-            </div>
-            <div className="mt-5 flex flex-wrap justify-center gap-2" data-tutorial="scenarios">
-              {DEMO_SCENARIOS.map((s) => (
-                <span key={s} className="rounded-full border border-[#e4e8eb] bg-white px-4 py-2 text-sm text-[#404040]">
-                  {s}
-                </span>
+            <div className="mt-5 space-y-2">
+              {DEMO_CATEGORIES.map((c) => (
+                <div
+                  key={c.name}
+                  className={`flex items-center gap-3 rounded-xl border p-3 ${
+                    c.on ? "border-[#4f46e5] bg-[#f5f5ff]" : "border-[#e4e8eb] bg-white"
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-[#191919]">{c.name}</div>
+                    <div className="mt-0.5 text-xs text-[#9aa0a6]">{c.blurb}</div>
+                  </div>
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold ${
+                      c.on ? "border-[#4f46e5] bg-[#4f46e5] text-white" : "border-[#d5d9dd] text-transparent"
+                    }`}
+                    aria-hidden
+                  >
+                    ✓
+                  </span>
+                </div>
               ))}
             </div>
           </div>
         </div>
       ) : (
-        /* ── 2부: 대화 화면 (더미) — 실제 E UI와 같은 한 컬럼 구조.
+        /* ── 2부: 대화 화면 (더미) — 실제 세션 UI와 같은 구조.
+              ours: 채팅 + 우측 사이드바 / baseline: 단일 컬럼.
               no-enter-anim: 한 번에 보여주므로 등장 애니 끔 ── */
-        <div className="no-enter-anim mx-auto flex h-[calc(100dvh-12rem)] max-w-3xl flex-col overflow-hidden rounded-2xl border border-[#eef0f2] bg-white">
-          <div className="flex-1 space-y-3 overflow-y-auto p-4">
-            <div data-tutorial="chat" className="space-y-3">
-              {tutorialTurns.map((t) => (
-                <MessageBubble key={t.id} turn={t} />
-              ))}
-            </div>
-
-            <div data-tutorial="products" className="pl-9">
-              <ProductCarousel>
-                {tutorialImpressions.map((imp, i) => (
-                  <ProductCard
-                    key={imp.id}
-                    impression={imp}
-                    index={i}
-                    givenFeedback={[]}
-                    onFeedback={() => {}}
-                    disabled
-                  />
+        <div
+          className={`no-enter-anim mx-auto grid h-[calc(100dvh-12rem)] gap-4 ${
+            showsCriteria ? "max-w-6xl grid-cols-1 lg:grid-cols-[minmax(0,1fr)_440px]" : "max-w-3xl grid-cols-1"
+          }`}
+        >
+          <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[#eef0f2] bg-white">
+            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+              <div data-tutorial="chat" className="space-y-3">
+                {tutorialTurns.map((t) => (
+                  <MessageBubble key={t.id} turn={t} />
                 ))}
-              </ProductCarousel>
+              </div>
+
+              <div data-tutorial="products" className="pl-9">
+                <ProductCarousel>
+                  {tutorialImpressions.map((imp, i) => (
+                    <ProductCard
+                      key={imp.id}
+                      impression={imp}
+                      index={i}
+                      givenFeedback={[]}
+                      onFeedback={() => {}}
+                      disabled
+                    />
+                  ))}
+                </ProductCarousel>
+              </div>
             </div>
 
-            {/* 기준 확인 — 채팅 안 인라인 (조건에 따라 노출) */}
-            {showsCriteria && (
-              <div data-tutorial="criteria-confirm" className="pl-9">
-                <SequentialCriteriaConfirm
-                  askable={chips.slice(0, 2)}
-                  alreadyKnown={chips.slice(2, 4)}
-                  onConfirm={noop}
-                  onReject={noop}
-                  onSaveEdit={noop}
-                  disabled
-                />
-              </div>
-            )}
-
-            {/* 충돌 — 에이전트 말풍선 (수정 가능 조건만) */}
-            {allowsCorrection && (
-              <div data-tutorial="conflict">
-                <ConflictUtterance conflict={tutorialConflict} onResolve={() => {}} disabled />
-              </div>
-            )}
+            <div data-tutorial="composer" className="border-t border-[#f0f2f4] p-3">
+              <ChatComposer onSend={() => {}} disabled placeholder="무엇을 찾고 계세요?" />
+            </div>
           </div>
 
-          {/* 입력창 위 한 줄 앵커 — 실제 화면과 동일 위치 */}
+          {/* 우측 사이드바 — 실제 studyPanel과 동일 구성 (충돌 카드 + 기준 패널, 레이더 없음) */}
           {showsCriteria && (
-            <div data-tutorial="anchor" className="border-t border-[#f0f2f4] bg-[#fafbfc] px-5 py-2">
-              <div className="flex w-full items-center gap-1.5 text-left text-xs text-[#5f6368]">
-                <span className="font-semibold text-[#9aa0a6]">이해한 기준:</span>
-                <span className="min-w-0 flex-1 truncate font-medium text-[#191919]">
-                  {chips.slice(0, 3).map((c) => (c.status === "confirmed" ? "✓ " : "") + c.label).join(" · ")}
-                </span>
-                <span className="shrink-0 text-[#9aa0a6]">▾</span>
-              </div>
+            <div data-tutorial="panel" className="min-h-0 space-y-3 overflow-y-auto pb-4 pr-1">
+              {allowsCorrection && (
+                <div data-tutorial="conflict">
+                  <ConflictCard conflict={tutorialConflict} onResolve={() => {}} disabled />
+                </div>
+              )}
+              <CurrentUnderstandingPanel
+                state={tutorialPreferenceState}
+                showRadar={false}
+                editable={allowsCorrection}
+                onChipAction={noop}
+                onShowEvidence={() => {}}
+              />
             </div>
           )}
-
-          <div data-tutorial="composer" className="border-t border-[#f0f2f4] p-3">
-            <ChatComposer onSend={() => {}} disabled placeholder="무엇을 찾고 계세요?" />
-          </div>
         </div>
       )}
 

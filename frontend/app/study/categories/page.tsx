@@ -1,15 +1,16 @@
 "use client";
 
-// 본실험 카테고리 선택 화면 (2026-08-06, 2026-08-08 개편) — 시나리오 선택을 대체한다.
+// 본실험 카테고리 선택 화면 (2026-08-06 · 2026-08-08 2단계 개편) — 시나리오 선택을 대체.
 //
-// 참가자는 쇼핑해 볼 상품군 4개를 고르고, 순서는 무작위로 정해진다. 예전의
-// "잘 알아요/잘 몰라요" 이분법 분류는 폐기 — 친숙도는 각 과제 직전 설문
-// (TPRE_K1/K2 "나는 {카테고리}에 대해 잘 알고 있다")으로 측정한다. 선택 시점
-// 이분법은 측정으로서 조악하고(경계 카테고리를 강제로 한쪽에 배정), 설문 문항과
-// 이중 측정이 됐다.
+// 2단계 플로우:
+//   1단계  평소 잘 아는 상품군 2개 선택
+//   2단계  (남은 것 중) 잘 모르는 상품군 2개 선택
+//   → 4개를 무작위 순서로 섞어 첫 쇼핑 시작
 //
-// 선택지 개수는 N개 일반형으로 짰다 — 지금은 상품 풀이 4개라 사실상 전부 고르게 되지만,
-// 카테고리를 늘리면 이 화면은 그대로 두고도 진짜 '선택'이 된다.
+// 왜 두 단계로 나누나: 한 화면에서 카드마다 "잘 알아요/잘 몰라요"를 고르게 하면 두
+// 판단이 섞여 기준이 흐려진다. 단계를 나누면 참가자가 한 번에 한 질문("아는 것은?" →
+// "모르는 것은?")만 생각한다. 친숙도는 within-subjects 요인으로 세션에 남고, 과제 직전
+// 설문(TPRE_K1/K2)이 이 이분법의 조작 점검이 된다.
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -17,13 +18,15 @@ import { api } from "@/lib/api";
 import { randomOrder, saveQueue } from "@/lib/taskQueue";
 import type { CategoryOption } from "@/lib/types";
 
-const NEED_TOTAL = 4; // 쇼핑 과제 수
+const NEED_PER_SIDE = 2; // 친숙 2 + 비친숙 2
 
 export default function CategorySelectPage() {
   const router = useRouter();
   const [options, setOptions] = useState<CategoryOption[]>([]);
   const [participantId, setParticipantId] = useState("");
-  const [picked, setPicked] = useState<string[]>([]);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [familiar, setFamiliar] = useState<string[]>([]);
+  const [unfamiliar, setUnfamiliar] = useState<string[]>([]);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,27 +37,39 @@ export default function CategorySelectPage() {
       .catch(() => setError("카테고리를 불러오지 못했어요. 새로고침해 주세요."));
   }, []);
 
-  const ready = picked.length === NEED_TOTAL;
-  // 4개가 차면 나머지 카드를 잠근다 — 5개째를 누른 뒤 "왜 안 되지"를 겪지 않도록.
-  const locked = (category: string) => ready && !picked.includes(category);
+  // 2단계 선택지 = 1단계에서 고르지 않은 것만 — "아는 것"으로 이미 분류한 카테고리를
+  // 다시 보여주면 참가자가 같은 판단을 두 번 한다.
+  const stepOptions = step === 1 ? options : options.filter((o) => !familiar.includes(o.category));
+  const picked = step === 1 ? familiar : unfamiliar;
+  const setPicked = step === 1 ? setFamiliar : setUnfamiliar;
+  const full = picked.length >= NEED_PER_SIDE;
 
   const toggle = (category: string) => {
     setPicked((prev) =>
       prev.includes(category)
         ? prev.filter((c) => c !== category) // 다시 누르면 해제
-        : locked(category) ? prev : [...prev, category],
+        : prev.length >= NEED_PER_SIDE ? prev : [...prev, category],
     );
   };
 
+  const goStep2 = () => {
+    // 1단계 선택을 바꿨을 수 있으니, 이제 친숙으로 분류된 것은 비친숙 선택에서 걷어낸다
+    setUnfamiliar((prev) => prev.filter((c) => !familiar.includes(c)));
+    setStep(2);
+  };
+
   const start = async () => {
-    if (!ready || starting) return;
+    if (unfamiliar.length !== NEED_PER_SIDE || starting) return;
     setStarting(true);
     setError(null);
     try {
-      // 순서는 여기서 무작위로 확정된다 — 고른 순서가 아니다.
-      const tasks = randomOrder(picked);
+      // 순서는 여기서 무작위로 확정된다 — 고른 순서도, 친숙/비친숙 교차도 아니다.
+      const tasks = randomOrder(familiar, unfamiliar);
       saveQueue(participantId || "anon", tasks);
-      const res = await api.createCategorySession(tasks[0].category, participantId || undefined);
+      const first = tasks[0];
+      const res = await api.createCategorySession(
+        first.category, first.familiarity, participantId || undefined,
+      );
       router.push(`/study/session/${res.sessionId}`);
     } catch (e) {
       console.error(e);
@@ -64,24 +79,33 @@ export default function CategorySelectPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="text-xl font-bold text-[#191919]">어떤 쇼핑을 해볼까요?</h1>
-      <p className="mt-2 text-sm leading-relaxed text-[#5f6368]">
-        아래에서 쇼핑해 볼 상품군 <b>{NEED_TOTAL}개</b>를 골라 주세요.
-        진행 순서는 무작위로 정해져요.
+    // key={step}: 단계가 바뀌면 서브트리를 새로 마운트해 스태거 진입이 다시 재생된다
+    <div key={step} className="mx-auto max-w-3xl px-4 py-8">
+      {/* 진입: 단계 배지 → 제목 → 카드(순차) → 푸터를 ~60ms 간격으로 스태거 */}
+      <div className="msg-in text-[11px] font-semibold tabular-nums text-[#9aa0a6]">
+        {step}단계 / 2단계
+      </div>
+      <h1 className="msg-in mt-1 text-xl font-bold text-[#191919]" style={{ animationDelay: "40ms" }}>
+        {step === 1 ? "평소 잘 아는 상품군 2개를 골라 주세요" : "잘 모르는 상품군 2개를 골라 주세요"}
+      </h1>
+      <p className="msg-in mt-2 text-sm leading-relaxed text-[#5f6368]" style={{ animationDelay: "80ms" }}>
+        {step === 1
+          ? "상품을 고를 때 무엇을 봐야 하는지 스스로 잘 안다고 느끼는 쪽이에요."
+          : "이번에는 반대로, 잘 모른다고 느끼는 상품군이에요. 진행 순서는 무작위로 정해져요."}
       </p>
 
       <div className="mt-6 space-y-2">
-        {options.map((o) => {
+        {stepOptions.map((o, i) => {
           const on = picked.includes(o.category);
-          const dim = !on && locked(o.category);
+          const dim = !on && full;
           return (
             <button
               key={o.category}
               onClick={() => toggle(o.category)}
               disabled={dim}
               aria-pressed={on}
-              className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
+              style={{ animationDelay: `${140 + i * 50}ms` }}
+              className={`msg-in flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-[border-color,background-color,opacity] duration-150 ${
                 on
                   ? "border-[#4f46e5] bg-[#f5f5ff]"
                   : dim
@@ -89,13 +113,13 @@ export default function CategorySelectPage() {
                     : "border-[#e4e8eb] bg-white hover:border-[#4f46e5]"
               }`}
             >
-              <span className="text-2xl" aria-hidden>{o.emoji}</span>
+              {/* 이모지 없음 (2026-08-08) — 브랜드 톤(인디고·절제)과 어긋나서 텍스트만 쓴다 */}
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-[#191919]">{o.category}</div>
-                {o.blurb && <div className="text-xs text-[#9aa0a6]">{o.blurb}</div>}
+                {o.blurb && <div className="mt-0.5 text-xs text-[#9aa0a6]">{o.blurb}</div>}
               </div>
               <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold ${
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold transition-[background-color,border-color,color] duration-150 ${
                   on ? "border-[#4f46e5] bg-[#4f46e5] text-white" : "border-[#d5d9dd] text-transparent"
                 }`}
                 aria-hidden
@@ -107,21 +131,46 @@ export default function CategorySelectPage() {
         })}
       </div>
 
-      <div className="mt-6 flex items-center justify-between gap-4">
-        <span className="text-xs text-[#9aa0a6]">
-          선택 {picked.length}/{NEED_TOTAL}
+      <div className="msg-in mt-6 flex items-center justify-between gap-4" style={{ animationDelay: "340ms" }}>
+        {/* tabular-nums: 0/2 → 2/2 변해도 폭이 흔들리지 않게 */}
+        <span className="text-xs tabular-nums text-[#9aa0a6]">
+          선택 {picked.length}/{NEED_PER_SIDE}
         </span>
-        <button
-          onClick={start}
-          disabled={!ready || starting}
-          className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors ${
-            ready && !starting
-              ? "bg-[#4f46e5] text-white hover:bg-[#4338ca]"
-              : "cursor-not-allowed bg-[#f5f6f7] text-[#c4c8cc]"
-          }`}
-        >
-          {starting ? "시작하는 중…" : "첫 번째 쇼핑 시작"}
-        </button>
+        <div className="flex items-center gap-2">
+          {step === 2 && (
+            <button
+              onClick={() => setStep(1)}
+              className="btn px-4 py-2.5 text-sm"
+            >
+              이전
+            </button>
+          )}
+          {step === 1 ? (
+            <button
+              onClick={goStep2}
+              disabled={!full}
+              className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-[background-color,color,scale] duration-150 active:scale-[0.96] ${
+                full
+                  ? "bg-[#4f46e5] text-white hover:bg-[#4338ca]"
+                  : "cursor-not-allowed bg-[#f5f6f7] text-[#c4c8cc]"
+              }`}
+            >
+              다음
+            </button>
+          ) : (
+            <button
+              onClick={start}
+              disabled={!full || starting}
+              className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-[background-color,color,scale] duration-150 active:scale-[0.96] ${
+                full && !starting
+                  ? "bg-[#4f46e5] text-white hover:bg-[#4338ca]"
+                  : "cursor-not-allowed bg-[#f5f6f7] text-[#c4c8cc]"
+              }`}
+            >
+              {starting ? "시작하는 중…" : "첫 번째 쇼핑 시작"}
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <p className="mt-3 text-xs text-rose-600">{error}</p>}

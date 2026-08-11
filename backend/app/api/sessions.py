@@ -69,8 +69,8 @@ def create_session(req: CreateSessionRequest, db: DbSession = Depends(get_db)):
             "studyCondition": study_condition,
             "category": scenario.get("targetCategory"),
             "shoppingGoal": scenario.get("title"),
-            # (구버전 호환) 2026-08-08부터 프론트는 familiarity를 보내지 않는다 —
-            # 친숙도는 과제 직전 설문(TPRE_K1/K2)으로 측정한다.
+            # 참가자가 선택 시점에 매긴 친숙도(2+2) — within-subjects 요인이라 세션에
+            # 남아야 분석된다. 과제 직전 설문(TPRE_K1/K2)이 이 이분법의 조작 점검.
             **({"familiarity": req.familiarity} if req.familiarity else {}),
             **({"customScenario": scenario} if req.scenarioId == "custom" and not req.category else {}),
         },
