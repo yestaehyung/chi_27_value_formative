@@ -24,7 +24,14 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-export VC_SEED_DIR="$PWD/seed_amazon"       # 본실험 활성 풀 (16,943개)
+# 전량 풀(44,539·10카테고리, 2026-08-11)은 git 밖 seed_amazon_full 에 있다 —
+# 벡터 202MB가 GitHub 한도를 넘어 볼륨(/data/seed_amazon)으로 배포한다.
+# 로컬에 없으면(새 clone) scripts/build_full_pool_seed.py 로 재생성하거나 seed_amazon 폴백.
+if [ -d "$PWD/seed_amazon_full" ]; then
+  export VC_SEED_DIR="$PWD/seed_amazon_full"  # 본실험 활성 풀 (44,539개 · 10카테고리)
+else
+  export VC_SEED_DIR="$PWD/seed_amazon"       # 폴백 (16,943개 · 4카테고리)
+fi
 export VC_DB_PATH="$PWD/study_v2.db"        # 라이브 /data/study_v2.db 와 같은 이름
 export VC_PORT="${VC_PORT:-8000}"
 
