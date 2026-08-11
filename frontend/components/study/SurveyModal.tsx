@@ -7,12 +7,14 @@ import { useMemo, useState } from "react";
 
 import { allQuestions, computeSectionScores, type MSection } from "@/lib/mainSurvey";
 import MainSurveyForm from "@/components/study/MainSurveyForm";
+import { STUDY_UI, tr } from "@/lib/studyI18n";
+import { canonicalizeStudyAnswers } from "@/lib/localizedMainSurvey";
 
 export default function SurveyModal({
   title,
   desc,
   sections,
-  submitLabel = "제출",
+  submitLabel = STUDY_UI.surveyModal.submit,
   onSubmit,
   onSkip,
   submitting = false,
@@ -42,7 +44,7 @@ export default function SurveyModal({
       document.getElementById(`q-${missing[0]}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    onSubmit(answers, computeSectionScores(sections, answers));
+    onSubmit(canonicalizeStudyAnswers(answers), computeSectionScores(sections, answers));
   };
 
   const answered = questionIds.length - missing.length;
@@ -84,7 +86,7 @@ export default function SurveyModal({
           <div className="text-xs">
             {showErrors && missing.length > 0 ? (
               <span className="font-semibold text-rose-600">
-                <span className="tabular-nums">{missing.length}</span>개 문항이 남았어요.
+                {tr(`${missing.length}개 문항이 남았어요.`, `${missing.length} ${missing.length === 1 ? "question remains" : "questions remain"}.`)}
               </span>
             ) : onSkip ? (
               <button
@@ -92,7 +94,7 @@ export default function SurveyModal({
                 disabled={submitting}
                 className="text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline disabled:opacity-40"
               >
-                건너뛰기
+                {STUDY_UI.survey.skip}
               </button>
             ) : (
               <span className="tabular-nums text-slate-400">
@@ -101,7 +103,7 @@ export default function SurveyModal({
             )}
           </div>
           <button onClick={submit} disabled={submitting} className="btn btn-primary px-5 py-2">
-            {submitting ? "제출 중…" : submitLabel}
+            {submitting ? STUDY_UI.surveyModal.submitting : submitLabel}
           </button>
         </div>
       </div>

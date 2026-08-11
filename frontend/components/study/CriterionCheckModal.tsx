@@ -9,8 +9,12 @@
 // 뒷받침하는가"를 묻기 때문에, 근거를 안 보여주면 그 문항 자체가 성립하지 않는다.
 import { useMemo, useState } from "react";
 
-import { CRITERION_CHECK } from "@/lib/mainSurvey";
+import {
+  CRITERION_CHECK_LOCALIZED as CRITERION_CHECK,
+  canonicalizeStudyAnswerValue,
+} from "@/lib/localizedMainSurvey";
 import { QuestionRow } from "@/components/study/MainSurveyForm";
+import { STUDY_UI, tr } from "@/lib/studyI18n";
 
 export type CriterionCandidate = {
   topic: { id: string; label: string; priority?: string | null };
@@ -39,27 +43,30 @@ const FORMATION_CODE: Record<string, string> = {
   "처음부터 가지고 있었지만 대화에서 직접 표현하지 않았다": "처음부터_미표현",
   "원래 가지고 있었지만 대화 중 더 명확해졌다": "대화중_명확해짐",
   "상품 탐색과 대화 중 새롭게 형성되었다": "대화중_새로형성",
+  "I had this criterion from the beginning but did not explicitly express it in the conversation.": "처음부터_미표현",
+  "I already had this criterion, but it became clearer during the conversation.": "대화중_명확해짐",
+  "This criterion formed while I was exploring products and conversing with the agent.": "대화중_새로형성",
 };
 
 function EvidenceList({ items }: { items: CriterionCandidate["evidence"] }) {
   if (!items.length) {
-    return <p className="text-[11px] text-slate-400">이 기준에 연결된 근거 기록이 없습니다.</p>;
+    return <p className="text-[11px] text-slate-400">{tr("이 기준에 연결된 근거 기록이 없습니다.", "No evidence is recorded for this criterion.")}</p>;
   }
   return (
     <ul className="space-y-1.5">
       {items.slice(0, 4).map((e) => (
         <li key={e.id} className="rounded-md bg-white px-2.5 py-1.5 text-[11px] leading-relaxed text-slate-600">
           <span className="mr-1.5 rounded bg-[#eef2ff] px-1.5 py-0.5 text-[10px] font-semibold text-[#4f46e5]">
-            {e.type === "turn" ? (e.role === "user" ? "내 발화" : "에이전트") : e.type === "feedback" ? "상품 반응" : "상품 특성"}
+            {e.type === "turn" ? (e.role === "user" ? tr("내 발화", "Your message") : tr("에이전트", "Agent")) : e.type === "feedback" ? tr("상품 반응", "Product feedback") : tr("상품 특성", "Product attribute")}
           </span>
           {e.type === "feedback" && e.productTitle ? (
             <span>
               <b>{e.productTitle}</b>
-              {e.feedbackType ? ` — ${e.feedbackType === "like" ? "좋아요" : e.feedbackType === "dislike" ? "싫어요" : e.feedbackType}` : ""}
+              {e.feedbackType ? ` — ${e.feedbackType === "like" ? tr("좋아요", "Like") : e.feedbackType === "dislike" ? tr("싫어요", "Dislike") : e.feedbackType}` : ""}
               {e.quote ? ` · “${e.quote}”` : ""}
             </span>
           ) : (
-            <span>{e.quote || "(내용 없음)"}</span>
+            <span>{e.quote || tr("(내용 없음)", "(No content)")}</span>
           )}
         </li>
       ))}
@@ -70,10 +77,13 @@ function EvidenceList({ items }: { items: CriterionCandidate["evidence"] }) {
 export default function CriterionCheckModal({
   candidates,
   onSubmit,
+  onSkip,
   submitting = false,
 }: {
   candidates: CriterionCandidate[];
   onSubmit: (items: CriterionAnswer[]) => void;
+  /** 테스트용 건너뛰기 (TEST_SURVEY_SKIP) — 응답 저장 없이 닫는다 */
+  onSkip?: () => void;
   submitting?: boolean;
 }) {
   const [idx, setIdx] = useState(0);
@@ -100,7 +110,7 @@ export default function CriterionCheckModal({
       const a = answers[c.topic.id] ?? {};
       const out: CriterionAnswer = { topicId: c.topic.id, topicLabel: c.topic.label };
       for (const q of CRITERION_CHECK) {
-        const raw = a[q.id];
+        const raw = canonicalizeStudyAnswerValue(q.id, a[q.id]);
         if (raw === undefined) continue;
         const field = FIELD[q.id];
         if (field === "importance") out.importance = Number(raw);
@@ -120,7 +130,7 @@ export default function CriterionCheckModal({
       <div className="card flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden">
         <div className="border-b border-[#f0f2f4] px-5 py-4 sm:px-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-[#191919]">추론한 기준이 맞는지 확인해 주세요</h2>
+            <h2 className="text-base font-bold text-[#191919]">{tr("추론한 기준이 맞는지 확인해 주세요", "Please Review the Agent's Inferred Criteria")}</h2>
             <span className="tabular-nums text-xs text-slate-400">
               {idx + 1} / {candidates.length}
             </span>
@@ -135,11 +145,11 @@ export default function CriterionCheckModal({
 
         <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6">
           <div className="rounded-lg border border-[#e4e8eb] bg-[#f8f9fa] p-3">
-            <div className="text-[11px] font-semibold text-[#9aa0a6]">에이전트가 추론한 기준</div>
+            <div className="text-[11px] font-semibold text-[#9aa0a6]">{tr("에이전트가 추론한 기준", "Criterion inferred by the agent")}</div>
             <div className="mt-1 text-sm font-bold leading-relaxed text-[#191919]">
               {current.topic.label}
             </div>
-            <div className="mt-2.5 text-[11px] font-semibold text-[#9aa0a6]">이렇게 판단한 근거</div>
+            <div className="mt-2.5 text-[11px] font-semibold text-[#9aa0a6]">{tr("이렇게 판단한 근거", "Supporting evidence")}</div>
             <div className="mt-1">
               <EvidenceList items={current.evidence} />
             </div>
@@ -162,7 +172,7 @@ export default function CriterionCheckModal({
           <div className="text-xs">
             {showErrors && missing.length > 0 ? (
               <span className="font-semibold text-rose-600">
-                <span className="tabular-nums">{missing.length}</span>개 문항이 남았어요.
+                {tr(`${missing.length}개 문항이 남았어요.`, `${missing.length} ${missing.length === 1 ? "question remains" : "questions remain"}.`)}
               </span>
             ) : idx > 0 ? (
               <button
@@ -170,12 +180,20 @@ export default function CriterionCheckModal({
                 disabled={submitting}
                 className="text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline disabled:opacity-40"
               >
-                이전 기준
+                {tr("이전 기준", "Previous Criterion")}
+              </button>
+            ) : onSkip ? (
+              <button
+                onClick={onSkip}
+                disabled={submitting}
+                className="text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline disabled:opacity-40"
+              >
+                {STUDY_UI.survey.skip}
               </button>
             ) : null}
           </div>
           <button onClick={next} disabled={submitting} className="btn btn-primary px-5 py-2">
-            {submitting ? "제출 중…" : isLast ? "제출하고 마치기" : "다음 기준"}
+            {submitting ? STUDY_UI.surveyModal.submitting : isLast ? tr("제출하고 마치기", "Submit and Finish") : tr("다음 기준", "Next Criterion")}
           </button>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { AnchorMapping, Concept, EvidenceItem, Topic } from "@/lib/types";
+import { tr } from "@/lib/studyI18n";
 
 const TYPE_ICON: Record<string, string> = {
   turn: "💬", feedback: "👆", product_cue: "🏷️", unknown: "•",
@@ -34,12 +35,12 @@ export default function EvidenceDrawer({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
-          <h3 className="text-base font-bold">왜 이렇게 이해했나요?</h3>
-          <button onClick={onClose} aria-label="닫기" className="-mr-2 -mt-1 flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors duration-150 hover:bg-slate-100 hover:text-slate-600 active:scale-[0.92]">✕</button>
+          <h3 className="text-base font-bold">{tr("왜 이렇게 이해했나요?", "Why Did the Agent Infer This?")}</h3>
+          <button onClick={onClose} aria-label={tr("닫기", "Close")} className="-mr-2 -mt-1 flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors duration-150 hover:bg-slate-100 hover:text-slate-600 active:scale-[0.92]">✕</button>
         </div>
 
         {!data ? (
-          <div className="mt-8 text-center text-sm text-slate-400">불러오는 중…</div>
+          <div className="mt-8 text-center text-sm text-slate-400">{tr("불러오는 중…", "Loading…")}</div>
         ) : (
           <div className="mt-4 space-y-5">
             <div className="rounded-lg bg-slate-50 p-3">
@@ -54,13 +55,13 @@ export default function EvidenceDrawer({
             </div>
 
             <section>
-              <h4 className="text-xs font-bold uppercase tracking-wide text-slate-400">근거</h4>
+              <h4 className="text-xs font-bold uppercase tracking-wide text-slate-400">{tr("근거", "Evidence")}</h4>
               <ol className="mt-2 space-y-2">
                 {data.evidence.map((ev, i) => (
                   <li key={ev.id + i} className="rounded-lg border border-slate-100 p-2.5 text-xs">
                     <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400">
                       <span>{TYPE_ICON[ev.type] ?? "•"}</span>
-                      <span>{i + 1}. {ev.type === "turn" ? "직접 하신 말" : ev.type === "feedback" ? `피드백 (${ev.feedbackType})` : "상품 단서"}</span>
+                      <span>{i + 1}. {ev.type === "turn" ? tr("직접 하신 말", "Your statement") : ev.type === "feedback" ? `${tr("피드백", "Feedback")} (${ev.feedbackType})` : tr("상품 단서", "Product cue")}</span>
                       {ev.productTitle && <span className="text-slate-500">— {ev.productTitle}</span>}
                     </div>
                     <div className="mt-1 text-slate-700">&quot;{ev.quote}&quot;</div>
@@ -71,7 +72,7 @@ export default function EvidenceDrawer({
 
             {data.concepts.length > 0 && (
               <section>
-                <h4 className="text-xs font-bold uppercase tracking-wide text-slate-400">연결된 concept</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wide text-slate-400">{tr("연결된 concept", "Related concepts")}</h4>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {data.concepts.map((c) => (
                     <span key={c.id} className="rounded-full bg-[#ecfdf5] px-2.5 py-1 text-xs font-medium text-[#047857]">
@@ -84,7 +85,7 @@ export default function EvidenceDrawer({
 
             {data.anchorMappings.length > 0 && (
               <section>
-                <h4 className="text-xs font-bold uppercase tracking-wide text-slate-400">가치 anchor</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wide text-slate-400">{tr("가치 anchor", "Value anchors")}</h4>
                 <div className="mt-2 space-y-1.5">
                   {data.anchorMappings.map((a) => (
                     <div key={a.id} className="rounded-lg border border-slate-100 p-2 text-xs">

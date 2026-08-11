@@ -3,6 +3,7 @@
 import { Impression } from "@/lib/types";
 import ProductCueBadges from "./ProductCueBadges";
 import ProductFeedbackButtons, { FeedbackPayload } from "./ProductFeedbackButtons";
+import { formatStudyPrice, tr } from "@/lib/studyI18n";
 
 const LETTERS = ["A", "B", "C", "D", "E"];
 
@@ -56,16 +57,16 @@ export default function ProductCard({
           </div>
           <div className="shrink-0 whitespace-nowrap text-right tabular-nums">
             <div className="text-base font-extrabold tracking-tight text-[#191919]">
-              {realPrice.toLocaleString()}원
+              {formatStudyPrice(realPrice)}
             </div>
             {discountPct > 0 && (
               <div className="text-[10px] leading-tight">
-                <span className="text-[#b0b8c1] line-through">{p.price.toLocaleString()}원</span>{" "}
+                <span className="text-[#b0b8c1] line-through">{formatStudyPrice(p.price)}</span>{" "}
                 <span className="font-bold text-[#e5392f]">{discountPct}%↓</span>
               </div>
             )}
             <div className="text-[10px] text-[#9aa0a6]">
-              배송비 {p.deliveryFee ? `${p.deliveryFee.toLocaleString()}원` : "무료"}
+              {tr("배송비", "Shipping")} {p.deliveryFee ? formatStudyPrice(p.deliveryFee) : tr("무료", "Free")}
             </div>
           </div>
         </div>
@@ -76,10 +77,10 @@ export default function ProductCard({
             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
               <span className="flex items-center gap-1">
                 <span className="text-[#f59e0b]">★</span>{p.rating}
-                <span className="text-[#b0b8c1]">· 리뷰 {p.reviewCount?.toLocaleString()}</span>
+                <span className="text-[#b0b8c1]">· {tr("리뷰", "Reviews")} {p.reviewCount?.toLocaleString()}</span>
               </span>
-              {showLtr && <span>한달리뷰 <b className={ltr >= 30 ? "text-[#047857]" : "text-[#404040]"}>{ltr}%</b></span>}
-              {showSales && <span>최근판매 {p.recentSalesCount?.toLocaleString()}건</span>}
+              {showLtr && <span>{tr("한달리뷰", "Long-term reviews")} <b className={ltr >= 30 ? "text-[#047857]" : "text-[#404040]"}>{ltr}%</b></span>}
+              {showSales && <span>{tr("최근판매", "Recent sales")} {p.recentSalesCount?.toLocaleString()}</span>}
             </div>
           </div>
 

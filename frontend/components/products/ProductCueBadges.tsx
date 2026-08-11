@@ -1,10 +1,11 @@
 import { ProductCueSummary } from "@/lib/types";
+import { tr } from "@/lib/studyI18n";
 
 const PRICE_LABEL: Record<string, string> = {
-  very_low: "초저가", low: "저가", mid: "중간 가격", high: "고가", very_high: "프리미엄",
+  very_low: tr("초저가", "Very low price"), low: tr("저가", "Low price"), mid: tr("중간 가격", "Mid-range"), high: tr("고가", "High price"), very_high: tr("프리미엄", "Premium"),
 };
 const POP_LABEL: Record<string, string> = {
-  niche: "니치", moderate: "보통 인기", popular: "인기", very_popular: "베스트셀러",
+  niche: tr("니치", "Niche"), moderate: tr("보통 인기", "Moderately popular"), popular: tr("인기", "Popular"), very_popular: tr("베스트셀러", "Best seller"),
 };
 
 // "신뢰 낮음/보통/높음" 배지는 2026-07-06 제거 — 파생 기준(평점·리뷰수 합성)이 참가자에게
@@ -15,7 +16,7 @@ export default function ProductCueBadges({ cues }: { cues: ProductCueSummary }) 
   const badges = [
     { label: PRICE_LABEL[cues.priceCue], tone: cues.priceCue === "very_low" ? "amber" : "slate" },
     ...(cues.popularityCue !== "niche" ? [{ label: POP_LABEL[cues.popularityCue], tone: "slate" }] : []),
-    ...(cues.noveltyCue === "distinctive" ? [{ label: "차별적", tone: "indigo" }] : []),
+    ...(cues.noveltyCue === "distinctive" ? [{ label: tr("차별적", "Distinctive"), tone: "indigo" }] : []),
   ];
   const toneCls: Record<string, string> = {
     slate: "bg-[#f5f6f8] text-[#606060]",

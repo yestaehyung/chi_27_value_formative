@@ -3,15 +3,20 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { LIKERT_MIN, LIKERT_MID, LIKERT_MAX, SurveyQuestion } from "@/lib/survey";
+import { LIKERT_MID, SurveyQuestion } from "@/lib/survey";
 // 본실험 사전 설문 (2026-07-27). FS1의 A–F 설문은 fs1-frozen 브랜치에 그대로 남아 있다 —
 // 본실험은 3조건 비교가 목적이라 TCV/동기 프로파일링(D·E)을 재지 않는다.
 import {
-  PRE_STUDY as SURVEY,
-  PRE_STUDY_INTRO as SURVEY_INTRO,
-  PRE_STUDY_REQUIRED_IDS as REQUIRED_IDS,
+  PRE_STUDY_LOCALIZED as SURVEY,
+  PRE_STUDY_INTRO_LOCALIZED as SURVEY_INTRO,
+  PRE_STUDY_REQUIRED_IDS_LOCALIZED as REQUIRED_IDS,
+  TEST_SURVEY_SKIP,
   computePreStudyProfile as computeProfile,
-} from "@/lib/mainSurvey";
+  LIKERT_MIN_LOCALIZED as LIKERT_MIN,
+  LIKERT_MAX_LOCALIZED as LIKERT_MAX,
+  canonicalizeStudyAnswers,
+} from "@/lib/localizedMainSurvey";
+import { IS_ENGLISH_STUDY, STUDY_UI } from "@/lib/studyI18n";
 
 type Answers = Record<string, string | string[]>;
 
@@ -50,7 +55,8 @@ export default function SurveyPage() {
     setSubmitting(true);
     try {
       const profile = computeProfile(answers);
-      const res = await api.submitSurvey(answers, profile); // 비어 있어도 참가자 생성(흐름 동일)
+      const canonicalAnswers = canonicalizeStudyAnswers(answers);
+      const res = await api.submitSurvey(canonicalAnswers, profile); // 비어 있어도 참가자 생성(흐름 동일)
       // 배정된 조건을 튜토리얼에 넘긴다 — 조건별로 안내할 단계가 다르다
       // (기준을 안 보여주는 조건에 '기준 확인'을 설명하면 조작이 깨진다)
       const cond = res.studyCondition ? `&cond=${res.studyCondition}` : "";
@@ -58,7 +64,7 @@ export default function SurveyPage() {
     } catch (e) {
       console.error(e);
       setSubmitting(false);
-      alert("설문 제출에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      alert(STUDY_UI.survey.submitError);
     }
   };
   const submit = () => {
@@ -69,7 +75,7 @@ export default function SurveyPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-5 pb-32">
       <div>
-        <h1 className="text-xl font-bold">사전 설문</h1>
+        <h1 className="text-xl font-bold">{STUDY_UI.survey.title}</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-500">{SURVEY_INTRO}</p>
       </div>
 
@@ -99,28 +105,30 @@ export default function SurveyPage() {
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
           <div className="text-xs">
             {excluded ? (
-              <span className="font-semibold text-rose-600">참여 기준/동의에 &apos;아니오&apos;가 있어 연구 참여 대상이 아닙니다.</span>
+              <span className="font-semibold text-rose-600">{STUDY_UI.survey.ineligible}</span>
             ) : missing.length > 0 ? (
-              <span className="text-slate-500">필수(참여기준·동의) <span className="tabular-nums">{missing.length}</span>개 남음</span>
+              <span className="text-slate-500">{STUDY_UI.survey.requiredRemaining(missing.length)}</span>
             ) : (
-              <span className="text-emerald-600">제출 준비 완료 — 제출 후 쇼핑 대화로 이동합니다.</span>
+              <span className="text-emerald-600">{STUDY_UI.survey.ready}</span>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <button
-              onClick={proceed}
-              disabled={submitting}
-              title="응답 없이 바로 대화로 이동"
-              className="rounded-lg border border-[#e4e8eb] px-3 py-2 text-xs text-slate-500 transition-colors duration-150 hover:border-[#4f46e5] hover:text-[#4f46e5] disabled:opacity-40 enabled:active:scale-[0.96]"
-            >
-              건너뛰기
-            </button>
+            {TEST_SURVEY_SKIP && (
+              <button
+                onClick={proceed}
+                disabled={submitting}
+                title={STUDY_UI.survey.skipTitle}
+                className="rounded-lg border border-[#e4e8eb] px-3 py-2 text-xs text-slate-500 transition-colors duration-150 hover:border-[#4f46e5] hover:text-[#4f46e5] disabled:opacity-40 enabled:active:scale-[0.96]"
+              >
+                {STUDY_UI.survey.skip}
+              </button>
+            )}
             <button
               onClick={submit}
               disabled={!canSubmit}
               className="btn btn-primary px-5 py-2 disabled:opacity-40"
             >
-              {submitting ? "제출 중…" : "제출하고 대화 시작하기"}
+              {submitting ? STUDY_UI.survey.submitting : STUDY_UI.survey.submit}
             </button>
           </div>
         </div>
@@ -172,7 +180,7 @@ function Question({
           {/* 버튼과 동일한 7칸 그리드 — 가운데 라벨이 4번 버튼 바로 아래 중앙에 오게 */}
           <div className="mt-1 grid grid-cols-7 gap-1.5 text-[10px] text-slate-400">
             <span className="col-start-1 text-left">{LIKERT_MIN}</span>
-            <span className="col-start-4 text-center">{LIKERT_MID}</span>
+            <span className="col-start-4 text-center">{IS_ENGLISH_STUDY ? "Neutral" : LIKERT_MID}</span>
             <span className="col-start-7 text-right">{LIKERT_MAX}</span>
           </div>
         </div>
@@ -195,7 +203,7 @@ function Question({
               </button>
             );
           })}
-          {excludedHere && <p className="text-xs text-rose-500">이 응답은 연구 참여 제외 사유입니다.</p>}
+          {excludedHere && <p className="text-xs text-rose-500">{STUDY_UI.survey.responseExcluded}</p>}
         </div>
       )}
 

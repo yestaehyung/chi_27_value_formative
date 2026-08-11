@@ -5,6 +5,7 @@ import { PreferenceChip, PreferenceState } from "@/lib/types";
 import AnchorRadar from "./AnchorRadar";
 import MotivationRadar from "./MotivationRadar";
 import AgentAvatar from "../chat/AgentAvatar";
+import { tr } from "@/lib/studyI18n";
 
 // 타입별 색 — 타입 배지에 사용
 const CHIP_STYLE: Record<string, string> = {
@@ -16,7 +17,7 @@ const CHIP_STYLE: Record<string, string> = {
 };
 
 const CHIP_TYPE_LABEL: Record<string, string> = {
-  must_have: "필수", important: "중요", nice_to_have: "선호", avoid: "피하기", uncertain: "불확실",
+  must_have: tr("필수", "Must have"), important: tr("중요", "Important"), nice_to_have: tr("선호", "Preference"), avoid: tr("피하기", "Avoid"), uncertain: tr("불확실", "Uncertain"),
 };
 
 export default function CurrentUnderstandingPanel({
@@ -37,7 +38,7 @@ export default function CurrentUnderstandingPanel({
   const [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
 
   if (!state) {
-    return <div className="card p-4 text-sm text-slate-400">아직 파악된 기준이 없어요.</div>;
+    return <div className="card p-4 text-sm text-slate-400">{tr("아직 파악된 기준이 없어요.", "No criteria have been identified yet.")}</div>;
   }
   const summary = state.userVisibleSummary;
 
@@ -57,7 +58,7 @@ export default function CurrentUnderstandingPanel({
             </span>
             <span className="font-medium text-[#191919]" title={chip.displayRationale}>{chip.label}</span>
           </div>
-          <span className="shrink-0 text-[10px] tabular-nums text-[#b0b8c1]" title="근거 개수">({chip.evidenceCount})</span>
+          <span className="shrink-0 text-[10px] tabular-nums text-[#b0b8c1]" title={tr("근거 개수", "Evidence count")}>({chip.evidenceCount})</span>
         </div>
 
         {!editable ? null : isEditing ? (
@@ -67,15 +68,15 @@ export default function CurrentUnderstandingPanel({
               onChange={(e) => setEditText(e.target.value)}
               autoFocus
               className="w-full rounded-lg border border-[#e4e8eb] px-2 py-1.5 text-xs focus:border-[#4f46e5] focus:outline-none"
-              placeholder="기준을 직접 수정하세요"
+              placeholder={tr("기준을 직접 수정하세요", "Edit this criterion")}
             />
             <div className="mt-1.5 flex justify-end gap-1.5">
-              <button className="btn px-2.5 py-1 text-[11px]" onClick={() => setEditing(null)}>취소</button>
+              <button className="btn px-2.5 py-1 text-[11px]" onClick={() => setEditing(null)}>{tr("취소", "Cancel")}</button>
               <button
                 className="btn btn-primary px-2.5 py-1 text-[11px]"
                 onClick={() => { onChipAction(chip.id, "edit_label", editText); setEditing(null); }}
               >
-                저장
+                {tr("저장", "Save")}
               </button>
             </div>
           </div>
@@ -85,21 +86,21 @@ export default function CurrentUnderstandingPanel({
             <div className="mt-2.5 flex items-center gap-1.5">
               {isConfirmed ? (
                 <span className="inline-flex items-center rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                  ✓ 확인됨
+                  ✓ {tr("확인됨", "Confirmed")}
                 </span>
               ) : (
                 <button
                   className="btn border-emerald-300 px-2.5 py-1.5 text-xs text-emerald-700 hover:bg-emerald-50"
                   onClick={() => { onChipAction(chip.id, "confirm"); setConfirmed((c) => ({ ...c, [chip.id]: true })); }}
                 >
-                  ✓ 맞아요
+                  ✓ {tr("맞아요", "Yes")}
                 </button>
               )}
               <button
                 className="btn border-rose-200 px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50"
                 onClick={() => onChipAction(chip.id, "reject")}
               >
-                ✗ 아니에요
+                ✗ {tr("아니에요", "No")}
               </button>
             </div>
 
@@ -109,12 +110,12 @@ export default function CurrentUnderstandingPanel({
                 — 없으면 눌림이 뚝 끊긴다. */}
             <div className="-mb-1 mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-1 text-[11px] text-[#9aa0a6]">
               <span className="flex items-center gap-0.5">
-                중요도
-                <button className="rounded-md px-2 py-1.5 transition-[color,background-color,scale] duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.96]" title="중요도 낮춤" onClick={() => onChipAction(chip.id, "decrease_priority")}>⬇</button>
-                <button className="rounded-md px-2 py-1.5 transition-[color,background-color,scale] duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.96]" title="중요도 높임" onClick={() => onChipAction(chip.id, "increase_priority")}>⬆</button>
+                {tr("중요도", "Priority")}
+                <button className="rounded-md px-2 py-1.5 transition-[color,background-color,scale] duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.96]" title={tr("중요도 낮춤", "Decrease priority")} onClick={() => onChipAction(chip.id, "decrease_priority")}>⬇</button>
+                <button className="rounded-md px-2 py-1.5 transition-[color,background-color,scale] duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.96]" title={tr("중요도 높임", "Increase priority")} onClick={() => onChipAction(chip.id, "increase_priority")}>⬆</button>
               </span>
-              <button className="rounded-md px-2 py-1.5 transition-[color,scale] duration-150 hover:text-[#4f46e5] active:scale-[0.96]" onClick={() => { setEditing(chip.id); setEditText(chip.label); }}>수정</button>
-              <button className="rounded-md px-2 py-1.5 transition-[color,scale] duration-150 hover:text-[#4f46e5] active:scale-[0.96]" data-tutorial="evidence" onClick={() => onShowEvidence(chip.id)}>근거</button>
+              <button className="rounded-md px-2 py-1.5 transition-[color,scale] duration-150 hover:text-[#4f46e5] active:scale-[0.96]" onClick={() => { setEditing(chip.id); setEditText(chip.label); }}>{tr("수정", "Edit")}</button>
+              <button className="rounded-md px-2 py-1.5 transition-[color,scale] duration-150 hover:text-[#4f46e5] active:scale-[0.96]" data-tutorial="evidence" onClick={() => onShowEvidence(chip.id)}>{tr("근거", "Evidence")}</button>
             </div>
           </>
         )}
@@ -127,11 +128,11 @@ export default function CurrentUnderstandingPanel({
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-bold text-[#191919]">
           <AgentAvatar className="h-6 w-6" />
-          제가 현재 이렇게 이해했어요
+          {tr("제가 현재 이렇게 이해했어요", "Here Is What I Currently Understand")}
         </h3>
         {summary.needsConfirmation && (
           <span className="rounded-full bg-[#fffbe6] px-2.5 py-1 text-[10px] font-semibold text-[#8a6d00]">
-            확인 필요
+            {tr("확인 필요", "Needs confirmation")}
           </span>
         )}
       </div>
@@ -140,7 +141,7 @@ export default function CurrentUnderstandingPanel({
 
       <div className="mt-3 space-y-2" data-tutorial="criteria">
         {summary.chips.length === 0 ? (
-          <span className="text-xs text-slate-400">대화하면서 기준이 여기에 쌓여요.</span>
+          <span className="text-xs text-slate-400">{tr("대화하면서 기준이 여기에 쌓여요.", "Criteria identified during the conversation will appear here.")}</span>
         ) : (
           summary.chips.map(renderChip)
         )}
@@ -149,10 +150,10 @@ export default function CurrentUnderstandingPanel({
       {(state.hardConstraints.length > 0 || state.avoidances.length > 0) && (
         <div className="mt-3 space-y-1 border-t border-[#f0f2f4] pt-2 text-[11px]">
           {state.hardConstraints.length > 0 && (
-            <div className="text-[#047857]">✔ 필수 조건: {state.hardConstraints.join(" · ")}</div>
+            <div className="text-[#047857]">✔ {tr("필수 조건", "Must-have requirements")}: {state.hardConstraints.join(" · ")}</div>
           )}
           {state.avoidances.length > 0 && (
-            <div className="text-[#e03131]">✘ 제외: {state.avoidances.join(" · ")}</div>
+            <div className="text-[#e03131]">✘ {tr("제외", "Avoid")}: {state.avoidances.join(" · ")}</div>
           )}
         </div>
       )}

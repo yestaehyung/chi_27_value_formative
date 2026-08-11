@@ -26,14 +26,10 @@ import {
   tutorialPreferenceState,
   tutorialTurns,
 } from "@/lib/tutorialFixtures";
+import { STUDY_UI } from "@/lib/studyI18n";
 
 // 카테고리 선택 미리보기 더미 — 실제 풀과 같은 이름을 쓰되, 여기서는 표시만 한다.
-const DEMO_CATEGORIES = [
-  { name: "블루투스 스피커", blurb: "집·야외에서 쓸 무선 스피커", on: true },
-  { name: "티셔츠", blurb: "일상에서 입을 티셔츠", on: true },
-  { name: "책상", blurb: "작업용 책상", on: false },
-  { name: "데스크체어", blurb: "오래 앉아 일할 의자", on: false },
-];
+const DEMO_CATEGORIES = STUDY_UI.tutorial.demoCategories;
 
 /** 이 단계를 보여줄 조건. 생략하면 전 조건 공통. */
 type Step = SpotStep & { conditions?: StudyCondition[] };
@@ -43,39 +39,15 @@ type Step = SpotStep & { conditions?: StudyCondition[] };
 const SHOWS = (Object.keys(SHOWS_CRITERIA) as StudyCondition[]).filter((c) => SHOWS_CRITERIA[c]);
 const EDITS = (Object.keys(ALLOWS_CORRECTION) as StudyCondition[]).filter((c) => ALLOWS_CORRECTION[c]);
 
-const ALL_STEPS: Step[] = [
-  // ── 1부: 카테고리 선택 화면 ──
-  { selector: '[data-tutorial="categories"]', title: "쇼핑할 상품군을 먼저 골라요",
-    body: "평소 잘 아는 상품군 2개 → 잘 모르는 상품군 2개, 두 단계로 골라요.\n고른 4개를 무작위 순서로 한 번씩 쇼핑하게 돼요." },
-
-  // ── 2부: 대화 화면 ──
-  { selector: '[data-tutorial="chat"]', title: "에이전트와 대화해요",
-    body: "원하는 걸 대화로 좁혀가요.\n에이전트가 더 묻거나 후보를 추천해줘요. (위는 예시 대화예요)" },
-  { selector: '[data-tutorial="products"]', title: "추천 상품",
-    body: "기준에 맞춰 서로 다른 방향의 후보를 보여줘요.\n좌우로 넘기면서 비교할 수 있어요." },
-  { selector: '[data-tutorial="card-info"]', title: "카드에서 무엇을 보나요",
-    body: "가격·평점·리뷰와 함께, 왜 이 상품을 골랐는지 이유가 적혀 있어요." },
-  { selector: '[data-tutorial="card-feedback"]', title: "카드에 반응해요",
-    body: "카드 옆 좋아요·싫어요로 취향을 알려주세요.\n반응할수록 추천이 정확해져요." },
-
-  // 조건 의존 — baseline은 기준을 화면에서 보지 않는다 (사이드바 자체가 없음)
-  { selector: '[data-tutorial="panel"]', title: "오른쪽: 제가 이해한 기준",
-    body: "대화에서 파악한 기준이 옆 패널에 실시간으로 쌓여요.\n지금 어떤 기준으로 추천하고 있는지 언제든 확인할 수 있어요.",
-    conditions: SHOWS },
-  { selector: '[data-tutorial="criteria"]', title: "맞는지 알려주세요",
-    body: "기준마다 '맞아요/아니에요'로 확인하고, 중요도를 조절하거나 문구를 직접 수정할 수 있어요.\n틀리게 이해했으면 꼭 바로잡아 주세요 — 다음 추천에 바로 반영돼요.",
-    conditions: EDITS },
-  { selector: '[data-tutorial="evidence"]', title: "왜 그렇게 이해했는지",
-    body: "'근거'를 누르면, 제가 어떤 말·선택을 보고 그렇게 판단했는지 확인할 수 있어요.",
-    conditions: SHOWS },
-  { selector: '[data-tutorial="conflict"]', title: "기준이 부딪힐 때",
-    body: "앞에서 말씀하신 기준과 다르게 고르신 것 같을 때, 패널 위에 확인 카드가 떠요.\n어느 쪽을 우선할지 골라주시면 바로 반영할게요.",
-    conditions: EDITS },
-
-  // 전 조건 공통 — 설문 흐름 예고 (모르고 있다가 만나면 이탈 지점이 된다)
-  { selector: '[data-tutorial="composer"]', title: "쇼핑을 마치면",
-    body: "충분히 살펴보셨으면 위쪽 '이 쇼핑 마치기'를 눌러주세요.\n마친 뒤 이번 쇼핑에 대한 짧은 질문을 드려요." },
-];
+const STEP_CONDITIONS: Partial<Record<string, StudyCondition[]>> = {
+  panel: SHOWS, criteria: EDITS, evidence: SHOWS, conflict: EDITS,
+};
+const ALL_STEPS: Step[] = STUDY_UI.tutorial.steps.map((step) => ({
+  selector: `[data-tutorial="${step.key}"]`,
+  title: step.title,
+  body: step.body,
+  conditions: STEP_CONDITIONS[step.key],
+}));
 
 export function stepsFor(condition: StudyCondition): Step[] {
   return ALL_STEPS.filter((s) => !s.conditions || s.conditions.includes(condition));
@@ -101,9 +73,9 @@ export default function TutorialDemo({
   return (
     <div className="space-y-3">
       <div>
-        <h1 className="text-xl font-bold">시작 전에, 잠깐 둘러볼게요</h1>
+        <h1 className="text-xl font-bold">{STUDY_UI.tutorial.pageTitle}</h1>
         <p className="mt-1 text-sm text-slate-500">
-          {inSelect ? "쇼핑을 시작하는 방법부터 알려드릴게요." : "대화 화면의 핵심 기능을 짚어드릴게요."}
+          {inSelect ? STUDY_UI.tutorial.categoryIntro : STUDY_UI.tutorial.chatIntro}
         </p>
       </div>
 
@@ -111,10 +83,10 @@ export default function TutorialDemo({
         /* ── 1부: 카테고리 선택 화면 (더미) — 실제 /study/categories 1단계와 같은 모양 ── */
         <div className="flex min-h-[calc(100dvh-12rem)] flex-col items-center justify-center">
           <div className="w-full max-w-2xl px-4" data-tutorial="categories">
-            <div className="text-[11px] font-semibold tabular-nums text-[#9aa0a6]">1단계 / 2단계</div>
-            <h2 className="mt-1 text-xl font-bold text-[#191919]">평소 잘 아는 상품군 2개를 골라 주세요</h2>
+            <div className="text-[11px] font-semibold tabular-nums text-[#9aa0a6]">{STUDY_UI.categories.step(1)}</div>
+            <h2 className="mt-1 text-xl font-bold text-[#191919]">{STUDY_UI.categories.familiarTitle}</h2>
             <p className="mt-2 text-sm leading-relaxed text-[#5f6368]">
-              상품을 고를 때 무엇을 봐야 하는지 스스로 잘 안다고 느끼는 쪽이에요.
+              {STUDY_UI.categories.familiarDescription}
             </p>
             <div className="mt-5 space-y-2">
               {DEMO_CATEGORIES.map((c) => (
@@ -175,7 +147,7 @@ export default function TutorialDemo({
             </div>
 
             <div data-tutorial="composer" className="border-t border-[#f0f2f4] p-3">
-              <ChatComposer onSend={() => {}} disabled placeholder="무엇을 찾고 계세요?" />
+              <ChatComposer onSend={() => {}} disabled placeholder={STUDY_UI.chat.inputPlaceholder} />
             </div>
           </div>
 

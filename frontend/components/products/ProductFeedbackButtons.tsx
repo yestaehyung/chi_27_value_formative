@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { tr } from "@/lib/studyI18n";
 
 const REASON_CODES = [
-  { code: "too_cheap_looking", label: "너무 저렴해 보여요" },
-  { code: "too_expensive", label: "너무 비싸요" },
-  { code: "not_trustworthy", label: "믿음이 안 가요" },
-  { code: "low_long_term_reviews", label: "오래 쓴 리뷰가 적어요" },
-  { code: "too_common", label: "너무 흔해요" },
-  { code: "bad_design", label: "디자인이 별로예요" },
-  { code: "other", label: "기타" },
+  { code: "too_cheap_looking", label: tr("너무 저렴해 보여요", "Looks too cheap") },
+  { code: "too_expensive", label: tr("너무 비싸요", "Too expensive") },
+  { code: "not_trustworthy", label: tr("믿음이 안 가요", "Does not seem trustworthy") },
+  { code: "low_long_term_reviews", label: tr("오래 쓴 리뷰가 적어요", "Not enough long-term reviews") },
+  { code: "too_common", label: tr("너무 흔해요", "Too common") },
+  { code: "bad_design", label: tr("디자인이 별로예요", "I do not like the design") },
+  { code: "other", label: tr("기타", "Other") },
 ];
 
 export type FeedbackPayload = {
@@ -64,13 +65,13 @@ export default function ProductFeedbackButtons({
       >
         <div className="flex items-start justify-between gap-3 border-b border-[#f0f2f4] px-5 py-3.5">
           <div className="min-w-0">
-            <div className="text-sm font-bold text-[#191919]">이 상품, 어떤 점이 별로였어요?</div>
+            <div className="text-sm font-bold text-[#191919]">{tr("이 상품, 어떤 점이 별로였어요?", "What did you dislike about this product?")}</div>
             {productTitle && <div className="mt-0.5 truncate text-xs text-[#9aa0a6]">{productTitle}</div>}
           </div>
           <button
             onClick={() => setShowReason(false)}
             className="-mr-2 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg leading-none text-[#9aa0a6] transition-colors duration-150 hover:bg-[#f0f2f4] hover:text-[#191919] active:scale-[0.92]"
-            aria-label="닫기"
+            aria-label={tr("닫기", "Close")}
           >✕</button>
         </div>
 
@@ -95,15 +96,15 @@ export default function ProductFeedbackButtons({
             value={reasonText}
             onChange={(e) => setReasonText(e.target.value)}
             rows={3}
-            placeholder={'자유롭게 적어주세요 (선택). 예: "선물인데 너무 저렴해 보이면 좀 그래요."'}
+            placeholder={tr('자유롭게 적어주세요 (선택). 예: "선물인데 너무 저렴해 보이면 좀 그래요."', 'Add a comment if you wish. For example: "It looks too cheap for a gift."')}
             className="mt-4 w-full resize-none rounded-xl border border-[#e4e8eb] px-3 py-2.5 text-sm leading-relaxed focus:border-rose-300 focus:outline-none"
           />
         </div>
 
         <div className="flex justify-end gap-2 border-t border-[#f0f2f4] px-5 py-3">
-          <button className="btn px-4 py-2 text-sm" onClick={() => setShowReason(false)}>취소</button>
+          <button className="btn px-4 py-2 text-sm" onClick={() => setShowReason(false)}>{tr("취소", "Cancel")}</button>
           <button className="btn btn-danger px-4 py-2 text-sm font-semibold" onClick={submitDislike}>
-            싫어요 보내기
+            {tr("싫어요 보내기", "Submit Dislike")}
           </button>
         </div>
       </div>
@@ -121,28 +122,28 @@ export default function ProductFeedbackButtons({
           disabled={disabled || has("like")}
           onClick={() => onFeedback({ type: "like" })}
         >
-          좋아요
+          {tr("좋아요", "Like")}
         </button>
         <button
           className={`${row} ${has("dislike") ? "bg-rose-50 font-semibold text-rose-700" : ""}`}
           disabled={disabled || has("dislike")}
           onClick={() => setShowReason(true)}
         >
-          싫어요
+          {tr("싫어요", "Dislike")}
         </button>
         <button
           className={row}
           disabled={disabled || has("view_detail")}
           onClick={() => onFeedback({ type: "view_detail" })}
         >
-          자세히
+          {tr("자세히", "Details")}
         </button>
         <button
           className={`${row} ${has("purchase") ? "bg-emerald-600 font-semibold text-white" : ""}`}
           disabled={disabled || has("purchase")}
           onClick={() => onFeedback({ type: "purchase" })}
         >
-          구매
+          {tr("구매", "Purchase")}
         </button>
 
         {mounted && showReason && createPortal(reasonModal, document.body)}
@@ -158,28 +159,28 @@ export default function ProductFeedbackButtons({
         disabled={disabled || has("like")}
         onClick={() => onFeedback({ type: "like" })}
       >
-        👍 좋아요
+        👍 {tr("좋아요", "Like")}
       </button>
       <button
         className={`btn min-h-10 px-2 text-xs ${has("dislike") ? "border-rose-300 bg-rose-50 text-rose-700" : ""}`}
         disabled={disabled || has("dislike")}
         onClick={() => setShowReason(true)}
       >
-        👎 싫어요
+        👎 {tr("싫어요", "Dislike")}
       </button>
       <button
         className="btn min-h-10 px-2 text-xs"
         disabled={disabled || has("view_detail")}
         onClick={() => onFeedback({ type: "view_detail" })}
       >
-        자세히
+        {tr("자세히", "Details")}
       </button>
       <button
         className={`btn min-h-10 px-2 text-xs ${has("purchase") ? "border-emerald-500 bg-emerald-600 text-white" : ""}`}
         disabled={disabled || has("purchase")}
         onClick={() => onFeedback({ type: "purchase" })}
       >
-        구매
+        {tr("구매", "Purchase")}
       </button>
 
       {mounted && showReason && createPortal(reasonModal, document.body)}

@@ -4,7 +4,8 @@
 // 5개 도구(사전/과제직전/과제직후/전체종료/기준별)가 전부 이 컴포넌트를 공유하므로,
 // 리커트 앵커가 문항마다 다른 경우(NASA-TLX)도 여기서 흡수한다.
 import type { MQuestion, MSection } from "@/lib/mainSurvey";
-import { LIKERT_MAX, LIKERT_MIN, LIKERT_POINTS } from "@/lib/mainSurvey";
+import { LIKERT_POINTS } from "@/lib/mainSurvey";
+import { LIKERT_MAX_LOCALIZED, LIKERT_MIN_LOCALIZED } from "@/lib/localizedMainSurvey";
 
 const SCALE = Array.from({ length: LIKERT_POINTS }, (_, i) => i + 1);
 
@@ -19,8 +20,8 @@ export function QuestionRow({
   onChange: (v: string) => void;
   invalid?: boolean;
 }) {
-  const min = q.minLabel ?? LIKERT_MIN;
-  const max = q.maxLabel ?? LIKERT_MAX;
+  const min = q.minLabel ?? LIKERT_MIN_LOCALIZED;
+  const max = q.maxLabel ?? LIKERT_MAX_LOCALIZED;
 
   return (
     <div

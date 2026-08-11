@@ -1,12 +1,13 @@
 import { Turn } from "@/lib/types";
 import AgentAvatar from "./AgentAvatar";
 import StructuredText from "./StructuredText";
+import { STUDY_UI } from "@/lib/studyI18n";
 
 const ROLE_LABEL: Record<string, string> = {
-  user: "나",
+  user: STUDY_UI.chat.user,
   user_agent: "User Agent",
-  service_agent: "쇼핑 에이전트",
-  system: "시스템",
+  service_agent: STUDY_UI.chat.agent,
+  system: STUDY_UI.chat.system,
 };
 
 // showMeta: 연구용 라벨(dialogueActs·agentAction) 노출 여부.

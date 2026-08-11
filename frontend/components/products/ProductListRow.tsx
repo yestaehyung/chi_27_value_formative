@@ -7,6 +7,7 @@
 
 import { Impression } from "@/lib/types";
 import ProductFeedbackButtons, { FeedbackPayload } from "./ProductFeedbackButtons";
+import { formatStudyPrice, tr } from "@/lib/studyI18n";
 
 const LETTERS = ["A", "B", "C", "D", "E"];
 
@@ -55,22 +56,22 @@ export default function ProductListRow({
         <div className="min-w-0 flex-1 space-y-1.5">
           {discountPct > 0 && (
             <div className="text-[13px] text-[#b0b8c1] line-through tabular-nums">
-              {p.price.toLocaleString()}원
+              {formatStudyPrice(p.price)}
             </div>
           )}
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             {discountPct > 0 && <span className="text-lg font-extrabold text-[#e5392f]">{discountPct}%</span>}
             <span className="text-xl font-extrabold tracking-tight text-[#191919] tabular-nums">
-              {realPrice.toLocaleString()}원
+              {formatStudyPrice(realPrice)}
             </span>
             <span className="text-xs text-[#606060]">
-              {p.deliveryFee ? `배송비 ${p.deliveryFee.toLocaleString()}원` : "무료배송"}
+              {p.deliveryFee ? `${tr("배송비", "Shipping")} ${formatStudyPrice(p.deliveryFee)}` : tr("무료배송", "Free shipping")}
             </span>
           </div>
           {(p.rating != null || p.reviewCount != null) && (
             <div className="text-[13px] tabular-nums text-[#404040]">
               <span className="text-[#f59e0b]">★</span> {p.rating}
-              {p.reviewCount != null && <span className="text-[#9aa0a6]"> · 리뷰 {p.reviewCount.toLocaleString()}</span>}
+              {p.reviewCount != null && <span className="text-[#9aa0a6]"> · {tr("리뷰", "Reviews")} {p.reviewCount.toLocaleString()}</span>}
             </div>
           )}
           {p.sellerName && (

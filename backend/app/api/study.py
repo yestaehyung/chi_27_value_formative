@@ -183,6 +183,65 @@ def submit_pre_task_survey(session_id: str, req: PreTaskSurveyRequest, db: DbSes
     return {"ok": True, "profile": meta["preTaskSurvey"]["profile"]}
 
 
+class FinalChoiceRequest(BaseModel):
+    productId: Optional[str] = None   # 최종 선택 (없으면 noneReason 필수)
+    noneReason: Optional[str] = None  # "이 중에는 없어요" 사유 / "no_products"
+
+
+@router.put("/sessions/{session_id}/final-choice")
+def submit_final_choice(session_id: str, req: FinalChoiceRequest, db: DbSession = Depends(get_db)):
+    """③ 최종 선택 확정 (2026-08-11) — 사후 기준 확인(④) **전에** 선택을 잠근다.
+
+    기준을 뜯어보는 행위가 선택에 영향을 주지 못하게 하는 절차적 잠금이다.
+    '필수 조건 위반 여부'는 여기서 판정하지 않는다 — 확정 시점의 기준 스냅샷과
+    선택 상품을 함께 저장해 분석 때 계산한다 (런타임 판정은 기준을 나중에 못 바꾼다).
+    """
+    from datetime import datetime, timezone
+
+    session = db.get(models.Session, session_id)
+    if session is None:
+        raise HTTPException(404, "session not found")
+    if not req.productId and not req.noneReason:
+        raise HTTPException(422, "productId 또는 noneReason 중 하나는 필요하다")
+    shown = {
+        pid for (pid,) in db.query(models.ProductImpression.product_id)
+        .filter(models.ProductImpression.session_id == session_id)
+    }
+    if req.productId and req.productId not in shown:
+        raise HTTPException(422, "이 세션에서 노출된 적 없는 상품이다")
+    # 확정 시점 기준 스냅샷 — 위반 분석의 재료 (rejected는 사용자가 이미 거른 기준이라 제외)
+    topics = (
+        db.query(models.IntentionTopic)
+        .filter(models.IntentionTopic.session_id == session_id)
+        .filter(models.IntentionTopic.status != "rejected_by_user")
+        .all()
+    )
+    liked = [
+        pid for (pid,) in db.query(models.FeedbackEvent.product_id)
+        .filter(models.FeedbackEvent.session_id == session_id)
+        .filter(models.FeedbackEvent.type == "like")
+    ]
+    meta = dict(session.meta or {})
+    meta["finalChoice"] = {
+        "productId": req.productId,
+        "noneReason": req.noneReason,
+        "decidedAt": datetime.now(timezone.utc).isoformat(),
+        "criteriaAtDecision": [
+            {
+                "label": t.label, "status": t.status, "priority": t.priority,
+                "explicitness": t.explicitness,
+                "hardConstraint": bool((t.hints or {}).get("impliedHardConstraint")),
+                "avoidance": bool((t.hints or {}).get("impliedAvoidance")),
+            }
+            for t in topics
+        ],
+        "likedIds": liked,
+    }
+    session.meta = meta
+    db.commit()
+    return {"ok": True, "finalChoice": meta["finalChoice"]}
+
+
 class PostStudySurveyRequest(BaseModel):
     answers: dict
     profile: Optional[dict] = None    # interpretability / evidence / edit_usability

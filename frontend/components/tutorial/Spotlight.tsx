@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { STUDY_UI } from "@/lib/studyI18n";
 
 export type SpotStep = { selector: string; title: string; body: string };
 
@@ -123,16 +124,16 @@ export default function Spotlight({
         <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-[#404040]">{step.body}</p>
         <div className="mt-3 flex items-center justify-between">
           <button className="-ml-1.5 rounded px-1.5 py-1 text-[11px] text-[#9aa0a6] transition-colors duration-150 hover:text-[#606060] active:scale-[0.96]" onClick={skip}>
-            건너뛰기
+            {STUDY_UI.tutorial.skip}
           </button>
           <div className="flex gap-2">
             {i > 0 && (
               <button className="btn px-3 py-1.5 text-xs" onClick={() => setI(i - 1)}>
-                이전
+                {STUDY_UI.tutorial.previous}
               </button>
             )}
             <button className="btn btn-primary px-3 py-1.5 text-xs" onClick={() => (last ? onDone() : setI(i + 1))}>
-              {last ? "시작하기" : "다음"}
+              {last ? STUDY_UI.tutorial.start : STUDY_UI.tutorial.next}
             </button>
           </div>
         </div>

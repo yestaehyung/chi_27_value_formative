@@ -1,3 +1,5 @@
+import { STUDY_UI } from "@/lib/studyI18n";
+
 // 쇼핑 에이전트(Service Agent) 프로필 아바타 — DiceBear "dylan" (seed 고정 → 항상 같은 얼굴).
 // 사람 페르소나는 notionists, 에이전트는 dylan 으로 시각적으로 구분한다.
 const AGENT_AVATAR_URL =
@@ -8,7 +10,7 @@ export default function AgentAvatar({ className = "h-7 w-7" }: { className?: str
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={AGENT_AVATAR_URL}
-      alt="쇼핑 에이전트"
+      alt={STUDY_UI.chat.agent}
       className={`shrink-0 rounded-full bg-[#c4b5fd] object-cover ${className}`}
       style={{ outline: "1px solid rgba(0,0,0,0.1)", outlineOffset: "-1px" }}
     />

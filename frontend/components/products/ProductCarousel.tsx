@@ -1,6 +1,7 @@
 "use client";
 
 import { Children, ReactNode, useEffect, useRef, useState } from "react";
+import { tr } from "@/lib/studyI18n";
 
 // ProductCard 고정폭/간격과 동기 — 카드 가시성 계산에 사용
 const CARD_W = 284;
@@ -79,7 +80,7 @@ export default function ProductCarousel({ children }: { children: ReactNode }) {
           <button
             onClick={() => handleArrow(-1)}
             disabled={!canLeft}
-            aria-label="이전 상품 보기"
+            aria-label={tr("이전 상품 보기", "View previous product")}
             className="btn h-10 w-10 rounded-full p-0 text-base leading-none"
           >
             ‹
@@ -97,7 +98,7 @@ export default function ProductCarousel({ children }: { children: ReactNode }) {
           <button
             onClick={() => handleArrow(1)}
             disabled={!canRight}
-            aria-label="다음 상품 보기"
+            aria-label={tr("다음 상품 보기", "View next product")}
             className="btn h-10 w-10 rounded-full p-0 text-base leading-none"
           >
             ›

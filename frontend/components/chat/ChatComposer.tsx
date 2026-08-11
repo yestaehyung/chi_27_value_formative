@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
+import { STUDY_UI, tr } from "@/lib/studyI18n";
 
 // 네이버 AI 쇼핑 스타일 입력창 (리디자인 후보). 2행 레이아웃:
 //  [ textarea (placeholder) ]
@@ -11,7 +12,7 @@ export default function ChatComposer({
   disabled,
   loading,
   onStop,
-  placeholder = "무엇이든 물어보세요",
+  placeholder = tr("무엇이든 물어보세요", "Ask anything"),
   disclaimer = true,
   suggestions,
   value,
@@ -98,7 +99,7 @@ export default function ChatComposer({
         {loading ? (
           <button
             onClick={onStop}
-            aria-label="중지"
+            aria-label={STUDY_UI.chat.stop}
             style={{ backgroundColor: brand }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = brandHover)}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = brand)}
@@ -110,7 +111,7 @@ export default function ChatComposer({
           <button
             onClick={submit}
             disabled={!canSend}
-            aria-label="전송"
+            aria-label={STUDY_UI.chat.send}
             style={canSend ? { backgroundColor: brand } : { backgroundColor: "#e4e8eb", color: "#b0b8c1" }}
             onMouseEnter={(e) => canSend && (e.currentTarget.style.backgroundColor = brandHover)}
             onMouseLeave={(e) => canSend && (e.currentTarget.style.backgroundColor = brand)}
@@ -125,7 +126,7 @@ export default function ChatComposer({
     </div>
     {disclaimer && (
       <p className="mt-2 text-center text-[11px] text-[#b0b8c1]">
-        AI 답변으로 정확하지 않은 정보가 포함될 수 있어요.
+        {STUDY_UI.chat.disclaimer}
       </p>
     )}
     </div>

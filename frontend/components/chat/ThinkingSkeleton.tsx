@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AgentAvatar from "./AgentAvatar";
+import { tr } from "@/lib/studyI18n";
 
 // 네이버 AI 스타일 로딩 — 실제 파이프라인 단계를 시간 흐름에 따라 순서대로 보여줌(A안).
 // steps를 주면 stepMs 간격으로 다음 단계로 넘어가되, 마지막 단계는 응답 올 때까지 머무른다
@@ -9,7 +10,7 @@ import AgentAvatar from "./AgentAvatar";
 // steps 미지정 시 label 한 줄로 폴백.
 export default function ThinkingSkeleton({
   steps,
-  label = "더 나은 답변을 위해 살펴보고 있어요…",
+  label = tr("더 나은 답변을 위해 살펴보고 있어요…", "Looking for a better answer…"),
   stepMs = 3500,
 }: {
   steps?: string[];

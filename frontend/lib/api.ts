@@ -152,6 +152,13 @@ export const api = {
   gap: (sessionId: string) => request<any>(`/api/study/sessions/${sessionId}/gap`),
 
   // 세션 종료 사후 설문 (이해·만족·신뢰 + 확장) — sessions.meta.postSurvey
+  /** ③ 최종 선택 확정 — 사후 설문·기준 검증 전에 선택을 잠근다 (2026-08-11). */
+  submitFinalChoice: (sessionId: string, productId: string | null, noneReason?: string) =>
+    request<{ ok: boolean }>(`/api/study/sessions/${sessionId}/final-choice`, {
+      method: "PUT",
+      body: JSON.stringify({ productId, noneReason }),
+    }),
+
   submitPostSurvey: (sessionId: string, answers: Record<string, unknown>, profile: Record<string, number>) =>
     request<{ ok: boolean }>(`/api/study/sessions/${sessionId}/post-survey`, {
       method: "PUT",

@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { randomOrder, saveQueue } from "@/lib/taskQueue";
 import type { CategoryOption } from "@/lib/types";
+import { categoryBlurb, categoryLabel, STUDY_UI } from "@/lib/studyI18n";
 
 const NEED_PER_SIDE = 2; // 친숙 2 + 비친숙 2
 
@@ -34,7 +35,7 @@ export default function CategorySelectPage() {
     setParticipantId(new URLSearchParams(window.location.search).get("pid") ?? "");
     api.categories()
       .then((d) => setOptions(d.categories))
-      .catch(() => setError("카테고리를 불러오지 못했어요. 새로고침해 주세요."));
+      .catch(() => setError(STUDY_UI.categories.loadError));
   }, []);
 
   // 2단계 선택지 = 1단계에서 고르지 않은 것만 — "아는 것"으로 이미 분류한 카테고리를
@@ -73,7 +74,7 @@ export default function CategorySelectPage() {
       router.push(`/study/session/${res.sessionId}`);
     } catch (e) {
       console.error(e);
-      setError("쇼핑을 시작하지 못했어요. 다시 눌러 주세요.");
+      setError(STUDY_UI.categories.startError);
       setStarting(false);
     }
   };
@@ -83,15 +84,15 @@ export default function CategorySelectPage() {
     <div key={step} className="mx-auto max-w-3xl px-4 py-8">
       {/* 진입: 단계 배지 → 제목 → 카드(순차) → 푸터를 ~60ms 간격으로 스태거 */}
       <div className="msg-in text-[11px] font-semibold tabular-nums text-[#9aa0a6]">
-        {step}단계 / 2단계
+        {STUDY_UI.categories.step(step)}
       </div>
       <h1 className="msg-in mt-1 text-xl font-bold text-[#191919]" style={{ animationDelay: "40ms" }}>
-        {step === 1 ? "평소 잘 아는 상품군 2개를 골라 주세요" : "잘 모르는 상품군 2개를 골라 주세요"}
+        {step === 1 ? STUDY_UI.categories.familiarTitle : STUDY_UI.categories.unfamiliarTitle}
       </h1>
       <p className="msg-in mt-2 text-sm leading-relaxed text-[#5f6368]" style={{ animationDelay: "80ms" }}>
         {step === 1
-          ? "상품을 고를 때 무엇을 봐야 하는지 스스로 잘 안다고 느끼는 쪽이에요."
-          : "이번에는 반대로, 잘 모른다고 느끼는 상품군이에요. 진행 순서는 무작위로 정해져요."}
+          ? STUDY_UI.categories.familiarDescription
+          : STUDY_UI.categories.unfamiliarDescription}
       </p>
 
       <div className="mt-6 space-y-2">
@@ -115,8 +116,8 @@ export default function CategorySelectPage() {
             >
               {/* 이모지 없음 (2026-08-08) — 브랜드 톤(인디고·절제)과 어긋나서 텍스트만 쓴다 */}
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold text-[#191919]">{o.category}</div>
-                {o.blurb && <div className="mt-0.5 text-xs text-[#9aa0a6]">{o.blurb}</div>}
+                <div className="text-sm font-semibold text-[#191919]">{categoryLabel(o.category)}</div>
+                {o.blurb && <div className="mt-0.5 text-xs text-[#9aa0a6]">{categoryBlurb(o.blurb)}</div>}
               </div>
               <span
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold transition-[background-color,border-color,color] duration-150 ${
@@ -134,7 +135,7 @@ export default function CategorySelectPage() {
       <div className="msg-in mt-6 flex items-center justify-between gap-4" style={{ animationDelay: "340ms" }}>
         {/* tabular-nums: 0/2 → 2/2 변해도 폭이 흔들리지 않게 */}
         <span className="text-xs tabular-nums text-[#9aa0a6]">
-          선택 {picked.length}/{NEED_PER_SIDE}
+          {STUDY_UI.categories.selected(picked.length, NEED_PER_SIDE)}
         </span>
         <div className="flex items-center gap-2">
           {step === 2 && (
@@ -142,7 +143,7 @@ export default function CategorySelectPage() {
               onClick={() => setStep(1)}
               className="btn px-4 py-2.5 text-sm"
             >
-              이전
+              {STUDY_UI.categories.back}
             </button>
           )}
           {step === 1 ? (
@@ -155,7 +156,7 @@ export default function CategorySelectPage() {
                   : "cursor-not-allowed bg-[#f5f6f7] text-[#c4c8cc]"
               }`}
             >
-              다음
+              {STUDY_UI.categories.next}
             </button>
           ) : (
             <button
@@ -167,7 +168,7 @@ export default function CategorySelectPage() {
                   : "cursor-not-allowed bg-[#f5f6f7] text-[#c4c8cc]"
               }`}
             >
-              {starting ? "시작하는 중…" : "첫 번째 쇼핑 시작"}
+              {starting ? STUDY_UI.categories.starting : STUDY_UI.categories.start}
             </button>
           )}
         </div>

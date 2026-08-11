@@ -14,7 +14,7 @@
 //   ✗아니에요 · 근거(EvidenceDrawer). 패널 폭도 현재와 동일(440px). 외재화는 패널이
 //   담당하므로 채팅 인라인 확인 문장은 없음. 충돌 카드는 패널에 (현재 버전과 동일).
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Conflict, Impression, PreferenceChip, PreferenceState, Turn } from "@/lib/types";
@@ -35,14 +35,18 @@ import ChipTypeBadge from "@/components/preference/ChipTypeBadge";
 import CurrentUnderstandingPanel from "@/components/preference/CurrentUnderstandingPanel";
 import EvidenceDrawer from "@/components/preference/EvidenceDrawer";
 import SimpleUnderstandingPanel from "@/components/preference/SimpleUnderstandingPanel";
+import FinalChoiceModal, { type SeenProduct } from "@/components/study/FinalChoiceModal";
 import SurveyModal from "@/components/study/SurveyModal";
 import CriterionCheckModal, { type CriterionCandidate } from "@/components/study/CriterionCheckModal";
 import {
-  ALLOWS_CORRECTION, CRITERION_CHECK_MAX, INFERS_INTENTION, POST_TASK, PRE_TASK,
-  SHOWS_CRITERIA, fillTemplate, postStudySectionsFor,
+  ALLOWS_CORRECTION, CRITERION_CHECK_MAX, INFERS_INTENTION,
+  POST_TASK_LOCALIZED as POST_TASK, PRE_TASK_LOCALIZED as PRE_TASK,
+  SHOWS_CRITERIA, TEST_SURVEY_SKIP, fillTemplate,
+  postStudySectionsLocalized as postStudySectionsFor,
   type StudyCondition,
-} from "@/lib/mainSurvey";
+} from "@/lib/localizedMainSurvey";
 import { completeTask, nextTask } from "@/lib/taskQueue";
+import { categoryLabel, STUDY_UI, tr } from "@/lib/studyI18n";
 
 export type UiVariant = "a" | "b" | "c" | "d" | "e";
 
@@ -87,7 +91,9 @@ export default function VariantSession({
   // 스터디 생명주기 (study=true에서만) — 마치기/사후설문/완료/첫 발화 자동전송
   const [participantId, setParticipantId] = useState("");
   const [pendingFirst, setPendingFirst] = useState<string | null>(null);
-  const [confirmEnd, setConfirmEnd] = useState(false);
+  // ③ 최종 선택 확정 (2026-08-11) — 마치기 → 최종 선택 → 사후설문 → 기준검증 순.
+  const [finalChoiceOpen, setFinalChoiceOpen] = useState(false);
+  const [finalSubmitting, setFinalSubmitting] = useState(false);
   const [postSurveyOpen, setPostSurveyOpen] = useState(false);
   const [postSubmitting, setPostSubmitting] = useState(false);
   const [finished, setFinished] = useState(false);
@@ -143,7 +149,7 @@ export default function VariantSession({
       router.push(`/study/session/${res.sessionId}`);
     } catch (e) {
       console.error(e);
-      showToast("다음 쇼핑을 열지 못했어요 — 다시 눌러 주세요.");
+      showToast(tr("다음 쇼핑을 열지 못했어요 — 다시 눌러 주세요.", "We could not open the next shopping task. Please try again."));
       setStartingNext(false);
     }
   };
@@ -216,10 +222,10 @@ export default function VariantSession({
         setTurns(d.turns);
         if (d.preferenceState) setState(d.preferenceState);
         setConflicts(d.conflicts);
-        showToast("연결이 불안정해 대화를 다시 불러왔어요.");
+        showToast(STUDY_UI.chat.reloaded);
       } catch {
         setTurns((prev) => prev.filter((t) => t.id !== optimisticId));
-        showToast("메시지 전송에 실패했어요.");
+        showToast(STUDY_UI.chat.sendFailed);
       }
     } finally {
       setBusy(false);
@@ -237,10 +243,10 @@ export default function VariantSession({
         setTurns((prev) => [...prev, res.agentTurn]);
         setChipSuggestions(res.replySuggestions?.length ? res.replySuggestions : null);
       }
-      if (payload.type === "purchase") showToast("이 상품을 선택했어요.");
+      if (payload.type === "purchase") showToast(STUDY_UI.chat.selectedProduct);
     } catch (e) {
       console.error(e);
-      showToast("피드백 전송에 실패했어요.");
+      showToast(STUDY_UI.chat.feedbackFailed);
     } finally {
       setBusy(false);
     }
@@ -265,7 +271,7 @@ export default function VariantSession({
       return true;
     } catch (e) {
       console.error(e);
-      showToast("충돌 해결에 실패했어요.");
+      showToast(STUDY_UI.chat.conflictFailed);
       return false;
     } finally {
       setBusy(false);
@@ -281,7 +287,7 @@ export default function VariantSession({
       return true;
     } catch (e) {
       console.error(e);
-      showToast("기준 반영에 실패했어요.");
+      showToast(STUDY_UI.chat.criterionFailed);
       return false;
     }
   }, []);
@@ -292,43 +298,68 @@ export default function VariantSession({
     return saved;
   }, [chipAction]);
 
-  // 대화 복사 (스터디 헤더) — 텍스트로 클립보드에
-  const copyConversation = useCallback(async () => {
-    const label = (r: string) => (r === "user" ? "나" : "에이전트");
-    const lines: string[] = [];
-    if (scenarioTitle) lines.push(`# ${scenarioTitle}`, "");
-    for (const t of turns) {
-      if (t.id.startsWith("optimistic_")) continue;
-      lines.push(`${label(t.role)}: ${t.content}`);
-      for (const imp of impressionsByTurn[t.id] ?? []) {
-        const p = imp.product;
-        if (p) lines.push(`  · ${p.title}${p.price != null ? ` (${p.price.toLocaleString()}원)` : ""}`);
+  // ③ 최종 선택 확정 — 이번 세션에서 본 상품(중복 제거). 정렬: 구매 → 좋아요 → 최근 본 순.
+  // 최근 턴부터 도는 이유: 대화가 진행될수록 기준이 다듬어지므로 마지막에 본 상품이
+  // 실제 선택일 확률이 높다. 긴 세션(수십 개 노출)에서도 위쪽 몇 개가 유력 후보가 된다.
+  const seenProducts = useMemo<SeenProduct[]>(() => {
+    const seen = new Set<string>();
+    const recent: SeenProduct[] = [];
+    for (let i = turns.length - 1; i >= 0; i--) {
+      for (const imp of impressionsByTurn[turns[i].id] ?? []) {
+        if (seen.has(imp.productId)) continue;
+        seen.add(imp.productId);
+        const fb = feedbackByProduct[imp.productId] ?? [];
+        recent.push({
+          productId: imp.productId,
+          title: imp.product?.title ?? "",
+          price: imp.product?.price ?? null,
+          imageUrl: imp.product?.imageUrl ?? null,
+          liked: fb.includes("like"),
+          purchased: fb.includes("purchase"),
+        });
       }
-      lines.push("");
     }
-    const text = lines.join("\n").trim();
-    // navigator.clipboard는 보안 컨텍스트(HTTPS/localhost)에서만 동작 — Tailscale http 접속엔
-    // 없다. 그 경우 textarea + execCommand 폴백으로 http에서도 복사되게 한다.
+    return [
+      ...recent.filter((p) => p.purchased),
+      ...recent.filter((p) => !p.purchased && p.liked),
+      ...recent.filter((p) => !p.purchased && !p.liked),
+    ];
+  }, [turns, impressionsByTurn, feedbackByProduct]);
+
+  const openFinalChoice = () => {
+    if (seenProducts.length === 0) {
+      // 본 상품이 없으면 고를 것도 없다 — 기록만 남기고 바로 사후 설문으로.
+      api.submitFinalChoice(sessionId, null, "no_products").catch(console.error);
+      setPostSurveyOpen(true);
+      return;
+    }
+    setFinalChoiceOpen(true);
+  };
+
+  const confirmFinalChoice = async (productId: string | null, noneReason?: string) => {
+    setFinalSubmitting(true);
     try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        const ok = document.execCommand("copy");
-        document.body.removeChild(ta);
-        if (!ok) throw new Error("execCommand copy failed");
-      }
-      showToast("대화를 클립보드에 복사했어요.");
-    } catch {
-      showToast("복사 실패 — 브라우저 권한을 확인해 주세요.");
+      await api.submitFinalChoice(sessionId, productId, noneReason);
+      setFinalChoiceOpen(false);
+      setPostSurveyOpen(true);
+    } catch (e) {
+      console.error(e);
+      showToast(STUDY_UI.chat.saveFailed);
+    } finally {
+      setFinalSubmitting(false);
     }
-  }, [turns, impressionsByTurn, scenarioTitle]);
+  };
+
+  /** 사후설문 다음 단계 — ④기준별 검증 또는 완료. 제출·건너뛰기가 같은 길을 탄다.
+   *  baseline1은 의도 추론 자체를 하지 않으므로 검증할 기준이 없다 — 호출 없이 완료로. */
+  const proceedAfterPostSurvey = async () => {
+    const list = infersIntention
+      ? (((await api.criterionCandidates(sessionId, CRITERION_CHECK_MAX))?.criteria ??
+          []) as CriterionCandidate[])
+      : [];
+    if (list.length > 0) { setCriteria(list); setCriterionOpen(true); }
+    else setFinished(true);
+  };
 
   // 첫 발화 자동 전송 (시작 화면에서 넘어온 것) — dev StrictMode 이중 실행 가드
   // 과제 직전 설문이 떠 있는 동안은 보류 — 설문을 내는 사이에 에이전트가 추천을 끝내면
@@ -359,7 +390,7 @@ export default function VariantSession({
   const latestRecommendTurnId = Object.keys(impressionsByTurn).at(-1);
   const latestAgentTurnId = [...turns].reverse().find((t) => t.role !== "user" && !t.id.startsWith("optimistic_"))?.id;
 
-  const thinkingSteps = ["말씀을 살펴보고 있어요…", "기준을 정리하고 있어요…", "맞는 상품을 고르고 있어요…"];
+  const thinkingSteps = STUDY_UI.chat.thinkingSteps;
 
   // 기준 한 줄 행 (안 B 앵커용) — 타입 배지(색+텍스트) + 라벨 + 한 줄 근거 + [수정] 하나.
   const renderCriterionRow = (chip: PreferenceChip) => (
@@ -375,8 +406,8 @@ export default function VariantSession({
               className="w-full rounded-lg border border-[#e4e8eb] px-2 py-1 text-xs focus:border-[#4f46e5] focus:outline-none"
             />
             <div className="mt-1 flex justify-end gap-1.5">
-              <button className="btn px-2 py-0.5 text-[11px]" onClick={() => setEditingChip(null)}>취소</button>
-              <button className="btn btn-primary px-2 py-0.5 text-[11px]" onClick={() => saveChipEdit(chip.id, editText)}>저장</button>
+              <button className="btn px-2 py-0.5 text-[11px]" onClick={() => setEditingChip(null)}>{tr("취소", "Cancel")}</button>
+              <button className="btn btn-primary px-2 py-0.5 text-[11px]" onClick={() => saveChipEdit(chip.id, editText)}>{tr("저장", "Save")}</button>
             </div>
           </div>
         ) : (
@@ -384,7 +415,7 @@ export default function VariantSession({
             <span className="text-xs font-medium text-[#191919]">{chip.label}</span>
             {/* 확인 상태 — E에서 맞아요 누른 기준은 ✓ 확인됨 (앵커에 확인 기록 반영) */}
             {chip.status === "confirmed" && (
-              <span className="ml-1.5 text-[10px] font-semibold text-emerald-700">✓ 확인됨</span>
+              <span className="ml-1.5 text-[10px] font-semibold text-emerald-700">✓ {tr("확인됨", "Confirmed")}</span>
             )}
             {/* 한 줄 근거 — 이 기준이 어디서 나왔는지 */}
             {chip.displayRationale && (
@@ -410,28 +441,18 @@ export default function VariantSession({
   // (없으면 시작 화면처럼 내용이 짧을 때 카드가 줄고 아래에 공백이 생김). grid 부모(안 3)에선 무해.
   const chatCard = (
     <div className="card flex h-full min-h-0 flex-1 flex-col">
-      {/* 헤더 — 스터디면 복사·마치기, 프로토타입이면 수정안 배지. 모바일에서 버튼 압축 */}
+      {/* 헤더 — 스터디면 마치기(→최종 선택 확정), 프로토타입이면 수정안 배지.
+          대화 복사 버튼은 제거(2026-08-11) — 참가자 기능이 아니고, 데이터는 서버에 있다. */}
       <div className="flex items-center justify-between gap-2 border-b border-[#f0f2f4] px-3 py-2.5 sm:px-5 sm:py-3">
         <div className="min-w-0 truncate text-sm font-bold text-[#191919]">
-          쇼핑 대화
+          {STUDY_UI.chat.title}
           {scenarioTitle && <span className="ml-1 text-xs font-normal text-[#9aa0a6]">— {scenarioTitle}</span>}
         </div>
         {study ? (
-          <div className="flex shrink-0 items-center gap-1.5">
-            <button
-              onClick={copyConversation}
-              disabled={turns.length === 0}
-              title="대화 내용을 클립보드에 복사"
-              className="rounded-lg border border-[#e4e8eb] px-2 py-1.5 text-xs text-[#5f6368] transition-[color,border-color,scale] duration-150 hover:border-[#4f46e5] hover:text-[#4f46e5] active:scale-[0.96] disabled:opacity-40"
-            >
-              <span className="sm:hidden">📋</span>
-              <span className="hidden sm:inline">📋 대화 복사</span>
-            </button>
-            <button onClick={() => setConfirmEnd(true)} className="btn btn-primary shrink-0 whitespace-nowrap px-2.5 py-1 text-xs">
-              <span className="sm:hidden">마치기</span>
-              <span className="hidden sm:inline">이 쇼핑 마치기</span>
-            </button>
-          </div>
+          <button onClick={openFinalChoice} className="btn btn-primary shrink-0 whitespace-nowrap px-2.5 py-1 text-xs">
+            <span className="sm:hidden">{STUDY_UI.chat.finishShort}</span>
+            <span className="hidden sm:inline">{STUDY_UI.chat.finish}</span>
+          </button>
         ) : (
           <span className="shrink-0 rounded-full bg-[#eef2ff] px-2.5 py-1 text-[10px] font-semibold text-[#4f46e5]">
             {VARIANT_META[variant].label}
@@ -444,9 +465,9 @@ export default function VariantSession({
           <div className="mt-16 text-center">
             <AgentAvatar className="mx-auto block h-12 w-12" />
             <div className="mt-3 text-xl font-extrabold text-[#191919]">
-              안녕하세요! <span className="text-[#4f46e5]">무엇을 찾아드릴까요?</span>
+              {STUDY_UI.chat.greeting} <span className="text-[#4f46e5]">{STUDY_UI.chat.prompt}</span>
             </div>
-            {initialNeed && <div className="mt-2 text-xs text-[#9aa0a6]">예: &quot;{initialNeed}&quot;</div>}
+            {initialNeed && <div className="mt-2 text-xs text-[#9aa0a6]">{STUDY_UI.chat.example}: &quot;{initialNeed}&quot;</div>}
           </div>
         )}
 
@@ -495,7 +516,7 @@ export default function VariantSession({
                     {understandingSentence(core)}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {["네, 맞아요", "조금 달라요 — "].map((s) => (
+                    {[tr("네, 맞아요", "Yes, that's right"), tr("조금 달라요 — ", "Not quite — ")].map((s) => (
                       <button
                         key={s}
                         onClick={() => setChatInput(s)}
@@ -533,7 +554,10 @@ export default function VariantSession({
                   onConfirm={(id) => chipAction(id, "confirm")}
                   onReject={(id) => chipAction(id, "reject")}
                   onSaveEdit={(id, label) => chipAction(id, "edit_label", label)}
-                  onEscapeToChat={(chip) => setChatInput(`‘${chip.label}’ 기준을 이렇게 바꾸고 싶어요: `)}
+                  onEscapeToChat={(chip) => setChatInput(tr(
+                    `‘${chip.label}’ 기준을 이렇게 바꾸고 싶어요: `,
+                    `I'd like to revise the “${chip.label}” criterion as follows: `,
+                  ))}
                 />
               </div>
             )}
@@ -575,7 +599,7 @@ export default function VariantSession({
             onClick={() => { setAnchorOpen((v) => !v); setShowAllCriteria(false); }}
             className="flex w-full items-center gap-1.5 text-left text-xs text-[#5f6368]"
           >
-            <span className="font-semibold text-[#9aa0a6]">이해한 기준:</span>
+            <span className="font-semibold text-[#9aa0a6]">{tr("이해한 기준:", "Understood criteria:")}</span>
             <span className="min-w-0 flex-1 truncate font-medium text-[#191919]">
               {core.map((c) => (c.status === "confirmed" ? "✓ " : "") + c.label).join(" · ")}
             </span>
@@ -605,7 +629,7 @@ export default function VariantSession({
           onSend={(msg) => { setChatInput(""); sendMessage(msg); }}
           disabled={busy}
           loading={busy}
-          placeholder="무엇을 찾고 계세요?"
+          placeholder={STUDY_UI.chat.inputPlaceholder}
           suggestions={
             chipSuggestions
             ?? (initialNeed && turns.length === 0 ? [initialNeed] : undefined)
@@ -678,32 +702,23 @@ export default function VariantSession({
         <EvidenceDrawer topicId={evidenceTopic} onClose={() => setEvidenceTopic(null)} />
       )}
 
-      {/* 스터디 생명주기 — 마치기 확인 → 사후설문 → 완료 화면 */}
-      {study && confirmEnd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="card max-w-xs p-6 text-center">
-            <h2 className="text-base font-bold text-[#191919]">이 쇼핑을 마칠까요?</h2>
-            <p className="mt-1 text-sm text-slate-500">지금까지의 대화는 저장돼요.</p>
-            <div className="mt-4 flex gap-2">
-              <button onClick={() => setConfirmEnd(false)} className="btn flex-1 py-2">취소</button>
-              <button
-                onClick={() => { setConfirmEnd(false); setPostSurveyOpen(true); }}
-                className="btn btn-primary flex-1 py-2"
-              >
-                마치기
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* 스터디 생명주기 — 마치기 → ③최종 선택 확정 → 사후설문 → ④기준검증 → 완료 화면 */}
+      {study && finalChoiceOpen && (
+        <FinalChoiceModal
+          products={seenProducts}
+          submitting={finalSubmitting}
+          onConfirm={confirmFinalChoice}
+        />
       )}
 
       {study && preTaskOpen && (
         <SurveyModal
-          title="쇼핑을 시작하기 전에"
-          desc={`${taskCategory || "이 상품군"}에 대한 지금의 생각을 알려주세요. 대화가 끝난 뒤 같은 질문을 한 번 더 드립니다.`}
-          sections={fillTemplate(PRE_TASK, { category: taskCategory || "이 상품군" })}
-          submitLabel="쇼핑 시작하기"
+          title={STUDY_UI.surveyModal.preTitle}
+          desc={STUDY_UI.surveyModal.preDescription(categoryLabel(taskCategory || tr("이 상품군", "this product category")))}
+          sections={fillTemplate(PRE_TASK, { category: categoryLabel(taskCategory || tr("이 상품군", "this product category")) })}
+          submitLabel={STUDY_UI.surveyModal.preSubmit}
           submitting={postSubmitting}
+          onSkip={TEST_SURVEY_SKIP ? () => setPreTaskOpen(false) : undefined}
           onSubmit={async (answers, profile) => {
             setPostSubmitting(true);
             try {
@@ -711,7 +726,7 @@ export default function VariantSession({
               setPreTaskOpen(false);
             } catch (e) {
               console.error(e);
-              showToast("설문 저장에 실패했어요 — 다시 시도해 주세요.");
+              showToast(STUDY_UI.surveyModal.saveFailed);
             } finally {
               setPostSubmitting(false);
             }
@@ -721,28 +736,24 @@ export default function VariantSession({
 
       {study && postSurveyOpen && (
         <SurveyModal
-          title="이번 쇼핑은 어떠셨나요?"
-          desc="방금 마친 대화를 떠올리며 답해 주세요."
+          title={STUDY_UI.surveyModal.postTitle}
+          desc={STUDY_UI.surveyModal.postDescription}
           sections={POST_TASK}
-          submitLabel="다음으로"
+          submitLabel={STUDY_UI.surveyModal.next}
           submitting={postSubmitting}
+          onSkip={TEST_SURVEY_SKIP ? () => {
+            setPostSurveyOpen(false);
+            proceedAfterPostSurvey().catch(() => setFinished(true));
+          } : undefined}
           onSubmit={async (answers, profile) => {
             setPostSubmitting(true);
             try {
               await api.submitPostSurvey(sessionId, answers, profile);
               setPostSurveyOpen(false);
-              // 이어서 기준별 검증 — 제시할 기준이 없으면(짧은 세션) 건너뛴다.
-              // baseline1은 의도 추론 자체를 하지 않으므로 검증할 기준이 생성되지 않는다;
-              // 호출도 하지 않고 바로 완료로 보낸다.
-              const list = infersIntention
-                ? (((await api.criterionCandidates(sessionId, CRITERION_CHECK_MAX))?.criteria ??
-                    []) as CriterionCandidate[])
-                : [];
-              if (list.length > 0) { setCriteria(list); setCriterionOpen(true); }
-              else setFinished(true);
+              await proceedAfterPostSurvey();
             } catch (e) {
               console.error(e);
-              showToast("설문 저장에 실패했어요 — 다시 제출해 주세요.");
+              showToast(STUDY_UI.surveyModal.saveFailed);
               setPostSurveyOpen(true);
             } finally {
               setPostSubmitting(false);
@@ -755,6 +766,7 @@ export default function VariantSession({
         <CriterionCheckModal
           candidates={criteria}
           submitting={postSubmitting}
+          onSkip={TEST_SURVEY_SKIP ? () => { setCriterionOpen(false); setFinished(true); } : undefined}
           onSubmit={async (items) => {
             setPostSubmitting(true);
             try {
@@ -763,7 +775,7 @@ export default function VariantSession({
               setFinished(true);
             } catch (e) {
               console.error(e);
-              showToast("저장에 실패했어요 — 다시 제출해 주세요.");
+              showToast(STUDY_UI.surveyModal.saveFailed);
             } finally {
               setPostSubmitting(false);
             }
@@ -773,11 +785,12 @@ export default function VariantSession({
 
       {study && postStudyOpen && (
         <SurveyModal
-          title="마지막으로 전체 경험에 대해"
-          desc="오늘 진행한 쇼핑 전체를 떠올리며 답해 주세요. 이 설문을 마치면 연구가 종료됩니다."
+          title={STUDY_UI.surveyModal.finalTitle}
+          desc={STUDY_UI.surveyModal.finalDescription}
           sections={postStudySectionsFor(condition)}
-          submitLabel="제출하고 종료"
+          submitLabel={STUDY_UI.surveyModal.finalSubmit}
           submitting={postSubmitting}
+          onSkip={TEST_SURVEY_SKIP ? () => { setPostStudyOpen(false); router.push("/study/done"); } : undefined}
           onSubmit={async (answers, profile) => {
             setPostSubmitting(true);
             try {
@@ -786,7 +799,7 @@ export default function VariantSession({
               router.push("/study/done");
             } catch (e) {
               console.error(e);
-              showToast("설문 저장에 실패했어요 — 다시 제출해 주세요.");
+              showToast(STUDY_UI.surveyModal.saveFailed);
             } finally {
               setPostSubmitting(false);
             }
@@ -794,38 +807,40 @@ export default function VariantSession({
         />
       )}
 
+      {/* 완료 화면 — 큐가 남았으면 다음 쇼핑으로 가는 길 하나뿐이다 (2026-08-11:
+          "모든 쇼핑을 마쳤어요" 중도 이탈 버튼 제거 — 4과제 완주가 설계 전제).
+          큐를 다 돌았으면 전체종료 설문으로만 이어진다. */}
       {study && finished && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="card max-w-sm p-6 text-center">
             <AgentAvatar className="mx-auto block h-12 w-12" />
-            <h2 className="mt-3 text-lg font-bold text-[#191919]">이 쇼핑을 마쳤어요</h2>
+            <h2 className="mt-3 text-lg font-bold text-[#191919]">{STUDY_UI.completion.taskTitle}</h2>
             <p className="mt-1 text-sm text-slate-500">
-              {queueLeft > 0 ? `남은 쇼핑 ${queueLeft}번이 있어요.` : "예정된 쇼핑을 모두 마쳤어요."}
+              {queueLeft > 0 ? STUDY_UI.completion.remaining(queueLeft) : STUDY_UI.completion.allTasks}
             </p>
             {/* 큐에 다음 과제가 있으면 그 카테고리로 바로 연다 — 참가자가 매번 고르면
                 자기선택 편향이 친숙도 요인과 교락되므로 순서는 설계가 정한다. */}
-            {queueLeft > 0 && (
+            {queueLeft > 0 ? (
               <button
                 onClick={startNextTask}
                 disabled={startingNext}
                 className="btn btn-primary mt-4 w-full py-2"
               >
-                {startingNext ? "여는 중…" : "다음 쇼핑으로 넘어가기"}
+                {startingNext ? STUDY_UI.completion.opening : STUDY_UI.completion.nextTask}
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setFinished(false);
+                  // 이 조건에 물을 섹션이 하나도 없으면 설문 없이 종료 화면으로
+                  if (postStudySectionsFor(condition).length === 0) router.push("/study/done");
+                  else setPostStudyOpen(true);
+                }}
+                className="btn btn-primary mt-4 w-full py-2"
+              >
+                {STUDY_UI.completion.finalSurvey}
               </button>
             )}
-            <button
-              onClick={() => {
-                setFinished(false);
-                // 이 조건에 물을 섹션이 하나도 없으면(기준을 안 보여준 조건) 설문을 건너뛴다
-                if (postStudySectionsFor(condition).length === 0) router.push("/study/done");
-                else setPostStudyOpen(true);
-              }}
-              className={queueLeft > 0
-                ? "mt-2 text-xs text-slate-400 hover:text-slate-600"
-                : "btn btn-primary mt-4 w-full py-2"}
-            >
-              모든 쇼핑을 마쳤어요
-            </button>
           </div>
         </div>
       )}
