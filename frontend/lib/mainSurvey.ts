@@ -285,6 +285,7 @@ export const ALLOWS_CORRECTION: Record<StudyCondition, boolean> = {
 
 /** 종료 설문은 **세 조건 공통** (2026-08-13 확정) — 기능이 없는 조건에서 통제감이
  *  낮게 나오는 것은 "물을 수 없음"이 아니라 조건 간 결과다. 필터 없이 전체를 준다. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function postStudySectionsFor(_condition: StudyCondition | null | undefined): MSection[] {
   return POST_STUDY;
 }

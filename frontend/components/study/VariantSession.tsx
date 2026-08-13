@@ -46,7 +46,7 @@ import {
   type StudyCondition,
 } from "@/lib/localizedMainSurvey";
 import { completeTask, nextTask } from "@/lib/taskQueue";
-import { categoryLabel, STUDY_UI, tr } from "@/lib/studyI18n";
+import { STUDY_UI, tr } from "@/lib/studyI18n";
 
 export type UiVariant = "a" | "b" | "c" | "d" | "e";
 
@@ -98,7 +98,6 @@ export default function VariantSession({
   const [postSubmitting, setPostSubmitting] = useState(false);
   const [finished, setFinished] = useState(false);
   // 본실험 설문 흐름: 과제직전 → (대화) → 과제직후 → 기준별 검증 → 완료 → (전체종료 설문)
-  const [taskCategory, setTaskCategory] = useState("");
   // between-subjects 조건 — 백엔드가 참가자에 배정한 값 (요청값은 무시된다)
   const [condition, setCondition] = useState<StudyCondition | null>(null);
   // 조건별 UI 게이트. study 모드가 아니면(UI 수정안 비교·데모) 조건 설계 밖이므로 전부 보인다.
@@ -183,7 +182,6 @@ export default function VariantSession({
       }
       if (study) {
         setParticipantId(d.session?.participantId ?? "");
-        setTaskCategory(d.scenario?.targetCategory ?? "");
         setCondition((d.session?.metadata?.studyCondition as StudyCondition) ?? null);
       }
     }).catch(console.error);
