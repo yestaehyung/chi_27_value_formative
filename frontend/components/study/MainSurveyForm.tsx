@@ -31,7 +31,15 @@ export function QuestionRow({
     >
       <div className="text-[13px] leading-relaxed text-[#191919]">{q.label}</div>
 
-      {q.type === "likert" ? (
+      {q.type === "text" ? (
+        <textarea
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          rows={3}
+          placeholder={q.placeholder}
+          className="mt-1.5 w-full resize-none rounded-lg border border-[#e4e8eb] px-3 py-2 text-xs leading-relaxed focus:border-[#4f46e5] focus:outline-none"
+        />
+      ) : q.type === "likert" ? (
         <>
           <div className="mt-1.5 flex gap-1">
             {SCALE.map((n) => {

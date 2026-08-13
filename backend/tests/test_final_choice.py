@@ -78,3 +78,56 @@ def test_empty_confirmation_is_rejected(client, shopped_session):
     sid, _ = shopped_session
     r = client.put(f"/api/study/sessions/{sid}/final-choice", json={})
     assert r.status_code == 422
+
+
+def test_shortlist_records_candidate_ids(client, shopped_session):
+    """결정 상태 shortlist — 후보 2개 이상의 id가 meta에 남는다 (측정 계획 §5.1)."""
+    sid, products = shopped_session
+    r = client.put(f"/api/study/sessions/{sid}/final-choice",
+                   json={"status": "shortlist", "shortlistIds": products[:2]})
+    assert r.status_code == 200, r.text
+    fc = client.get(f"/api/sessions/{sid}").json()["session"]["metadata"]["finalChoice"]
+    assert fc["status"] == "shortlist"
+    assert fc["shortlistIds"] == products[:2]
+
+
+def test_shortlist_needs_two_or_more(client, shopped_session):
+    sid, products = shopped_session
+    r = client.put(f"/api/study/sessions/{sid}/final-choice",
+                   json={"status": "shortlist", "shortlistIds": products[:1]})
+    assert r.status_code == 422
+
+
+def test_explore_more_is_a_valid_terminal_state(client, shopped_session):
+    sid, _ = shopped_session
+    r = client.put(f"/api/study/sessions/{sid}/final-choice", json={"status": "explore_more"})
+    assert r.status_code == 200
+    fc = client.get(f"/api/sessions/{sid}").json()["session"]["metadata"]["finalChoice"]
+    assert fc["status"] == "explore_more"
+
+
+def test_criterion_audit_part_a_survives_without_topics(client):
+    """A파트(자기 기준)·누락 기준은 추론 topic이 없어도 저장된다 — baseline1 대응."""
+    cat = client.get("/api/meta/categories").json()["categories"][0]["category"]
+    sid = client.post("/api/sessions", json={
+        "mode": "manual", "category": cat, "studyCondition": "baseline1",
+    }).json()["sessionId"]
+    r = client.post(f"/api/study/sessions/{sid}/criterion-validations", json={
+        "items": [],
+        "ownCriteria": [{"label": "예산 10만원 이내", "necessity": "반드시 충족", "influence": "예"}],
+        "missingCriteria": ["배터리 오래감"],
+    })
+    assert r.status_code == 200, r.text
+    audit = client.get(f"/api/sessions/{sid}").json()["session"]["metadata"]["criterionAudit"]
+    assert audit["ownCriteria"][0]["label"] == "예산 10만원 이내"
+    assert audit["missingCriteria"] == ["배터리 오래감"]
+
+
+def test_knowledge_survey_lands_on_participant(client, shopped_session):
+    """지식 행렬은 참가자 단위 1회 — Participant.survey.productKnowledge."""
+    sid, _ = shopped_session
+    pid = client.get(f"/api/sessions/{sid}").json()["session"]["participantId"]
+    r = client.put(f"/api/study/participants/{pid}/knowledge-survey", json={
+        "answers": {"k:티셔츠:SPK_1": "6"}, "scores": {"티셔츠": 5.4}, "categories": ["티셔츠"],
+    })
+    assert r.status_code == 200, r.text

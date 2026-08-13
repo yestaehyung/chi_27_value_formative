@@ -1,0 +1,276 @@
+<title>ValueCommit 본실험 시스템 브리핑 — 2026-08-11</title>
+<style>
+  :root {
+    --bg: #f7f7f9;
+    --surface: #ffffff;
+    --ink: #1c1c22;
+    --ink-soft: #5b5f6b;
+    --ink-faint: #9296a3;
+    --line: #e6e7ec;
+    --brand: #4f46e5;
+    --brand-soft: #eef0ff;
+    --good: #047857;
+    --good-soft: #ecfdf5;
+    --warn: #b45309;
+    --warn-soft: #fffbeb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16161c;
+      --surface: #1f1f27;
+      --ink: #ececf1;
+      --ink-soft: #b3b6c2;
+      --ink-faint: #7c8090;
+      --line: #32333e;
+      --brand: #8b85f2;
+      --brand-soft: #2a2a45;
+      --good: #34d399;
+      --good-soft: #123529;
+      --warn: #fbbf24;
+      --warn-soft: #3a2c10;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16161c;
+    --surface: #1f1f27;
+    --ink: #ececf1;
+    --ink-soft: #b3b6c2;
+    --ink-faint: #7c8090;
+    --line: #32333e;
+    --brand: #8b85f2;
+    --brand-soft: #2a2a45;
+    --good: #34d399;
+    --good-soft: #123529;
+    --warn: #fbbf24;
+    --warn-soft: #3a2c10;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    line-height: 1.65;
+    word-break: keep-all;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 860px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 8px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.12em; color: var(--brand); font-weight: 700; }
+  h1 { font-size: 27px; line-height: 1.3; margin: 6px 0 10px; text-wrap: balance; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--ink-soft); }
+  .meta b { color: var(--ink); font-weight: 600; }
+  section { margin-top: 44px; }
+  h2 { font-size: 19px; margin: 0 0 4px; display: flex; align-items: baseline; gap: 10px; }
+  h2 .no { font-size: 12px; color: var(--ink-faint); font-weight: 600; letter-spacing: 0.06em; }
+  .lede { color: var(--ink-soft); font-size: 14px; margin: 0 0 16px; max-width: 62ch; }
+  h3 { font-size: 14.5px; margin: 22px 0 8px; }
+  p { font-size: 14.5px; max-width: 68ch; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+  .tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th { font-size: 12px; letter-spacing: 0.04em; color: var(--ink-faint); font-weight: 700; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pill { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 11.5px; font-weight: 700; }
+  .pill.brand { background: var(--brand-soft); color: var(--brand); }
+  .pill.good { background: var(--good-soft); color: var(--good); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .callout { border-left: 3px solid var(--brand); background: var(--surface); border-radius: 0 10px 10px 0; padding: 12px 16px; font-size: 13.5px; color: var(--ink-soft); margin: 14px 0; }
+  .callout b { color: var(--ink); }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  code { font-family: "SF Mono", "D2Coding", Consolas, monospace; font-size: 12.5px; background: var(--brand-soft); color: var(--brand); border-radius: 5px; padding: 1px 6px; }
+  .flow { font-family: "SF Mono", "D2Coding", Consolas, monospace; font-size: 12.5px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; white-space: pre; line-height: 1.8; color: var(--ink-soft); }
+  .flow b { color: var(--ink); }
+  ul { padding-left: 20px; font-size: 14px; }
+  li { margin: 5px 0; max-width: 66ch; }
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 14px; font-size: 12px; color: var(--ink-faint); }
+  a { color: var(--brand); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .small { font-size: 12.5px; color: var(--ink-faint); }
+</style>
+
+<div class="page">
+  <header class="doc">
+    <div class="eyebrow">VALUECOMMIT · MAIN STUDY BRIEF</div>
+    <h1>본실험 시스템 현황 브리핑 — 비용 추정과 6가지 핵심 변경</h1>
+    <div class="meta">
+      <span>작성 <b>2026-08-11</b></span>
+      <span>라이브 <b>shopping-lab.up.railway.app</b></span>
+      <span>챗 모델 <b>gpt-5.6-terra</b></span>
+      <span>상품 풀 <b>44,539개 · 10카테고리</b></span>
+      <span>참가자 <b>모집 전 (테스트 데이터만)</b></span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="no">01</span>예상 API 비용</h2>
+    <p class="lede">챗 모델을 GPT-5.6 Terra로 전환한 기준의 추정입니다. 단가는 2026-07-30 인하가 반영된 공식 가격입니다.</p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>모델</th><th class="num">입력 (1M tokens)</th><th class="num">출력 (1M tokens)</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td><b>GPT-5.6 Terra</b> <span class="pill brand">현재 사용</span></td><td class="num">$2.00</td><td class="num">$12.00</td><td>FS1과 동일 모델 — 비교 일관성</td></tr>
+          <tr><td>GPT-5.6 Luna</td><td class="num">$0.20</td><td class="num">$1.20</td><td>Terra의 1/10 단가</td></tr>
+          <tr><td>DeepSeek V4 Flash <span class="pill warn">직전 사용</span></td><td class="num">$0.14 <span class="small">(캐시 히트 $0.003)</span></td><td class="num">$0.28</td><td>단가 최저 · 8/6 인상 공지, 8/11 현재 미시행</td></tr>
+          <tr><td>text-embedding-3-small</td><td class="num">$0.02</td><td class="num">—</td><td>검색용 임베딩 (무시 가능 수준)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>실측 — 동일 대화를 두 모델로 (2026-08-11)</h3>
+    <p>스피커 쇼핑 대화 <b>4턴 + 좋아요 1회</b>를 Terra와 DeepSeek으로 각각 실행하고, 전체 LLM 호출의 토큰 사용량을 합산. 발화 1번마다 백엔드 호출 ~9회(기준 추출·병합·이론 매핑·충돌 감지 + 행동 결정 + 상품 재정렬 + 답변 생성), 대화 전체 47회.</p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>모델</th><th class="num">입력 토큰</th><th class="num">출력 토큰</th><th class="num">대화 1건 비용</th><th class="num">Terra 대비</th></tr></thead>
+        <tbody>
+          <tr><td><b>GPT-5.6 Terra</b> (실측)</td><td class="num">68,983</td><td class="num">10,260</td><td class="num"><b>$0.26</b></td><td class="num">1×</td></tr>
+          <tr><td>DeepSeek V4 Flash (실측)</td><td class="num">76,125</td><td class="num">16,098</td><td class="num">$0.015</td><td class="num">1/17</td></tr>
+          <tr><td>GPT-5.6 Luna (Terra 토큰 × Luna 단가)</td><td class="num">68,983</td><td class="num">10,260</td><td class="num">$0.026</td><td class="num">1/10</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ul>
+      <li>Terra 출력이 DeepSeek보다 <b>36% 적음</b> (10.3K vs 16.1K) — 답이 짧고 형식 재시도가 없음. 다만 43배 단가 차이를 뒤집을 수준은 아님</li>
+      <li>이전 내부 비교에서는 총액이 비슷했으나, <b>7/30 GPT-5.6 인하·DeepSeek thinking 차단이 반영된 현재 조건에서는 Flash가 총액 ~17배 저렴</b></li>
+      <li>DeepSeek은 8/6 "상당한" 인상 공지, <b>8/11 현재 미시행</b>(새 요율·시행일 미공개) — 위 Flash 값은 현행 요율·캐시 미스 기준이며 인상 폭에 따라 무효화될 수 있음</li>
+      <li>Terra 유지 근거는 비용이 아니라 <b>품질과 FS1 일관성</b> (FS1도 Terra로 수집)</li>
+    </ul>
+
+    <h3>100명 추정 (실측 × 참가자 규모 환산)</h3>
+    <p class="small">참가자 1명 = 4과제 × 6턴 + 반응 ~10회 ≈ 실측 대화의 약 6배로 환산. 조건 혼합(baseline1은 추론 미실행으로 더 저렴) 미반영한 상한.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th></th><th class="num">Terra</th><th class="num">Luna</th><th class="num">V4 Flash</th></tr></thead>
+        <tbody>
+          <tr><td>참가자 1명</td><td class="num">$1.6 ~ 2.0</td><td class="num">$0.16 ~ 0.20</td><td class="num">$0.09 ~ 0.12</td></tr>
+          <tr><td><b>100명 전체</b></td><td class="num"><b>$160 ~ 200</b><br><span class="small">약 22 ~ 28만원</span></td><td class="num">$16 ~ 20<br><span class="small">약 2.2 ~ 2.8만원</span></td><td class="num">$9 ~ 12<br><span class="small">약 1.2 ~ 1.7만원</span></td></tr>
+          <tr><td>일회성 (이미 지출)</td><td class="num" colspan="3">임베딩 3만 건 ~$0.3 · 상품 프로필 생성은 연구실 자체 서버 = $0</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">02</span>WIMHF 분석 결과를 발화 설계에 반영</h2>
+    <p class="lede">"What's In My Human Feedback" 방법으로 사용자가 어떤 에이전트 발화를 선호하는지 두 모델로 분석했고, 그 결과가 CRS 발화 설계의 근거가 됐습니다.</p>
+
+    <h3>분석에서 발견한 것</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>분석 모델</th><th>발견</th></tr></thead>
+        <tbody>
+          <tr><td><b>DeepSeek</b><br><span class="small">근본적 기대</span></td><td>추천을 요청한 사용자는 되묻거나 회피하는 답변("예산과 목적을 알려주셔야 추천할 수 있습니다")보다, <b>불완전해도 바로 후보와 정보를 주는 답변</b>("정보가 부족하지만 우선 세 기준으로 추천드리겠습니다 — 가성비 A · 성능 B · 휴대성 C. 좁히려면 예산을 알려주세요")을 선택함</td></tr>
+          <tr><td><b>GPT-OSS</b><br><span class="small">구체적 형식</span></td><td>같은 기대를 더 세분화 — ① <b>구체 스펙 포함 추천</b> 선호(후보명·가격·장단점·선택지·목적별 이유 — "실제로 선택할 수 있는 수준의 정보"), ② <b>구조화된 표현</b> 선호(불릿 없음 −0.046 · 마크다운 구조 없음 −0.170 · <b>비교표 없음 −0.205</b>), ③ 친근한 말투 선호</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>설계 반영과 실동작 확인</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>반영</th><th>구현</th><th>실동작 확인 (8/11 실측 대화)</th></tr></thead>
+        <tbody>
+          <tr><td><b>바로 추천</b></td><td>에이전트 기본 행동 = 되묻기가 아닌 추천. 행동 판단이 모호하면 추천으로 폴백. 숨은 기준 파악은 질문 공세 없이 대화·반응에서 배경 추론</td><td>첫 턴 "캠핑용 스피커, 시끄러운 건 부담" → 즉시 5개 추천 + "마음에 드는 쪽을 골라주시면 다음 추천을 맞춰볼게요" (되묻기 0회)</td></tr>
+          <tr><td><b>구조화 표현</b></td><td>말풍선에 표·불릿·번호목록 렌더링 추가, 비교 요청일 때만 사용. 회귀 테스트 12개로 고정</td><td>비교 질문("첫 번째랑 두 번째 차이?")에 두 후보의 확인된 스펙·평점을 대조해 답변</td></tr>
+          <tr><td><b>선택 가능한 정보</b></td><td>추천 카드마다 추천 이유 + 기준 부합점(✓)·미흡점(−) + 가격·평점·리뷰</td><td>카드 예: "IP67 방수로 야외 사용에 안전 / 출력 사양 미기재로 소리 크기를 정확히 알 수 없음"</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">03</span>에이전트 답변의 구조화 (표·목록)</h2>
+    <p class="lede">평문만 허용하던 말풍선이 이제 구조를 렌더링합니다.</p>
+    <ul>
+      <li>프론트에 전용 렌더러(<code>StructuredText</code>) 신설 — <b>불릿·번호 목록·표·굵게</b> 4가지만 렌더하고, 그 외 마크다운(제목·코드블록 등)은 백엔드가 계속 제거합니다.</li>
+      <li>프롬프트 원칙: 기본은 사람처럼 한두 문장, <b>비교 요청 등 구조가 이득일 때만</b> 표를 씁니다. 상품 카드가 이미 보여주는 정보(가격·평점)는 표로 중복하지 않습니다.</li>
+      <li>부수 수정 — 카드 위치 오안내 버그: 프롬프트의 금지 예시("오른쪽 패널")가 오히려 그 단어를 심어 12%(5/40)가 잘못된 방향 안내를 했습니다. 오염원 제거 후 0/40. 회귀 테스트로 고정.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="no">04</span>데이터 풀 확장 — 16,943 → 44,539개 · 10카테고리</h2>
+    <p class="lede">Amazon Reviews 2023 실상품 기반. 참가자는 이 10개 중 "잘 아는 것 2개 + 잘 모르는 것 2개"를 골라 4번 쇼핑합니다.</p>
+    <div class="grid2">
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>카테고리</th><th class="num">상품 수</th></tr></thead>
+          <tbody>
+            <tr><td>티셔츠</td><td class="num">9,527</td></tr>
+            <tr><td>청바지 <span class="pill good">신규</span></td><td class="num">4,799</td></tr>
+            <tr><td>노트북 <span class="pill good">신규</span></td><td class="num">4,759</td></tr>
+            <tr><td>팬츠·바지 <span class="pill good">신규</span></td><td class="num">4,551</td></tr>
+            <tr><td>니트·가디건 <span class="pill good">신규</span></td><td class="num">4,547</td></tr>
+            <tr><td>후드·맨투맨 <span class="pill good">신규</span></td><td class="num">4,519</td></tr>
+            <tr><td>셔츠·블라우스 <span class="pill good">신규</span></td><td class="num">4,421</td></tr>
+            <tr><td>책상</td><td class="num">2,926</td></tr>
+            <tr><td>블루투스 스피커</td><td class="num">2,363</td></tr>
+            <tr><td>데스크체어</td><td class="num">2,127</td></tr>
+            <tr><td><b>합계</b></td><td class="num"><b>44,539</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">품질 게이트</h3>
+        <ul style="margin:0">
+          <li>전 상품 실이미지·실가격(KRW 환산)·<b>리뷰 10개 이상</b></li>
+          <li>아동복·전자 액세서리(케이블 등)·중복 제거</li>
+          <li>신규 상품의 한국어 상품명·설명은 이미지 검증을 거친 멀티모달 생성 — 한국어화에 실패한 2,404개는 영어 노출 방지를 위해 제외</li>
+          <li>검색 색인에 이미지에서 뽑은 시각 특징 포함 (5장)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="no">05</span>추천 알고리즘</h2>
+    <div class="flow">발화 → <b>1단계 의미 검색</b> (선택 카테고리 안에서만, 후보 30개) → 가격·속성 필터
+     → <b>2단계 LLM 재정렬</b> (조건 집행 · 강점이 다른 5개 구성) → 카드 5개 노출</div>
+    <ul>
+      <li><b>역할 분담</b> — 1단계 검색은 관련성만 보고, "30만원 이내"·"무선만" 같은 조건 집행과 서로 다른 강점의 조합 구성은 2단계 LLM이 담당합니다.</li>
+      <li>부정 표현("시끄러운 건 싫어요")은 검색어에 넣지 않고 <b>별도 조건 메모</b>로 2단계에 전달합니다 — 의미 검색이 부정을 이해하지 못하는 알려진 한계를 우회.</li>
+      <li>신규 상품은 이미지에서 뽑은 시각 특징까지 넣어 검색 색인을 만들었습니다 — "빨간 후드티" 같은 눈으로 보는 조건의 질의에 유리.</li>
+      <li>조건을 지키는 후보가 5개 미만이면 <b>그만큼만 정직하게</b> 노출합니다 (조건 위반 상품으로 칸을 채우지 않음).</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="no">06</span>실험 조건 — baseline1 · baseline2 · ours</h2>
+    <p class="lede">참가자 단위 1회 배정(최소화 방식, 100명이면 34/33/33), 4과제 내내 동일 조건.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th></th><th>baseline1<br><span class="small">순수 LLM</span></th><th>baseline2<br><span class="small">추론·미외재화</span></th><th>ours<br><span class="small">외재화+수정</span></th></tr></thead>
+        <tbody>
+          <tr><td>의도 추론</td><td>✗ 안 돎</td><td>✓ 돎 (숨김)</td><td>✓ 돎 (사이드바 노출)</td></tr>
+          <tr><td>화면</td><td>채팅+카드</td><td>채팅+카드 (b1과 동일 외관)</td><td>+ 기준 칩·충돌 카드 사이드바</td></tr>
+          <tr><td>추천에 쓰는 신호</td><td>발화 원문만</td><td>발화 + <b>미확인 추론까지</b></td><td>발화 + <b>확인된 기준만</b></td></tr>
+          <tr><td>기준 확인·수정</td><td>—</td><td>불가</td><td>맞아요/아니에요·중요도·수정·근거</td></tr>
+          <tr><td>사후 기준 검증(④)</td><td>없음 (기준이 없음)</td><td>✓ 로그 기준을 사후 확인</td><td>✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout"><b>비교축:</b> b1↔b2 = "동적 사용자 모델링 자체"의 효과 (참가자는 화면 차이를 못 느낌) · b2↔ours = "외재화+수정 가능성"의 효과. ours가 미확인 추론을 안 쓰는 건 의도된 비대칭 — 가설은 사용자 확인을 통과해야 추천에 반영된다는 원칙.</div>
+    <p>과제 흐름(공통): 카테고리 2+2 선택(잘 아는 것/모르는 것) → 무작위 순서 4과제 → 과제마다 [직전 설문 → 대화 → <b>최종 선택 확정</b> → 직후 설문 → 기준 검증] → 전체 종료 설문.</p>
+  </section>
+
+  <section>
+    <h2><span class="no">07</span>영문화 (English Study 준비)</h2>
+    <ul>
+      <li>UI 전 문자열이 <code>tr(한국어, English)</code> 레이어를 통과하도록 리팩터링 완료 — 설문 5종 포함.</li>
+      <li><b>기본은 한국어</b>이며 현재 라이브도 100% 한국어입니다. 프론트 env <code>NEXT_PUBLIC_STUDY_LOCALE=en</code>을 준 배포에서만 영어로 켜집니다 (별도 영어 스터디 배포용 스위치).</li>
+      <li>에이전트 답변 언어는 별도 사안 — 영어 스터디 시 프롬프트의 한국어 지시도 함께 전환해야 합니다 (미착수).</li>
+    </ul>
+  </section>
+
+  <footer>
+    ValueCommit Shopping Agent · 본실험 준비 브리핑 · 2026-08-11 기준.
+    가격 출처: <a href="https://openai.com/index/advancing-the-price-performance-frontier-with-gpt-5-6/">OpenAI GPT-5.6 발표</a> ·
+    <a href="https://www.infoworld.com/article/4203865/openai-drops-gpt-5-6-luna-and-terra-api-prices-by-up-to-80.html">InfoWorld (7/30 인하)</a> ·
+    <a href="https://deepseek.ai/pricing">DeepSeek V4 요금표</a>
+  </footer>
+</div>

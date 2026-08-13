@@ -48,6 +48,14 @@ function read(): StoredQueue | null {
   }
 }
 
+/** 큐의 전체 과제 목록 (지식 행렬 화면이 4개 카테고리를 읽는다). 큐가 없으면 []. */
+export function queuedTasks(participantId?: string): PlannedTask[] {
+  const q = read();
+  if (!q) return [];
+  if (participantId && q.participantId !== participantId) return [];
+  return q.tasks;
+}
+
 /** 아직 시작하지 않은 다음 과제. 큐가 없거나 다 끝났으면 null. */
 export function nextTask(participantId?: string): PlannedTask | null {
   const q = read();

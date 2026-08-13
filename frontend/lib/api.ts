@@ -152,11 +152,28 @@ export const api = {
   gap: (sessionId: string) => request<any>(`/api/study/sessions/${sessionId}/gap`),
 
   // 세션 종료 사후 설문 (이해·만족·신뢰 + 확장) — sessions.meta.postSurvey
-  /** ③ 최종 선택 확정 — 사후 설문·기준 검증 전에 선택을 잠근다 (2026-08-11). */
-  submitFinalChoice: (sessionId: string, productId: string | null, noneReason?: string) =>
+  /** ③ 결정 상태 확정 (4범주) — 사후 설문·기준 감사 전에 잠근다 (2026-08-13). */
+  submitFinalChoice: (sessionId: string, payload: {
+    status: "final" | "shortlist" | "explore_more" | "none_suitable";
+    productId?: string | null;
+    shortlistIds?: string[];
+    noneReason?: string;
+  }) =>
     request<{ ok: boolean }>(`/api/study/sessions/${sessionId}/final-choice`, {
       method: "PUT",
-      body: JSON.stringify({ productId, noneReason }),
+      body: JSON.stringify(payload),
+    }),
+
+  /** 제품군별 지식 행렬 (카테고리 확정 직후 1회) — Participant.survey.productKnowledge */
+  submitKnowledgeSurvey: (
+    participantId: string,
+    answers: Record<string, string>,
+    scores: Record<string, number>,
+    categories: string[],
+  ) =>
+    request<{ ok: boolean }>(`/api/study/participants/${participantId}/knowledge-survey`, {
+      method: "PUT",
+      body: JSON.stringify({ answers, scores, categories }),
     }),
 
   submitPostSurvey: (sessionId: string, answers: Record<string, unknown>, profile: Record<string, number>) =>
@@ -200,10 +217,16 @@ export const api = {
   criterionCandidates: (sessionId: string, limit = 5) =>
     request<any>(`/api/study/sessions/${sessionId}/criterion-candidates?limit=${limit}`),
 
-  submitCriterionValidations: (sessionId: string, items: unknown[]) =>
+  /** 기준 감사 저장 — B파트(items) + A파트 자기 기준(ownCriteria) + 누락 기준 */
+  submitCriterionValidations: (
+    sessionId: string,
+    items: unknown[],
+    ownCriteria: { label: string; necessity?: string; influence?: string }[] = [],
+    missingCriteria: string[] = [],
+  ) =>
     request<{ saved: number }>(`/api/study/sessions/${sessionId}/criterion-validations`, {
       method: "POST",
-      body: JSON.stringify({ items }),
+      body: JSON.stringify({ items, ownCriteria, missingCriteria }),
     }),
 
   // RIG — Relational Intention Graph (메타경로 기반 예측·설명)

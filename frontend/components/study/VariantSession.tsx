@@ -35,13 +35,13 @@ import ChipTypeBadge from "@/components/preference/ChipTypeBadge";
 import CurrentUnderstandingPanel from "@/components/preference/CurrentUnderstandingPanel";
 import EvidenceDrawer from "@/components/preference/EvidenceDrawer";
 import SimpleUnderstandingPanel from "@/components/preference/SimpleUnderstandingPanel";
-import FinalChoiceModal, { type SeenProduct } from "@/components/study/FinalChoiceModal";
+import FinalChoiceModal, { type FinalChoicePayload, type SeenProduct } from "@/components/study/FinalChoiceModal";
 import SurveyModal from "@/components/study/SurveyModal";
 import CriterionCheckModal, { type CriterionCandidate } from "@/components/study/CriterionCheckModal";
 import {
   ALLOWS_CORRECTION, CRITERION_CHECK_MAX, INFERS_INTENTION,
-  POST_TASK_LOCALIZED as POST_TASK, PRE_TASK_LOCALIZED as PRE_TASK,
-  SHOWS_CRITERIA, TEST_SURVEY_SKIP, fillTemplate,
+  POST_TASK_LOCALIZED as POST_TASK,
+  SHOWS_CRITERIA, TEST_SURVEY_SKIP,
   postStudySectionsLocalized as postStudySectionsFor,
   type StudyCondition,
 } from "@/lib/localizedMainSurvey";
@@ -117,7 +117,6 @@ export default function VariantSession({
   const [startingNext, setStartingNext] = useState(false);
   // 완료 표시는 한 번만. finished가 껐다 켜져도(전체종료 설문 취소 등) 큐가 두 칸 가면 안 된다.
   const advancedRef = useRef(false);
-  const [preTaskOpen, setPreTaskOpen] = useState(false);
   const [criterionOpen, setCriterionOpen] = useState(false);
   const [criteria, setCriteria] = useState<CriterionCandidate[]>([]);
   const [postStudyOpen, setPostStudyOpen] = useState(false);
@@ -186,9 +185,6 @@ export default function VariantSession({
         setParticipantId(d.session?.participantId ?? "");
         setTaskCategory(d.scenario?.targetCategory ?? "");
         setCondition((d.session?.metadata?.studyCondition as StudyCondition) ?? null);
-        // 과제 직전 설문은 대화가 시작되기 전에 받아야 한다 — 에이전트가 이미 추천을 하면
-        // '지금 내 기준이 얼마나 명확한가'가 오염돼서 Δ(사전→사후) 자체가 무의미해진다.
-        if (!d.session?.metadata?.preTaskSurvey) setPreTaskOpen(true);
       }
     }).catch(console.error);
   }, [sessionId, study]);
@@ -328,18 +324,19 @@ export default function VariantSession({
 
   const openFinalChoice = () => {
     if (seenProducts.length === 0) {
-      // 본 상품이 없으면 고를 것도 없다 — 기록만 남기고 바로 사후 설문으로.
-      api.submitFinalChoice(sessionId, null, "no_products").catch(console.error);
+      // 본 상품이 없으면 고를 것도 없다 — 기록만 남기고 바로 확신 설문으로.
+      api.submitFinalChoice(sessionId, { status: "none_suitable", noneReason: "no_products" })
+        .catch(console.error);
       setPostSurveyOpen(true);
       return;
     }
     setFinalChoiceOpen(true);
   };
 
-  const confirmFinalChoice = async (productId: string | null, noneReason?: string) => {
+  const confirmFinalChoice = async (payload: FinalChoicePayload) => {
     setFinalSubmitting(true);
     try {
-      await api.submitFinalChoice(sessionId, productId, noneReason);
+      await api.submitFinalChoice(sessionId, payload);
       setFinalChoiceOpen(false);
       setPostSurveyOpen(true);
     } catch (e) {
@@ -350,28 +347,26 @@ export default function VariantSession({
     }
   };
 
-  /** 사후설문 다음 단계 — ④기준별 검증 또는 완료. 제출·건너뛰기가 같은 길을 탄다.
-   *  baseline1은 의도 추론 자체를 하지 않으므로 검증할 기준이 없다 — 호출 없이 완료로. */
+  /** 확신 설문 다음 단계 — 기준 감사. A파트(내 기준 나열)는 **세 조건 공통**이므로
+   *  추론 기준이 없어도(baseline1) 감사는 항상 연다. B파트만 후보 유무로 갈린다. */
   const proceedAfterPostSurvey = async () => {
     const list = infersIntention
       ? (((await api.criterionCandidates(sessionId, CRITERION_CHECK_MAX))?.criteria ??
           []) as CriterionCandidate[])
       : [];
-    if (list.length > 0) { setCriteria(list); setCriterionOpen(true); }
-    else setFinished(true);
+    setCriteria(list);
+    setCriterionOpen(true);
   };
 
   // 첫 발화 자동 전송 (시작 화면에서 넘어온 것) — dev StrictMode 이중 실행 가드
-  // 과제 직전 설문이 떠 있는 동안은 보류 — 설문을 내는 사이에 에이전트가 추천을 끝내면
-  // 사전 측정이 사후 측정이 되어버린다.
   const sentFirstRef = useRef(false);
   useEffect(() => {
-    if (pendingFirst && !preTaskOpen && !sentFirstRef.current) {
+    if (pendingFirst && !sentFirstRef.current) {
       sentFirstRef.current = true;
       setPendingFirst(null);
       sendMessage(pendingFirst);
     }
-  }, [pendingFirst, preTaskOpen, sendMessage]);
+  }, [pendingFirst, sendMessage]);
 
   // ----- derived ------------------------------------------------------------
   const chips = state?.userVisibleSummary.chips ?? [];
@@ -711,29 +706,8 @@ export default function VariantSession({
         />
       )}
 
-      {study && preTaskOpen && (
-        <SurveyModal
-          title={STUDY_UI.surveyModal.preTitle}
-          desc={STUDY_UI.surveyModal.preDescription(categoryLabel(taskCategory || tr("이 상품군", "this product category")))}
-          sections={fillTemplate(PRE_TASK, { category: categoryLabel(taskCategory || tr("이 상품군", "this product category")) })}
-          submitLabel={STUDY_UI.surveyModal.preSubmit}
-          submitting={postSubmitting}
-          onSkip={TEST_SURVEY_SKIP ? () => setPreTaskOpen(false) : undefined}
-          onSubmit={async (answers, profile) => {
-            setPostSubmitting(true);
-            try {
-              await api.submitPreTaskSurvey(sessionId, answers, profile, taskCategory);
-              setPreTaskOpen(false);
-            } catch (e) {
-              console.error(e);
-              showToast(STUDY_UI.surveyModal.saveFailed);
-            } finally {
-              setPostSubmitting(false);
-            }
-          }}
-        />
-      )}
-
+      {/* 과제직전 설문은 폐지(2026-08-13) — 제품군 지식·초기 명확성은 /study/knowledge
+          행렬에서 카테고리 확정 직후 1회 수집한다 (측정 계획 §4). */}
       {study && postSurveyOpen && (
         <SurveyModal
           title={STUDY_UI.surveyModal.postTitle}
@@ -767,10 +741,10 @@ export default function VariantSession({
           candidates={criteria}
           submitting={postSubmitting}
           onSkip={TEST_SURVEY_SKIP ? () => { setCriterionOpen(false); setFinished(true); } : undefined}
-          onSubmit={async (items) => {
+          onSubmit={async (items, ownCriteria, missingCriteria) => {
             setPostSubmitting(true);
             try {
-              await api.submitCriterionValidations(sessionId, items);
+              await api.submitCriterionValidations(sessionId, items, ownCriteria, missingCriteria);
               setCriterionOpen(false);
               setFinished(true);
             } catch (e) {

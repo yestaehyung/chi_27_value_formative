@@ -1,21 +1,22 @@
-// 메인 스터디(본실험) 설문 정의 — 5개 도구.
+// 본실험 설문 정의 — 2026-08-13 최종 측정 계획 반영 (docs/briefs 참조 문서).
 //
-// FS1 사전 설문(`survey.ts`)과는 별개다. FS1은 탐색적 프로파일링(TCV 가치·쇼핑 동기)이
-// 목적이었고, 본실험은 3조건 between-subjects × 3카테고리 within-subjects 설계에서
-// 조건 간 차이를 재는 것이 목적이라 문항 구성이 다르다.
+// 측정 구조 (검증 척도 기반):
+//   1. PRE_STUDY          실험 전 1회 — 동의 + 인구통계 + 사실 공변량
+//   2. KNOWLEDGE_SECTIONS 카테고리 확정 직후 1회 — 제품군별 주관적 지식(Flynn &
+//                         Goldsmith 1999, 5문항) + 구매경험 + 초기 기준 명확성 + 자유응답
+//   3. POST_TASK          각 과제 후 — Choice Confidence 3문항 (Heitmann et al. 2007)
+//                         ※ 원척도는 9점이나 설문 내 일관성을 위해 7점으로 조정(adapted)
+//   4. 기준 감사          각 과제, 최종 선택·확신 응답 후 — A파트(내 기준 나열) →
+//                         B파트(추론 기준 대조: CRITERION_CHECK) + 누락 추가
+//   5. POST_STUDY         네 과제 종료 후 1회 — CRS-Que 4종(이해·투명성·통제감·만족)
+//                         + S-TIAS(신뢰) + Intention to Use. **세 조건 공통** —
+//                         기능이 없어서 낮게 나오는 것 자체가 조건 간 결과다.
 //
-// 시점별 5개 도구:
-//   1. PRE_STUDY      연구 시작 전 · 참가자 1회      → Participant.survey
-//   2. PRE_TASK       각 쇼핑 과제 직전 · 세션마다   → Session.meta.preTaskSurvey
-//   3. POST_TASK      각 쇼핑 과제 직후 · 세션마다   → Session.meta.postSurvey
-//   4. POST_STUDY     전체 과제 종료 후 · 참가자 1회 → Participant.survey.postStudy
-//   5. CRITERION_CHECK 추론된 기준별 · 과제마다 3–5개 → criterion_validations 테이블
-//
-// 핵심 설계: PRE_TASK의 "구매 기준 명확성" 3문항과 POST_TASK의 첫 3문항은 **동일 문항**이다.
-// 과제 전후 차이(Δ)가 조건 간 주요 비교치이므로, 같은 문항 텍스트를 한 곳(CRITERIA_CLARITY)에서
-// 정의해 양쪽이 공유한다 — 문구가 갈라지면 차이값이 오염된다.
+// 결정 사항 (2026-08-13): Purchase Intention 삭제(Intention to Use와 중복),
+// 인구통계 추가, 조건별 섹션 필터 제거, Choice Confidence 7점 통일.
+// 원척도 문항 수는 줄이지 않고, referent(에이전트명 등)만 맥락에 맞게 바꾼다.
 
-export type MQType = "single" | "likert";
+export type MQType = "single" | "likert" | "text";
 
 export type MQuestion = {
   id: string;
@@ -25,12 +26,14 @@ export type MQuestion = {
   /** 리커트 양 끝 라벨. 생략 시 기본(전혀 그렇지 않다 ~ 매우 그렇다) */
   minLabel?: string;
   maxLabel?: string;
-  /** 구인 평균 계산 시 (8 - v)로 뒤집는다. NASA-TLX 성공도 전용. */
+  /** 역문항 — 구인 평균 계산 시 (8 - v)로 뒤집는다 */
   reverse?: boolean;
   /** 미응답이면 제출 불가 (참여 동의 문항) */
   required?: boolean;
   /** 이 값을 고르면 연구 참여 제외 */
   excludeIf?: string;
+  /** text 전용 — 입력 안내 */
+  placeholder?: string;
 };
 
 export type MSection = {
@@ -49,10 +52,8 @@ export const LIKERT_MIN = "전혀 그렇지 않다";
 export const LIKERT_MAX = "매우 그렇다";
 
 /** 7점 리커트 (기본 앵커) */
-const lk = (id: string, label: string): MQuestion => ({ id, label, type: "likert" });
-/** 7점 리커트 (앵커 지정) */
-const lkA = (id: string, label: string, minLabel: string, maxLabel: string, reverse = false): MQuestion =>
-  ({ id, label, type: "likert", minLabel, maxLabel, reverse });
+const lk = (id: string, label: string, reverse = false): MQuestion =>
+  ({ id, label, type: "likert", ...(reverse ? { reverse } : {}) });
 /** 객관식 */
 const sg = (id: string, label: string, options: string[]): MQuestion =>
   ({ id, label, type: "single", options });
@@ -61,23 +62,11 @@ const consent = (id: string, label: string): MQuestion =>
   ({ id, label, type: "single", options: ["예", "아니오"], required: true, excludeIf: "아니오" });
 
 // ─────────────────────────────────────────────────────────────────────
-// 공유 문항: 구매 기준 명확성 (과제 직전·직후 동일 문항, Δ 측정용)
-// ─────────────────────────────────────────────────────────────────────
-const CRITERIA_CLARITY: { key: string; label: string }[] = [
-  { key: "CLARITY_1", label: "이 상품을 선택할 때 중요하게 고려해야 할 기준이 무엇인지 명확하다." },
-  { key: "CLARITY_2", label: "여러 구매 기준 중 무엇을 더 우선해야 하는지 명확하다." },
-  { key: "CLARITY_3", label: "반드시 충족해야 할 조건과 타협 가능한 조건을 구분할 수 있다." },
-];
-
-const clarityQuestions = (prefix: "TPRE" | "TPOST"): MQuestion[] =>
-  CRITERIA_CLARITY.map((c) => lk(`${prefix}_${c.key}`, c.label));
-
-// ─────────────────────────────────────────────────────────────────────
-// 1. 연구 시작 전 사전 설문 (참가자 1회)
+// 1. 실험 전 설문 (참가자 1회) — 동의 + 인구통계 + 사실 기반 공변량
 // ─────────────────────────────────────────────────────────────────────
 export const PRE_STUDY_INTRO =
   "본 설문은 대화형 쇼핑 에이전트 연구의 사전 설문입니다. 정답은 없으며, 평소 경험에 " +
-  "가장 가까운 답을 선택해 주세요. 소요 시간은 약 3분입니다.";
+  "가장 가까운 답을 선택해 주세요. 소요 시간은 약 2분입니다.";
 
 export const PRE_STUDY: MSection[] = [
   {
@@ -91,272 +80,220 @@ export const PRE_STUDY: MSection[] = [
     ],
   },
   {
-    id: "shopping",
-    title: "온라인 쇼핑 경험",
+    id: "demographics",
+    title: "기본 정보",
     questions: [
-      sg("PRE_1", "온라인 쇼핑을 얼마나 자주 하나요?", [
-        "거의 하지 않음", "한 달에 1회 미만", "한 달에 1–2회",
-        "일주일에 1회 정도", "일주일에 여러 번", "거의 매일",
+      sg("DEM_AGE", "연령대를 선택해 주세요.", [
+        "만 19–24세", "25–29세", "30–34세", "35–39세", "40–49세", "50세 이상",
+      ]),
+      sg("DEM_GENDER", "성별을 선택해 주세요.", [
+        "여성", "남성", "기타/응답하지 않음",
+      ]),
+      sg("DEM_JOB", "현재 직업 상태를 선택해 주세요.", [
+        "학생", "직장인", "자영업/프리랜서", "주부", "무직/구직 중", "기타",
       ]),
     ],
   },
   {
-    id: "llm",
-    title: "LLM 사용 경험",
+    // 다문항 잠재변수 척도가 아니라 문항별 공변량 (측정 계획 §3)
+    id: "shopping_facts",
+    title: "쇼핑 경험",
     questions: [
-      sg("PRE_2", "ChatGPT, Claude, Gemini 등의 AI 챗봇을 얼마나 자주 사용하나요?", [
-        "사용해 본 적 없음", "몇 번 사용해 봄", "한 달에 1–2회",
-        "일주일에 1–2회", "일주일에 여러 번", "거의 매일",
+      sg("FACT_SHOP_FREQ", "최근 3개월 동안 온라인에서 상품을 구매하거나 상품을 비교한 빈도는 어느 정도입니까?", [
+        "전혀 없음", "월 1회 미만", "월 1–3회", "주 1–2회", "주 3회 이상",
       ]),
-      lk("PRE_3", "AI와 여러 번 대화하면서 요청을 구체화하는 데 익숙하다."),
-      lk("PRE_4", "AI가 내 요청을 잘못 이해했을 때 이를 수정하는 데 익숙하다."),
-    ],
-  },
-  {
-    id: "ai_rec",
-    title: "AI 상품 추천 경험",
-    questions: [
-      sg("PRE_5", "AI에게 상품 추천이나 구매 조언을 받아 본 적이 있나요?", [
-        "없다", "몇 번 있다", "자주 있다",
+      sg("FACT_AI_REC", "ChatGPT, Claude, Gemini 등 생성형 AI에게 상품 추천이나 구매 관련 조언을 요청한 빈도는 어느 정도입니까?", [
+        "경험 없음", "1–2회", "3–5회", "월 1–3회", "주 1회 이상",
       ]),
-      sg("PRE_6", "AI의 상품 추천을 실제 상품 비교나 구매 결정에 활용한 적이 있나요?", [
-        "없다", "상품 비교에 참고한 적이 있다", "실제 구매 결정에 활용한 적이 있다",
-      ]),
-    ],
-  },
-  {
-    id: "agent_knowledge",
-    title: "AI 에이전트에 대한 지식",
-    questions: [
-      lk("PRE_7", "AI 에이전트가 대화를 바탕으로 사용자의 선호를 추론하고 갱신할 수 있음을 알고 있다."),
-      lk("PRE_8", "AI 에이전트가 사용자의 의도나 상품 정보를 잘못 해석할 수 있음을 알고 있다."),
-    ],
-  },
-  {
-    id: "prior_trust",
-    title: "AI 상품 추천에 대한 사전 신뢰",
-    questions: [
-      lk("PRE_9", "AI 상품 추천은 구매 결정에 유용한 도움을 줄 수 있다고 생각한다."),
-      lk("PRE_10", "중요한 구매에서는 AI 추천을 다른 정보와 비교하거나 확인할 필요가 있다고 생각한다."),
+      lk("FACT_COMPARE", "나는 상품을 구매하기 전에 여러 후보를 비교하는 편이다."),
     ],
   },
 ];
 
-/** 미응답이면 제출 불가한 문항 (참여 동의) — 정의에서 파생하므로 따로 관리하지 않는다 */
 export const PRE_STUDY_REQUIRED_IDS = allQuestions(PRE_STUDY)
   .filter((q) => q.required)
   .map((q) => q.id);
 
-/** 사전 설문 파생 점수 — 리커트 섹션(llm/agent_knowledge/prior_trust)만 평균이 의미 있다 */
+/** 사전 설문 파생 — 리커트가 1문항뿐이라 섹션 평균은 참고용 */
 export function computePreStudyProfile(answers: Record<string, unknown>): Record<string, number> {
   return computeSectionScores(PRE_STUDY, answers);
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 2. 각 쇼핑 과제 직전 설문 (세션마다 · [상품군] 치환)
+// 2. 제품군별 지식 행렬 (카테고리 확정 직후 1회 · {category} 치환)
 // ─────────────────────────────────────────────────────────────────────
-export const PRE_TASK: MSection[] = [
+// Subjective Product Knowledge — Flynn & Goldsmith (1999) 5문항 전체, 2·4·5 역채점.
+// 구매경험·초기 명확성은 사실/상태 문항이라 지식 점수와 합산하지 않는다.
+export const KNOWLEDGE_SECTIONS: MSection[] = [
   {
-    id: "domain_knowledge",
-    title: "상품군별 지식과 경험",
+    id: "subjective_knowledge",
+    title: "“{category}”에 대한 지식",
     questions: [
-      // 카테고리 이름을 따옴표로 감싼다 — "나는 "모니터"에 대해 잘 알고 있다"처럼
-      // 무엇에 대한 문항인지 한눈에 잡히게 (2026-08-08).
-      lk("TPRE_K1", '나는 "{category}"에 대해 잘 알고 있다.'),
-      lk("TPRE_K2", '나는 "{category}"의 상품 간 차이를 평가할 수 있다.'),
-      sg("TPRE_E1", '이전에 "{category}"을(를) 직접 구매한 경험이 있나요?', [
-        "없다", "1회 있다", "2회 이상 있다",
+      lk("SPK_1", '나는 "{category}"에 대해 꽤 많이 알고 있다.'),
+      lk("SPK_2", '나는 "{category}"에 대해 잘 알고 있다고 느끼지 않는다.', true),
+      lk("SPK_3", '내 친구들 사이에서 나는 "{category}"에 대한 ‘전문가’ 중 한 명이다.'),
+      lk("SPK_4", '대부분의 사람들과 비교하면, 나는 "{category}"에 대해 덜 알고 있다.', true),
+      lk("SPK_5", '"{category}"에 관해서라면 나는 정말 많이 알지 못한다.', true),
+      sg("EXP_BUY", '"{category}" 상품을 직접 구매해 본 경험은 몇 회입니까?', [
+        "구매 경험 없음", "1회", "2–3회", "4회 이상",
       ]),
-      sg("TPRE_E2", '현재 또는 과거에 "{category}"을(를) 사용한 경험이 있나요?', [
-        "없다", "1년 미만 사용한 경험이 있다", "1년 이상 사용한 경험이 있다",
-      ]),
-    ],
-  },
-  {
-    id: "criteria_clarity",
-    title: "구매 기준 명확성",
-    questions: clarityQuestions("TPRE"),
-  },
-];
-
-// ─────────────────────────────────────────────────────────────────────
-// 3. 각 쇼핑 과제 직후 설문 (세션마다)
-// ─────────────────────────────────────────────────────────────────────
-export const POST_TASK: MSection[] = [
-  {
-    id: "criteria_clarity",
-    title: "구매 기준 명확성",
-    desc: "과제 직전과 같은 문항입니다. 지금 시점의 생각으로 답해 주세요.",
-    questions: clarityQuestions("TPOST"),
-  },
-  {
-    id: "intent_alignment",
-    title: "에이전트의 의도 이해 정합성",
-    questions: [
-      lk("TPOST_A1", "에이전트는 내가 중요하게 생각한 구매 기준을 잘 이해했다."),
-      lk("TPOST_A2", "에이전트는 내가 특정 기준을 중요하게 생각한 이유와 상황을 잘 이해했다."),
-      lk("TPOST_A3", "에이전트가 반영한 기준의 우선순위는 내 생각과 일치했다."),
-    ],
-  },
-  {
-    id: "control",
-    title: "사용자 통제와 수정 가능성",
-    questions: [
-      lk("TPOST_U1", "에이전트가 나를 잘못 이해했을 때 이를 바로잡을 수 있었다."),
-      lk("TPOST_U2", "추천에 사용되는 구매 기준을 내가 원하는 방향으로 조정할 수 있었다."),
-    ],
-  },
-  {
-    id: "outcome",
-    title: "추천 및 의사결정 결과",
-    questions: [
-      lk("TPOST_O1", "추천 결과는 현재 구매 목적과 기준에 적합했다."),
-      lk("TPOST_O2", "추천 결과에 전반적으로 만족한다."),
-      lk("TPOST_O3", "이 결과를 바탕으로 상품을 선택할 자신이 있다."),
-    ],
-  },
-  {
-    id: "trust",
-    title: "사용한 에이전트에 대한 신뢰",
-    questions: [
-      lk("TPOST_T1", "이 에이전트의 추천과 해석을 신뢰할 수 있었다."),
-      lk("TPOST_T2", "이 에이전트는 자신의 한계나 불확실성을 적절히 드러냈다."),
-    ],
-  },
-  {
-    id: "tlx",
-    title: "과제 부담 (NASA-TLX)",
-    desc: "이번 과제를 수행하면서 느낀 정도를 표시해 주세요.",
-    questions: [
-      lkA("TPOST_TLX_MENTAL", "이 과제는 정신적으로 얼마나 부담스러웠나요?", "매우 낮음", "매우 높음"),
-      lkA("TPOST_TLX_PHYSICAL", "이 과제는 신체적으로 얼마나 부담스러웠나요?", "매우 낮음", "매우 높음"),
-      lkA("TPOST_TLX_TEMPORAL", "이 과제를 수행하는 동안 시간적 압박을 얼마나 느꼈나요?", "매우 낮음", "매우 높음"),
-      // 성공도만 방향이 반대다 — 높을수록 부담이 '낮다'. 종합 점수에서 역채점.
-      lkA("TPOST_TLX_PERFORMANCE", "이 과제를 얼마나 성공적으로 수행했다고 생각하나요?",
-        "전혀 성공적이지 않음", "매우 성공적임", true),
-      lkA("TPOST_TLX_EFFORT", "이 과제를 수행하기 위해 얼마나 많은 노력을 들였나요?", "매우 낮음", "매우 높음"),
-      lkA("TPOST_TLX_FRUSTRATION", "이 과제를 수행하는 동안 얼마나 좌절하거나 불편했나요?", "매우 낮음", "매우 높음"),
+      lk("INIT_CLARITY", '현재 나는 "{category}" 상품을 고를 때 무엇을 중요하게 보아야 할지 명확히 알고 있다.'),
+      {
+        id: "INIT_CRITERIA_FREE",
+        type: "text",
+        label: '현재 "{category}" 상품을 고를 때 중요하다고 생각하는 조건이나 기준을 모두 적어 주세요.',
+        placeholder: "예: 예산 10만원 이내, 무게, 디자인… 아직 정하지 못했다면 “미정”",
+      },
     ],
   },
 ];
 
-// ─────────────────────────────────────────────────────────────────────
-// 4. 전체 과제 종료 후 설문 (참가자 1회)
-// ─────────────────────────────────────────────────────────────────────
-export const POST_STUDY: MSection[] = [
-  {
-    // 조건 중립 — 세 조건 모두에게 묻는다. 나머지 세 섹션은 전부 '기준을 화면에서 봤다'를
-    // 전제하므로 baseline1·baseline2에서는 필터링돼 사라진다. 그러면 조건을 가로지르는
-    // 종료 측정치가 하나도 남지 않아 between-subjects 비교 자체가 불가능해진다.
-    // 이 섹션이 그 공통 종속변인이다.
-    id: "overall",
-    title: "전반적 경험",
-    questions: [
-      lk("END_O1", "이 에이전트의 추천은 전반적으로 내 마음에 들었다."),
-      lk("END_O2", "이 에이전트는 내가 무엇을 원하는지 잘 파악했다."),
-      lk("END_O3", "이 에이전트를 신뢰할 수 있다고 느꼈다."),
-      lk("END_O4", "실제 쇼핑에서도 이런 에이전트를 사용하고 싶다."),
-    ],
-  },
-  {
-    id: "interpretability",
-    title: "해석의 이해 가능성",
-    questions: [
-      lk("END_I1", "에이전트가 현재 어떤 구매 기준을 고려하고 있는지 쉽게 이해할 수 있었다."),
-      lk("END_I2", "에이전트가 각 기준을 어느 정도 중요하게 보고 있는지 쉽게 파악할 수 있었다."),
-      lk("END_I3", "제시된 구매 기준의 표현과 정보량은 이해하기에 적절했다."),
-    ],
-  },
-  {
-    id: "evidence",
-    title: "근거의 타당성과 추적 가능성",
-    questions: [
-      lk("END_V1", "각 구매 기준이 어떤 발화나 행동에서 추론되었는지 확인할 수 있었다."),
-      lk("END_V2", "제시된 근거는 해당 구매 기준을 적절히 뒷받침했다."),
-      lk("END_V3", "근거를 보고 에이전트의 해석이 맞는지 판단할 수 있었다."),
-    ],
-  },
-  {
-    id: "edit_usability",
-    title: "수정 인터페이스 사용성",
-    questions: [
-      lk("END_E1", "잘못 추론된 구매 기준을 쉽게 수정하거나 삭제할 수 있었다."),
-      lk("END_E2", "구매 기준의 우선순위를 쉽게 조정할 수 있었다."),
-      lk("END_E3", "내가 수정한 내용이 이후 추천에 반영되었음을 확인할 수 있었다."),
-    ],
-  },
-];
-
-// 조건별 문항 필터 — 없는 기능의 사용성을 물으면 응답 자체가 무의미하다.
-// (통제감 문항 TPOST_U1/U2는 여기서 빼지 않는다: 그건 종속변인이라 baseline에서
-//  낮게 나오는 것이 결과다. "없어서 못 물음"과 "없어서 낮음"은 다르다.)
-export type StudyCondition = "baseline1" | "baseline2" | "ours";
-
-/** 의도 추론을 돌리는가. baseline1은 돌지 않으므로 '기준별 검증'(⑤)을 물을 수 없다. */
-export const INFERS_INTENTION: Record<StudyCondition, boolean> = {
-  baseline1: false,
-  baseline2: true,
-  ours: true,
-};
-/** 추론한 기준을 화면에 보여주는가 (백엔드 app/core/conditions.py와 짝) */
-export const SHOWS_CRITERIA: Record<StudyCondition, boolean> = {
-  baseline1: false,
-  baseline2: false,
-  ours: true,
-};
-/** 기준을 확인·수정할 수 있는가 */
-export const ALLOWS_CORRECTION: Record<StudyCondition, boolean> = {
-  baseline1: false,
-  baseline2: false,
-  ours: true,
-};
-
-/**
- * 전체 종료 설문에서 이 조건에 물을 수 있는 섹션만 남긴다.
- *  - 기준을 안 보여준 조건(baseline) → '해석 이해가능성'·'근거 추적' 해당 없음
- *  - 수정 불가 조건 → '수정 인터페이스 사용성' 해당 없음
- * 남는 섹션이 없으면 빈 배열 — 호출부가 설문 자체를 건너뛴다.
- */
-export function postStudySectionsFor(condition: StudyCondition | null | undefined): MSection[] {
-  const c = (condition ?? "ours") as StudyCondition;
-  const shows = SHOWS_CRITERIA[c] ?? true;
-  const edits = ALLOWS_CORRECTION[c] ?? true;
-  return POST_STUDY.filter((s) => {
-    if (s.id === "overall") return true; // 조건 중립 — 언제나 묻는다
-    if (s.id === "edit_usability") return edits;
-    return shows; // interpretability / evidence
-  });
+/** 지식 5문항(역채점 반영) 평균 — 제품군별 조절변수 점수 */
+export function computeKnowledgeScore(answers: Record<string, unknown>, prefix: string): number | null {
+  const items = KNOWLEDGE_SECTIONS[0].questions.filter((q) => q.id.startsWith("SPK_"));
+  const vals: number[] = [];
+  for (const q of items) {
+    const v = Number(answers[`${prefix}${q.id}`]);
+    if (!Number.isFinite(v) || v <= 0) continue;
+    vals.push(q.reverse ? LIKERT_POINTS + 1 - v : v);
+  }
+  return vals.length ? Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100 : null;
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 5. 추론된 구매 기준별 직접 검증 (과제마다 주요 기준 3–5개)
+// 3. 각 과제 후 — Choice Confidence (Heitmann, Lehmann, & Herrmann 2007)
 // ─────────────────────────────────────────────────────────────────────
-/** 한 기준당 묻는 4문항. {label}은 기준 라벨로 치환된다. */
+// 원척도 9점 → 설문 내 일관성을 위해 7점으로 조정(adapted). 1번 역채점.
+// 최종 선택 직후·기준 감사 화면을 보여주기 **전에** 응답한다.
+export const POST_TASK: MSection[] = [
+  {
+    id: "choice_confidence",
+    title: "최종 선택에 대한 확신",
+    desc: "방금 마친 쇼핑에서의 선택을 떠올리며 답해 주세요.",
+    questions: [
+      lk("CC_1", "어떤 상품이 내 선호에 가장 잘 맞는지 확신하는 것은 불가능했다.", true),
+      lk("CC_2", "내 선호에 가장 잘 맞는 상품 하나를 골라낼 때 확신이 있었다."),
+      lk("CC_3", "내 필요를 가장 잘 충족하는 상품을 찾았다고 확신한다."),
+    ],
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────
+// 4. 기준 감사 (Participant Criterion Audit) — 과제마다, 확신 응답 후
+// ─────────────────────────────────────────────────────────────────────
+// A파트: 에이전트 기준을 **보여주기 전** 참가자의 실제 기준을 잠근다 —
+// 이 순서가 precision/recall 계산의 오염을 막는다 (뒤로 돌아갈 수 없음).
+export const AUDIT_NECESSITY = ["반드시 충족", "가능하면 충족", "최종적으로 중요하지 않음"] as const;
+export const AUDIT_INFLUENCE = ["예", "아니오", "판단하기 어려움"] as const;
+
+// B파트: 에이전트가 추론한 기준마다 2문항 (일치 + 형성 시점 5택).
 export const CRITERION_CHECK: MQuestion[] = [
-  sg("CRIT_MATCH", "이 구매 기준은 실제 내 생각과 일치합니까?", [
-    "일치한다", "부분적으로 일치한다", "일치하지 않는다",
+  sg("CRIT_MATCH", "에이전트가 표시한 이 기준은 실제 나의 구매 기준과 얼마나 일치합니까?", [
+    "정확히 일치", "일부만 일치하며 수정 필요", "내 기준이 아님",
   ]),
-  lkA("CRIT_IMPORTANCE", "이 기준은 실제 구매 결정에서 얼마나 중요했습니까?",
-    "전혀 중요하지 않았다", "매우 중요했다"),
-  sg("CRIT_EVIDENCE", "제시된 발화·선택·거절 근거가 이 기준을 뒷받침합니까?", [
-    "뒷받침한다", "부분적으로 뒷받침한다", "뒷받침하지 않는다",
-  ]),
-  sg("CRIT_FORMATION", "이 기준은 언제 형성되었습니까?", [
-    "처음부터 가지고 있었지만 대화에서 직접 표현하지 않았다",
-    "원래 가지고 있었지만 대화 중 더 명확해졌다",
-    "상품 탐색과 대화 중 새롭게 형성되었다",
+  sg("CRIT_FORMATION", "이 기준은 언제부터 중요했습니까?", [
+    "대화 전부터 중요했고 처음부터 말했다",
+    "대화 전부터 중요했지만 처음에는 말하지 않았다",
+    "상품이나 비교 정보를 본 뒤 대화 중 새로 중요해졌다",
+    "에이전트가 제안한 뒤 중요하다고 받아들였다",
+    "실제로는 내 기준이 아니다",
   ]),
 ];
 
-/** 검증 대상으로 제시할 기준 개수 상한 (설문 §5: 주요 기준 3–5개) */
+/** 검증 대상으로 제시할 추론 기준 개수 상한 (주요 기준 3–5개) */
 export const CRITERION_CHECK_MAX = 5;
 export const CRITERION_CHECK_MIN = 3;
+
+// ─────────────────────────────────────────────────────────────────────
+// 5. 네 과제 종료 후 (참가자 1회 · 6구성개념 × 3문항 · 세 조건 공통)
+// ─────────────────────────────────────────────────────────────────────
+export const POST_STUDY: MSection[] = [
+  {
+    // CRS-Que (Jin et al. 2024) — CUI Understanding (원: Borsci et al. 2022)
+    id: "understanding",
+    title: "에이전트의 이해",
+    questions: [
+      lk("CUI_1", "이 쇼핑 에이전트는 내가 말한 내용을 이해했다."),
+      lk("CUI_2", "나는 이 쇼핑 에이전트가 내가 원하는 것을 이해했다고 느꼈다."),
+      lk("CUI_3", "나는 이 쇼핑 에이전트가 내 구매 의도를 이해했다고 느꼈다."),
+    ],
+  },
+  {
+    // CRS-Que — Transparency (원: Hellmann et al. 2022; Pu et al. 2011)
+    id: "transparency",
+    title: "투명성",
+    questions: [
+      lk("TR_1", "나는 왜 이 상품들이 추천되었는지 이해했다."),
+      lk("TR_2", "나는 시스템이 상품의 적합성을 어떻게 판단했는지 이해했다."),
+      lk("TR_3", "나는 추천 결과가 내 선호와 얼마나 잘 맞는지 이해했다."),
+    ],
+  },
+  {
+    // CRS-Que — User Control (개념 원출처: Pu et al. 2011)
+    id: "control",
+    title: "사용자 통제감",
+    questions: [
+      lk("UC_1", "나는 이 쇼핑 에이전트를 사용하여 내 선호를 수정하는 과정을 통제할 수 있다고 느꼈다."),
+      lk("UC_2", "나는 이 쇼핑 에이전트가 나에게 제시하는 추천을 통제할 수 있었다."),
+      lk("UC_3", "나는 내 선호에 따라 추천 결과를 조정하는 과정을 통제할 수 있다고 느꼈다."),
+    ],
+  },
+  {
+    // CRS-Que — Satisfaction
+    id: "satisfaction",
+    title: "추천 만족도",
+    questions: [
+      lk("SAT_1", "나는 이 쇼핑 에이전트가 제공한 추천에 만족했다."),
+      lk("SAT_2", "이 쇼핑 에이전트의 추천 결과는 만족스러웠다."),
+      lk("SAT_3", "이 쇼핑 에이전트의 추천은 전반적으로 나를 만족시켰다."),
+    ],
+  },
+  {
+    // S-TIAS (McGrath et al. 2025; 원척도 Jian et al. 2000)
+    id: "trust",
+    title: "AI 쇼핑 에이전트 신뢰",
+    questions: [
+      lk("TRUST_1", "나는 이 AI 쇼핑 에이전트에 대해 확신을 갖는다."),
+      lk("TRUST_2", "이 AI 쇼핑 에이전트는 신뢰할 만하다."),
+      lk("TRUST_3", "나는 이 AI 쇼핑 에이전트를 신뢰할 수 있다."),
+    ],
+  },
+  {
+    // CRS-Que — Intention to Use (개념 원출처: Pu et al. 2011)
+    id: "intention",
+    title: "재사용 의향",
+    questions: [
+      lk("ITU_1", "나는 이 쇼핑 에이전트를 다시 사용할 것이다."),
+      lk("ITU_2", "나는 이 쇼핑 에이전트를 자주 사용할 것이다."),
+      lk("ITU_3", "나는 친구들에게 이 쇼핑 에이전트에 대해 이야기할 것이다."),
+    ],
+  },
+];
+
+// 조건별 UI 게이트 (백엔드 app/core/conditions.py와 짝)
+export type StudyCondition = "baseline1" | "baseline2" | "ours";
+
+export const INFERS_INTENTION: Record<StudyCondition, boolean> = {
+  baseline1: false, baseline2: true, ours: true,
+};
+export const SHOWS_CRITERIA: Record<StudyCondition, boolean> = {
+  baseline1: false, baseline2: false, ours: true,
+};
+export const ALLOWS_CORRECTION: Record<StudyCondition, boolean> = {
+  baseline1: false, baseline2: false, ours: true,
+};
+
+/** 종료 설문은 **세 조건 공통** (2026-08-13 확정) — 기능이 없는 조건에서 통제감이
+ *  낮게 나오는 것은 "물을 수 없음"이 아니라 조건 간 결과다. 필터 없이 전체를 준다. */
+export function postStudySectionsFor(_condition: StudyCondition | null | undefined): MSection[] {
+  return POST_STUDY;
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // 헬퍼
 // ─────────────────────────────────────────────────────────────────────
 
-/** {category} / {label} 같은 자리표시자를 치환한 섹션 사본을 만든다. */
+/** {category} 같은 자리표시자를 치환한 섹션 사본 */
 export function fillTemplate(sections: MSection[], vars: Record<string, string>): MSection[] {
   const sub = (s: string) => s.replace(/\{(\w+)\}/g, (m, k) => vars[k] ?? m);
   return sections.map((sec) => ({
@@ -371,7 +308,8 @@ export function allQuestions(sections: MSection[]): MQuestion[] {
   return sections.flatMap((s) => s.questions);
 }
 
-/** 리커트 문항만 대상으로 섹션별 평균. reverse 문항은 (8 - v)로 뒤집는다. */
+/** 리커트 문항만 대상으로 섹션별 평균. reverse 문항은 (8 - v)로 뒤집는다.
+ *  구성개념은 각각 보고하며 전체 합산 점수는 만들지 않는다 (측정 계획 §10). */
 export function computeSectionScores(
   sections: MSection[],
   answers: Record<string, unknown>,
@@ -390,43 +328,4 @@ export function computeSectionScores(
     }
   }
   return out;
-}
-
-/**
- * 과제 전후 '구매 기준 명확성' 변화량. 본실험의 핵심 종속변인 —
- * 조건(Baseline1/2/Ours) 간 이 Δ를 비교한다.
- * pre/post 응답을 각각 받아 (post 평균 − pre 평균)을 낸다.
- */
-export function clarityDelta(
-  preAnswers: Record<string, unknown>,
-  postAnswers: Record<string, unknown>,
-): { pre: number | null; post: number | null; delta: number | null } {
-  const avg = (prefix: "TPRE" | "TPOST", src: Record<string, unknown>) => {
-    const vals = CRITERIA_CLARITY
-      .map((c) => Number(src[`${prefix}_${c.key}`]))
-      .filter((v) => Number.isFinite(v) && v > 0);
-    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-  };
-  const pre = avg("TPRE", preAnswers);
-  const post = avg("TPOST", postAnswers);
-  return {
-    pre: pre === null ? null : Math.round(pre * 100) / 100,
-    post: post === null ? null : Math.round(post * 100) / 100,
-    delta: pre === null || post === null ? null : Math.round((post - pre) * 100) / 100,
-  };
-}
-
-/** NASA-TLX 종합 (6문항 평균, 성공도 역채점). 높을수록 부담이 크다. */
-export function tlxScore(answers: Record<string, unknown>): number | null {
-  const tlx = POST_TASK.find((s) => s.id === "tlx");
-  if (!tlx) return null;
-  const vals = tlx.questions
-    .map((q) => {
-      const v = Number(answers[q.id]);
-      if (!Number.isFinite(v) || v <= 0) return null;
-      return q.reverse ? LIKERT_POINTS + 1 - v : v;
-    })
-    .filter((v): v is number => v !== null);
-  if (!vals.length) return null;
-  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100;
 }

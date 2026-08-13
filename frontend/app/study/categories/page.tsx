@@ -59,24 +59,15 @@ export default function CategorySelectPage() {
     setStep(2);
   };
 
-  const start = async () => {
+  const start = () => {
     if (unfamiliar.length !== NEED_PER_SIDE || starting) return;
     setStarting(true);
-    setError(null);
-    try {
-      // 순서는 여기서 무작위로 확정된다 — 고른 순서도, 친숙/비친숙 교차도 아니다.
-      const tasks = randomOrder(familiar, unfamiliar);
-      saveQueue(participantId || "anon", tasks);
-      const first = tasks[0];
-      const res = await api.createCategorySession(
-        first.category, first.familiarity, participantId || undefined,
-      );
-      router.push(`/study/session/${res.sessionId}`);
-    } catch (e) {
-      console.error(e);
-      setError(STUDY_UI.categories.startError);
-      setStarting(false);
-    }
+    // 순서는 여기서 무작위로 확정된다 — 고른 순서도, 친숙/비친숙 교차도 아니다.
+    const tasks = randomOrder(familiar, unfamiliar);
+    saveQueue(participantId || "anon", tasks);
+    // 첫 세션은 지식 행렬(측정 계획 §4)을 마친 뒤에 연다 — "초기" 지식·기준이
+    // 대화에 오염되기 전에 잠겨야 한다.
+    router.push(participantId ? `/study/knowledge?pid=${participantId}` : "/study/knowledge");
   };
 
   return (

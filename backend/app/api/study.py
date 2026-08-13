@@ -183,32 +183,47 @@ def submit_pre_task_survey(session_id: str, req: PreTaskSurveyRequest, db: DbSes
     return {"ok": True, "profile": meta["preTaskSurvey"]["profile"]}
 
 
+FINAL_STATUSES = {"final", "shortlist", "explore_more", "none_suitable"}
+
+
 class FinalChoiceRequest(BaseModel):
-    productId: Optional[str] = None   # 최종 선택 (없으면 noneReason 필수)
-    noneReason: Optional[str] = None  # "이 중에는 없어요" 사유 / "no_products"
+    # 결정 상태 4범주 (측정 계획 §5.1). 구버전 호환: status 없이 productId/noneReason만
+    # 오면 final/none_suitable로 해석한다.
+    status: Optional[str] = None
+    productId: Optional[str] = None       # status=final일 때 필수
+    shortlistIds: list[str] = []          # status=shortlist일 때 2개 이상
+    noneReason: Optional[str] = None      # status=none_suitable 사유 / "no_products"
 
 
 @router.put("/sessions/{session_id}/final-choice")
 def submit_final_choice(session_id: str, req: FinalChoiceRequest, db: DbSession = Depends(get_db)):
-    """③ 최종 선택 확정 (2026-08-11) — 사후 기준 확인(④) **전에** 선택을 잠근다.
+    """③ 최종 선택·결정 상태 확정 — 사후 기준 확인(④) **전에** 잠근다.
 
     기준을 뜯어보는 행위가 선택에 영향을 주지 못하게 하는 절차적 잠금이다.
     '필수 조건 위반 여부'는 여기서 판정하지 않는다 — 확정 시점의 기준 스냅샷과
-    선택 상품을 함께 저장해 분석 때 계산한다 (런타임 판정은 기준을 나중에 못 바꾼다).
+    선택/후보 상품을 함께 저장해 분석 때 계산한다 (런타임 판정은 기준을 나중에 못 바꾼다).
     """
     from datetime import datetime, timezone
 
     session = db.get(models.Session, session_id)
     if session is None:
         raise HTTPException(404, "session not found")
-    if not req.productId and not req.noneReason:
-        raise HTTPException(422, "productId 또는 noneReason 중 하나는 필요하다")
+    status = req.status or ("final" if req.productId else "none_suitable")
+    if status not in FINAL_STATUSES:
+        raise HTTPException(422, f"알 수 없는 결정 상태: {status}")
+    if status == "final" and not req.productId:
+        raise HTTPException(422, "최종 선택에는 productId가 필요하다")
+    if status == "shortlist" and len(req.shortlistIds) < 2:
+        raise HTTPException(422, "후보 목록에는 상품 2개 이상이 필요하다")
+    if status == "none_suitable" and not req.noneReason:
+        raise HTTPException(422, "적합 상품 없음에는 사유(noneReason)가 필요하다")
     shown = {
         pid for (pid,) in db.query(models.ProductImpression.product_id)
         .filter(models.ProductImpression.session_id == session_id)
     }
-    if req.productId and req.productId not in shown:
-        raise HTTPException(422, "이 세션에서 노출된 적 없는 상품이다")
+    for pid in [req.productId, *req.shortlistIds]:
+        if pid and pid not in shown:
+            raise HTTPException(422, "이 세션에서 노출된 적 없는 상품이다")
     # 확정 시점 기준 스냅샷 — 위반 분석의 재료 (rejected는 사용자가 이미 거른 기준이라 제외)
     topics = (
         db.query(models.IntentionTopic)
@@ -223,7 +238,9 @@ def submit_final_choice(session_id: str, req: FinalChoiceRequest, db: DbSession 
     ]
     meta = dict(session.meta or {})
     meta["finalChoice"] = {
+        "status": status,
         "productId": req.productId,
+        "shortlistIds": req.shortlistIds,
         "noneReason": req.noneReason,
         "decidedAt": datetime.now(timezone.utc).isoformat(),
         "criteriaAtDecision": [
@@ -242,9 +259,39 @@ def submit_final_choice(session_id: str, req: FinalChoiceRequest, db: DbSession 
     return {"ok": True, "finalChoice": meta["finalChoice"]}
 
 
+class KnowledgeSurveyRequest(BaseModel):
+    """제품군별 지식 행렬 (측정 계획 §4) — 카테고리 확정 직후 1회."""
+    answers: dict                     # {"k:{카테고리}:SPK_1": "5", ...}
+    scores: Optional[dict] = None     # {카테고리: 지식 5문항 평균(역채점 반영)}
+    categories: list[str] = []
+
+
+@router.put("/participants/{participant_id}/knowledge-survey")
+def submit_knowledge_survey(
+    participant_id: str, req: KnowledgeSurveyRequest, db: DbSession = Depends(get_db)
+):
+    """주관적 지식(Flynn & Goldsmith)·구매경험·초기 명확성·자유응답 저장 —
+    참가자 단위 1회, 네 제품군을 한 행렬로. 조절변수 분석의 재료."""
+    from datetime import datetime, timezone
+
+    participant = db.get(models.Participant, participant_id)
+    if participant is None:
+        raise HTTPException(404, "participant not found")
+    survey = dict(participant.survey or {})
+    survey["productKnowledge"] = {
+        "answers": req.answers,
+        "scores": req.scores or {},
+        "categories": req.categories,
+        "submittedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    participant.survey = survey
+    db.commit()
+    return {"ok": True, "scores": survey["productKnowledge"]["scores"]}
+
+
 class PostStudySurveyRequest(BaseModel):
     answers: dict
-    profile: Optional[dict] = None    # interpretability / evidence / edit_usability
+    profile: Optional[dict] = None    # 이해/투명성/통제/만족/신뢰/재사용 섹션 평균
 
 
 @router.put("/participants/{participant_id}/post-study-survey")
@@ -309,8 +356,19 @@ class CriterionValidationItem(BaseModel):
     formation: Optional[str] = None
 
 
+class AuditOwnCriterion(BaseModel):
+    """A파트 — 에이전트 기준 공개 전 참가자가 잠근 자기 기준 (측정 계획 §7.1A)."""
+    label: str
+    necessity: Optional[str] = None    # 반드시 충족 / 가능하면 충족 / 최종적으로 중요하지 않음
+    influence: Optional[str] = None    # 예 / 아니오 / 판단하기 어려움
+
+
 class CriterionValidationRequest(BaseModel):
     items: list[CriterionValidationItem]
+    # 기준 감사 확장 (2026-08-13): A파트 자기 기준 + 에이전트가 놓친 기준.
+    # precision/recall/F1의 재료 — items(B파트)와 함께 meta.criterionAudit에 저장.
+    ownCriteria: list[AuditOwnCriterion] = []
+    missingCriteria: list[str] = []
 
 
 @router.post("/sessions/{session_id}/criterion-validations")
@@ -340,18 +398,28 @@ def submit_criterion_validations(
             evidence_supports=item.evidenceSupports,
             formation=item.formation,
         ))
-    if not rows:
-        return {"saved": 0, "validations": []}
 
-    (db.query(models.CriterionValidation)
-       .filter(models.CriterionValidation.session_id == session_id)
-       .delete(synchronize_session=False))
-    for row in rows:
-        db.add(row)
-    saved = rows
+    # A파트(자기 기준)·누락 기준은 topic 행이 없어도 그 자체로 데이터다 —
+    # baseline1(추론 없음)은 B파트가 비지만 A파트는 반드시 남아야 한다.
+    from datetime import datetime, timezone
+
+    meta = dict(session.meta or {})
+    meta["criterionAudit"] = {
+        "ownCriteria": [c.model_dump() for c in req.ownCriteria],
+        "missingCriteria": req.missingCriteria,
+        "submittedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    session.meta = meta
+
+    if rows:
+        (db.query(models.CriterionValidation)
+           .filter(models.CriterionValidation.session_id == session_id)
+           .delete(synchronize_session=False))
+        for row in rows:
+            db.add(row)
     db.commit()
-    return {"saved": len(saved),
-            "validations": [serializers.criterion_validation_to_dict(r) for r in saved]}
+    return {"saved": len(rows),
+            "validations": [serializers.criterion_validation_to_dict(r) for r in rows]}
 
 
 @router.put("/sessions/{session_id}/ground-truth")
