@@ -79,14 +79,11 @@ export default function AdminPage() {
   const [forcedCondition, setForcedCondition] = useState<string | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
 
-  // 조건 지정 테스트 세션 생성 — 서버의 조건 배정 경로 ②(요청 명시, 신규 참가자)를 쓴다.
-  // 조건은 참가자 단위로 고정되므로 조건마다 새 test_admin_* 참가자를 만든다.
-  const [categories, setCategories] = useState<string[]>([]);
-  const [newCond, setNewCond] = useState<"ours" | "baseline1" | "baseline2">("ours");
-  const [newCat, setNewCat] = useState("");
-  const [newFam, setNewFam] = useState<"familiar" | "unfamiliar">("familiar");
-  const [creating, setCreating] = useState(false);
-  const [createdLinks, setCreatedLinks] = useState<{ url: string; label: string }[]>([]);
+  // 데이터 관리 — 전체 다운로드(ZIP) + 전체 삭제(배치 리셋, 입력 확인 필수)
+  const [downloading, setDownloading] = useState(false);
+  const [wipeInput, setWipeInput] = useState("");
+  const [wiping, setWiping] = useState(false);
+  const [wipeResult, setWipeResult] = useState<string | null>(null);
 
   const fetchWithKey = useCallback(async (path: string, k: string) => {
     const res = await fetch(path, { headers: { "X-Research-Key": k } });
@@ -127,40 +124,48 @@ export default function AdminPage() {
       setKey(saved);
       void loadAll(saved);
     }
-    void fetch("/api/meta/categories")
-      .then((r) => r.json())
-      .then((d) => {
-        const cats = (d.categories ?? []).map((c: { category: string }) => c.category);
-        setCategories(cats);
-        if (cats.length) setNewCat((prev) => prev || cats[0]);
-      })
-      .catch(() => {});
   }, [loadAll]);
 
-  const createTestSession = async () => {
-    if (!newCat) return;
-    setCreating(true);
+  const downloadAll = async () => {
+    if (!key) return;
+    setDownloading(true);
     try {
-      const pid = `test_admin_${newCond}_${Date.now().toString(36).slice(-5)}`;
-      const res = await fetch("/api/sessions", {
+      const res = await fetch("/api/exports/archive", { headers: { "X-Research-Key": key } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `vc_export_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setLoadError("데이터 다운로드에 실패했어요.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const wipeAll = async () => {
+    if (!key || wipeInput !== "전체삭제") return;
+    if (!window.confirm("정말 모든 참가자·세션 데이터를 삭제할까요? 되돌릴 수 없습니다.\n(다운로드를 먼저 했는지 확인하세요)")) return;
+    setWiping(true);
+    setWipeResult(null);
+    try {
+      const res = await fetch("/api/research/wipe", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "manual", category: newCat, familiarity: newFam,
-          participantId: pid, studyCondition: newCond,
-        }),
+        headers: { "Content-Type": "application/json", "X-Research-Key": key },
+        body: JSON.stringify({ confirm: "전체삭제" }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const d = await res.json();
-      setCreatedLinks((prev) => [
-        { url: `${window.location.origin}/study/session/${d.sessionId}`, label: `${newCat} · ${newCond} · ${newFam}` },
-        ...prev,
-      ]);
-      void loadAll(key!);
+      setWipeResult(`삭제 완료 — 총 ${d.totalRows}행 (참가자 ${d.deleted?.participants ?? 0}, 세션 ${d.deleted?.sessions ?? 0}, 턴 ${d.deleted?.turns ?? 0})`);
+      setWipeInput("");
+      void loadAll(key);
     } catch {
-      setLoadError("세션 생성에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      setLoadError("전체 삭제에 실패했어요.");
     } finally {
-      setCreating(false);
+      setWiping(false);
     }
   };
 
@@ -279,7 +284,7 @@ export default function AdminPage() {
         </p>
         <div className="flex flex-wrap gap-2">
           {([["ours", "ours (제안 시스템)"], ["baseline2", "baseline2 (추론 숨김)"],
-             ["baseline1", "baseline1 (추론 없음)"], [null, "자동 균형 배정"]] as [string | null, string][]).map(([v, label]) => (
+             ["baseline1", "baseline1 (추론 없음)"]] as [string, string][]).map(([v, label]) => (
             <button
               key={label}
               disabled={savingConfig}
@@ -295,7 +300,9 @@ export default function AdminPage() {
           ))}
         </div>
         <p className="mt-2 text-xs font-medium text-gray-700">
-          현재: {forcedCondition ? `${COND_LABEL[forcedCondition] ?? forcedCondition} 고정 모집 중` : "자동 균형 배정"}
+          현재: {forcedCondition
+            ? `${COND_LABEL[forcedCondition] ?? forcedCondition} 모집 중`
+            : "⚠️ 조건 미설정 — 위에서 모집할 조건을 선택해 주세요"}
         </p>
       </section>
 
@@ -322,49 +329,6 @@ export default function AdminPage() {
             과제 시작 {balance.totalStarted}명 · 설문만 하고 이탈 {balance.dropped}명
           </p>
         )}
-      </section>
-
-      {/* 조건 지정 테스트 세션 생성 */}
-      <section className="mb-8 rounded-xl border border-indigo-200 bg-indigo-50/40 p-4">
-        <h2 className="mb-3 text-sm font-semibold text-gray-700">테스트 세션 만들기 (조건 직접 지정)</h2>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <select value={newCond} onChange={(e) => setNewCond(e.target.value as typeof newCond)}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2">
-            <option value="ours">ours (제안 시스템)</option>
-            <option value="baseline2">baseline2 (추론 숨김)</option>
-            <option value="baseline1">baseline1 (추론 없음)</option>
-          </select>
-          <select value={newCat} onChange={(e) => setNewCat(e.target.value)}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2">
-            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select value={newFam} onChange={(e) => setNewFam(e.target.value as typeof newFam)}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2">
-            <option value="familiar">잘 아는 상품군</option>
-            <option value="unfamiliar">잘 모르는 상품군</option>
-          </select>
-          <button onClick={() => void createTestSession()} disabled={creating || !newCat}
-                  className="rounded-lg bg-[#4F46E5] px-4 py-2 font-semibold text-white disabled:opacity-40">
-            {creating ? "만드는 중…" : "세션 생성"}
-          </button>
-        </div>
-        {createdLinks.length > 0 && (
-          <ul className="mt-3 space-y-1.5">
-            {createdLinks.map((l) => (
-              <li key={l.url} className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-gray-600">{l.label}</span>
-                <a href={l.url} target="_blank" rel="noreferrer" className="font-mono text-[#4F46E5] underline">{l.url}</a>
-                <button onClick={() => void navigator.clipboard.writeText(l.url)}
-                        className="rounded border border-gray-300 bg-white px-1.5 py-0.5 text-gray-600 hover:bg-gray-50">
-                  복사
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <p className="mt-2 text-[11px] text-gray-500">
-          생성된 세션은 test_admin_* 참가자로 묶여요 — 실험 데이터 정리 때 일괄 삭제 대상입니다.
-        </p>
       </section>
 
       {/* 참가자 */}
@@ -498,6 +462,37 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      {/* 데이터 관리 */}
+      <section className="mt-10 rounded-xl border border-red-200 bg-red-50/40 p-4">
+        <h2 className="mb-1 text-sm font-semibold text-gray-700">데이터 관리</h2>
+        <p className="mb-3 text-xs text-gray-500">
+          다운로드는 모든 테이블(참가자·설문·세션·대화·추천·피드백·칩·충돌·교정·LLM 로그 전부)을
+          JSONL로 묶은 ZIP입니다. <b>전체 삭제 전에는 반드시 먼저 다운로드하세요.</b>
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => void downloadAll()} disabled={downloading}
+                  className="rounded-lg bg-[#4F46E5] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            {downloading ? "내려받는 중…" : "전체 데이터 다운로드 (ZIP)"}
+          </button>
+          <span className="mx-2 h-6 w-px bg-red-200" />
+          <input
+            value={wipeInput}
+            onChange={(e) => setWipeInput(e.target.value)}
+            placeholder='삭제하려면 "전체삭제" 입력'
+            className="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm focus:outline-none"
+          />
+          <button onClick={() => void wipeAll()} disabled={wiping || wipeInput !== "전체삭제"}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">
+            {wiping ? "삭제 중…" : "전체 삭제 (배치 리셋)"}
+          </button>
+        </div>
+        <p className="mt-2 text-[11px] text-gray-500">
+          삭제 대상: 참가자·세션·대화·추천·피드백·칩·충돌·교정·검증·LLM 로그. 상품 풀과 시드
+          concept, 조건 설정은 유지됩니다. 되돌릴 수 없습니다.
+        </p>
+        {wipeResult && <p className="mt-2 text-xs font-medium text-emerald-700">{wipeResult}</p>}
       </section>
     </main>
   );

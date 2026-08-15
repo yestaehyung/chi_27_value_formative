@@ -252,6 +252,37 @@ def put_study_config(req: dict, db: DbSession = Depends(get_db)):
     return {"forcedCondition": value}
 
 
+@router.post("/wipe")
+def wipe_study_data(req: dict, db: DbSession = Depends(get_db)):
+    """전체 삭제 (배치 리셋) — 참가자·세션·파생 온톨로지·로그 전부 삭제.
+    상품 풀, 시드 concept(top_down_seed), 운영 설정(StudySetting)은 유지.
+    되돌릴 수 없다: confirm 문자열 + 연구 키(라우터 게이트) 이중 확인.
+    관리자 페이지는 이 버튼 앞에 '전체 데이터 다운로드'를 두어 백업을 유도한다."""
+    if req.get("confirm") != "전체삭제":
+        raise HTTPException(400, 'confirm must be the exact string "전체삭제"')
+    tables = [
+        models.Turn, models.ProductImpression, models.FeedbackEvent,
+        models.IntentionTopic, models.IntentionEvidence, models.TopicConcept,
+        models.AnchorMapping, models.ConceptAnchorMapping, models.IntentionRelation,
+        models.PreferenceConflict, models.PreferenceStateSnapshot,
+        models.ChosenRejectedPair, models.CorrectionEvent, models.ConflictResolutionEvent,
+        models.CriterionValidation, models.ObservationMarker,
+        models.DiscoveredFeature, models.FeatureCluster, models.LLMCall,
+        models.Session, models.Participant,
+    ]
+    deleted: dict[str, int] = {}
+    for m in tables:
+        deleted[m.__tablename__] = db.query(m).delete()
+    # concept은 시드만 남긴다 (세션에서 자란 TBox는 실험 데이터)
+    non_seed = [c for c in db.query(models.Concept).all()
+                if "top_down_seed" not in (c.origin or [])]
+    for c in non_seed:
+        db.delete(c)
+    deleted["concepts_non_seed"] = len(non_seed)
+    db.commit()
+    return {"deleted": deleted, "totalRows": sum(deleted.values())}
+
+
 @router.get("/participants/{participant_id}/spec")
 def participant_spec(participant_id: str, db: DbSession = Depends(get_db)):
     """참가자 자연어 명세 파일 (AI memory). 최신 상태로 합성해 반환."""

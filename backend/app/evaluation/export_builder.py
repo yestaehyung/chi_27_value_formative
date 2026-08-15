@@ -39,6 +39,23 @@ def export_all(db: DbSession) -> dict[str, int]:
         ("criterion_validations.jsonl", models.CriterionValidation,
          serializers.criterion_validation_to_dict),
     ]
+    # 전용 시리얼라이저가 없는 테이블은 컬럼 전체를 제네릭 변환 — "얻을 수 있는 모든
+    # 데이터" 보장 (participants에는 사전 설문·조건이, llm_calls에는 판정행렬 진단이 있다)
+    def _generic(row) -> dict:
+        from sqlalchemy import inspect as sa_inspect
+
+        d = {}
+        for attr in sa_inspect(row).mapper.column_attrs:
+            v = getattr(row, attr.key)
+            d[attr.key] = v.isoformat() if hasattr(v, "isoformat") else v
+        return d
+
+    spec += [
+        ("participants.jsonl", models.Participant, _generic),
+        ("llm_calls.jsonl", models.LLMCall, _generic),
+        ("intention_evidence.jsonl", models.IntentionEvidence, _generic),
+        ("concept_anchor_mappings.jsonl", models.ConceptAnchorMapping, _generic),
+    ]
     counts: dict[str, int] = {}
     for filename, model, serialize in spec:
         rows = [serialize(r) for r in db.query(model).all()]
