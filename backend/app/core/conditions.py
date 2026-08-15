@@ -89,8 +89,32 @@ def started_counts(db: DbSession) -> dict[str, int]:
     return counts
 
 
+FORCED_CONDITION_KEY = "forced_condition"
+
+
+def get_forced_condition(db: DbSession) -> str | None:
+    """관리자가 고정한 배정 조건 (없으면 None = 자동 균형).
+    조건별 순차 모집용 — 관리자 페이지(/admin)에서 설정하며 재배포가 필요 없다."""
+    row = db.get(models.StudySetting, FORCED_CONDITION_KEY)
+    slug = normalize_condition(row.value) if row and row.value else None
+    return slug if slug in STUDY_CONDITIONS else None
+
+
+def set_forced_condition(db: DbSession, condition: str | None) -> str | None:
+    row = db.get(models.StudySetting, FORCED_CONDITION_KEY)
+    if row is None:
+        row = models.StudySetting(key=FORCED_CONDITION_KEY)
+        db.add(row)
+    row.value = condition
+    return condition
+
+
 def assign_condition(db: DbSession) -> str:
-    """가장 적게 배정된 조건을 준다 (minimization). 동률이면 STUDY_CONDITIONS 순서."""
+    """관리자 고정 조건이 있으면 그 조건, 없으면 가장 적게 배정된 조건(minimization).
+    동률이면 STUDY_CONDITIONS 순서."""
+    forced = get_forced_condition(db)
+    if forced is not None:
+        return forced
     counts = assigned_counts(db)
     return min(STUDY_CONDITIONS, key=lambda c: (counts[c], STUDY_CONDITIONS.index(c)))
 

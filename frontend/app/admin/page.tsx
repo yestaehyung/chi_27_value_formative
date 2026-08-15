@@ -35,7 +35,7 @@ type SessionRow = {
 type Turn = { role: string; content: string; agentAction?: string | null };
 type SessionDetail = {
   turns: Turn[];
-  feedback: { type: string; reasonText?: string | null }[];
+  feedback: { type: string; reasonText?: string | null; productId?: string | null }[];
   impressions: { productId: string; recommendationReason?: string | null; product?: { title?: string; price?: number } }[];
 };
 
@@ -75,6 +75,10 @@ export default function AdminPage() {
   const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [hideTest, setHideTest] = useState(false);
 
+  // 실험 조건 배정 모드 — null이면 자동 균형, 조건 슬러그면 신규 참가자 전원 그 조건으로
+  const [forcedCondition, setForcedCondition] = useState<string | null>(null);
+  const [savingConfig, setSavingConfig] = useState(false);
+
   // 조건 지정 테스트 세션 생성 — 서버의 조건 배정 경로 ②(요청 명시, 신규 참가자)를 쓴다.
   // 조건은 참가자 단위로 고정되므로 조건마다 새 test_admin_* 참가자를 만든다.
   const [categories, setCategories] = useState<string[]>([]);
@@ -94,12 +98,14 @@ export default function AdminPage() {
   const loadAll = useCallback(async (k: string) => {
     setLoadError(null);
     try {
-      const [bal, parts, sess] = await Promise.all([
+      const [bal, parts, sess, cfg] = await Promise.all([
         fetchWithKey("/api/research/condition-balance", k),
         fetchWithKey("/api/research/participants", k),
         fetchWithKey("/api/research/sessions?mode=manual", k),
+        fetchWithKey("/api/research/study-config", k),
       ]);
       setBalance(bal);
+      setForcedCondition(cfg.forcedCondition ?? null);
       const plist: Participant[] = Array.isArray(parts) ? parts : parts.participants ?? [];
       plist.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
       setParticipants(plist);
@@ -176,6 +182,24 @@ export default function AdminPage() {
     }
   };
 
+  const saveForcedCondition = async (value: string | null) => {
+    if (!key) return;
+    setSavingConfig(true);
+    try {
+      const res = await fetch("/api/research/study-config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "X-Research-Key": key },
+        body: JSON.stringify({ forcedCondition: value }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setForcedCondition(value);
+    } catch {
+      setLoadError("조건 설정 저장에 실패했어요.");
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
   const toggleSession = async (sid: string) => {
     if (openSession === sid) {
       setOpenSession(null);
@@ -246,13 +270,46 @@ export default function AdminPage() {
 
       {loadError && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</p>}
 
+      {/* 실험 조건 배정 모드 */}
+      <section className="mb-6 rounded-xl border border-amber-300 bg-amber-50/50 p-4">
+        <h2 className="mb-1 text-sm font-semibold text-gray-700">실험 조건 배정 (신규 참가자)</h2>
+        <p className="mb-3 text-xs text-gray-500">
+          조건을 고르면 <b>지금부터 설문을 제출하는 모든 신규 참가자</b>가 그 조건으로 배정됩니다.
+          목표 인원이 차면 다음 조건으로 바꿔주세요. 이미 배정된 참가자는 바뀌지 않습니다.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {([["ours", "ours (제안 시스템)"], ["baseline2", "baseline2 (추론 숨김)"],
+             ["baseline1", "baseline1 (추론 없음)"], [null, "자동 균형 배정"]] as [string | null, string][]).map(([v, label]) => (
+            <button
+              key={label}
+              disabled={savingConfig}
+              onClick={() => void saveForcedCondition(v)}
+              className={`rounded-lg border px-3 py-2 text-sm font-medium disabled:opacity-50 ${
+                forcedCondition === v
+                  ? "border-[#4F46E5] bg-[#4F46E5] text-white"
+                  : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs font-medium text-gray-700">
+          현재: {forcedCondition ? `${COND_LABEL[forcedCondition] ?? forcedCondition} 고정 모집 중` : "자동 균형 배정"}
+        </p>
+      </section>
+
       {/* 조건 밸런스 */}
       <section className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold text-gray-500">조건 배정 현황</h2>
+        <h2 className="mb-3 text-sm font-semibold text-gray-500">조건별 모집 현황</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {(balance?.conditions ?? []).map((c) => (
-            <div key={c.condition} className="rounded-xl border border-gray-200 p-4">
-              <p className="text-xs text-gray-500">{COND_LABEL[c.condition] ?? c.condition}</p>
+            <div key={c.condition}
+                 className={`rounded-xl border p-4 ${forcedCondition === c.condition ? "border-[#4F46E5] bg-indigo-50/40" : "border-gray-200"}`}>
+              <p className="text-xs text-gray-500">
+                {COND_LABEL[c.condition] ?? c.condition}
+                {forcedCondition === c.condition && <span className="ml-1 font-semibold text-[#4F46E5]">← 모집 중</span>}
+              </p>
               <p className="mt-1 text-2xl font-bold text-gray-900">
                 {c.started}
                 <span className="ml-1 text-sm font-normal text-gray-400">시작 / 배정 {c.assigned}</span>
@@ -384,20 +441,52 @@ export default function AdminPage() {
                           {!detail ? (
                             <p className="text-xs text-gray-400">불러오는 중…</p>
                           ) : (
-                            <div className="space-y-2">
-                              {detail.turns.map((t, i) => (
-                                <p key={i} className="text-xs leading-relaxed">
-                                  <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${t.role === "user" ? "bg-indigo-100 text-indigo-700" : "bg-gray-200 text-gray-600"}`}>
-                                    {t.role === "user" ? "참가자" : "에이전트"}
-                                  </span>
-                                  {t.content}
+                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                              {/* 대화 */}
+                              <div className="space-y-2">
+                                <p className="text-[11px] font-semibold text-gray-500">대화 ({detail.turns.length}턴)</p>
+                                {detail.turns.map((t, i) => (
+                                  <p key={i} className="text-xs leading-relaxed">
+                                    <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${t.role === "user" ? "bg-indigo-100 text-indigo-700" : "bg-gray-200 text-gray-600"}`}>
+                                      {t.role === "user" ? "참가자" : "에이전트"}
+                                    </span>
+                                    {t.content}
+                                  </p>
+                                ))}
+                              </div>
+                              {/* 추천·선택 */}
+                              <div className="space-y-2">
+                                <p className="text-[11px] font-semibold text-gray-500">
+                                  추천된 상품 ({detail.impressions.length}) · 선택: {m.finalChoice?.status ?? "미확정"}
                                 </p>
-                              ))}
-                              {detail.feedback.length > 0 && (
-                                <p className="text-xs text-gray-500">
-                                  피드백: {detail.feedback.map((f) => `${f.type}${f.reasonText ? `(${f.reasonText})` : ""}`).join(", ")}
-                                </p>
-                              )}
+                                <ul className="space-y-1.5">
+                                  {detail.impressions.map((imp, i) => {
+                                    const fb = detail.feedback.filter((f) => f.productId === imp.productId);
+                                    const liked = fb.some((f) => f.type === "like");
+                                    const disliked = fb.some((f) => f.type === "dislike");
+                                    const purchased = fb.some((f) => f.type === "purchase");
+                                    return (
+                                      <li key={i} className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs">
+                                        <span className="font-medium text-gray-800">{imp.product?.title ?? imp.productId}</span>
+                                        {typeof imp.product?.price === "number" && (
+                                          <span className="ml-1 text-gray-500">{imp.product.price.toLocaleString("ko-KR")}원</span>
+                                        )}
+                                        {purchased && <span className="ml-1 rounded bg-[#4F46E5] px-1 text-[10px] text-white">최종 선택</span>}
+                                        {liked && <span className="ml-1 rounded bg-emerald-100 px-1 text-[10px] text-emerald-700">좋아요</span>}
+                                        {disliked && <span className="ml-1 rounded bg-red-100 px-1 text-[10px] text-red-600">싫어요</span>}
+                                        {imp.recommendationReason && (
+                                          <p className="mt-0.5 text-[11px] text-gray-500">{imp.recommendationReason}</p>
+                                        )}
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                                {detail.feedback.length > 0 && (
+                                  <p className="text-[11px] text-gray-500">
+                                    피드백 이유: {detail.feedback.filter((f) => f.reasonText).map((f) => `"${f.reasonText}"`).join(", ") || "없음"}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           )}
                         </td>

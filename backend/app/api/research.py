@@ -229,6 +229,29 @@ def condition_balance(db: DbSession = Depends(get_db)):
     }
 
 
+@router.get("/study-config")
+def get_study_config(db: DbSession = Depends(get_db)):
+    """운영 설정 조회 — 현재 조건 배정 모드 (관리자 페이지용)."""
+    from app.core.conditions import get_forced_condition
+
+    return {"forcedCondition": get_forced_condition(db)}
+
+
+@router.put("/study-config")
+def put_study_config(req: dict, db: DbSession = Depends(get_db)):
+    """조건 배정 모드 변경 — forcedCondition을 조건 슬러그로 주면 신규 참가자 전원이
+    그 조건으로 배정되고(조건별 순차 모집), null이면 자동 균형으로 돌아간다.
+    research 라우터라 study 모드에서 연구 키 없이는 호출 불가."""
+    from app.core.conditions import STUDY_CONDITIONS, set_forced_condition
+
+    value = req.get("forcedCondition")
+    if value is not None and value not in STUDY_CONDITIONS:
+        raise HTTPException(400, f"forcedCondition must be one of {STUDY_CONDITIONS} or null")
+    set_forced_condition(db, value)
+    db.commit()
+    return {"forcedCondition": value}
+
+
 @router.get("/participants/{participant_id}/spec")
 def participant_spec(participant_id: str, db: DbSession = Depends(get_db)):
     """참가자 자연어 명세 파일 (AI memory). 최신 상태로 합성해 반환."""

@@ -445,3 +445,16 @@ class LLMCall(Base):
     request: Mapped[dict] = mapped_column(JSON, default=dict)
     response: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class StudySetting(Base):
+    """연구 운영 설정 (key-value) — 재배포 없이 관리자 페이지에서 바꾸는 값.
+
+    첫 용도: forced_condition — 신규 참가자 조건 배정을 균형 알고리즘 대신
+    지정 조건으로 고정한다 (조건별 순차 모집; core/conditions.assign_condition이 읽음).
+    """
+    __tablename__ = "study_settings"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[str | None] = mapped_column(String)
+    updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
