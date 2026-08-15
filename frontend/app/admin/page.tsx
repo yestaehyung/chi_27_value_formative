@@ -32,7 +32,6 @@ type SessionRow = {
   topicCount: number;
   metadata?: { category?: string; studyCondition?: string; familiarity?: string; finalChoice?: { status?: string } } | null;
 };
-type Turn = { role: string; content: string; agentAction?: string | null };
 
 const COND_LABEL: Record<string, string> = {
   baseline1: "베이스라인1 (추론 없음)",
