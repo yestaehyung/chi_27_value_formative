@@ -58,9 +58,11 @@ export default function SurveyPage() {
       const canonicalAnswers = canonicalizeStudyAnswers(answers);
       const res = await api.submitSurvey(canonicalAnswers, profile); // 비어 있어도 참가자 생성(흐름 동일)
       // 배정된 조건을 튜토리얼에 넘긴다 — 조건별로 안내할 단계가 다르다
-      // (기준을 안 보여주는 조건에 '기준 확인'을 설명하면 조작이 깨진다)
-      const cond = res.studyCondition ? `&cond=${res.studyCondition}` : "";
-      router.push(`/study/tutorial?pid=${res.participantId}${cond}`);
+      // (기준을 안 보여주는 조건에 '기준 확인'을 설명하면 조작이 깨진다).
+      // URL이 아니라 sessionStorage로: 주소창·히스토리에 조건 라벨이 보이면
+      // 참가자가 자기 조건을 알게 되어 블라인딩이 깨진다.
+      if (res.studyCondition) sessionStorage.setItem("vc:studyCond", res.studyCondition);
+      router.push(`/study/tutorial?pid=${res.participantId}`);
     } catch (e) {
       console.error(e);
       setSubmitting(false);

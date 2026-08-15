@@ -17,7 +17,11 @@ function TutorialInner() {
   const router = useRouter();
   const params = useSearchParams();
   const pid = params.get("pid");
-  const raw = params.get("cond");
+  // 조건은 sessionStorage로 전달된다(설문 페이지가 저장) — URL에 노출하면 참가자가
+  // 자기 조건을 볼 수 있어 블라인딩이 깨진다. URL 파라미터는 조건별 튜토리얼을
+  // 수동 프리뷰하는 개발용 오버라이드로만 남긴다 (정상 플로우는 붙이지 않음).
+  const raw = params.get("cond")
+    ?? (typeof window !== "undefined" ? sessionStorage.getItem("vc:studyCond") : null);
   const condition: StudyCondition =
     raw && raw in SHOWS_CRITERIA ? (raw as StudyCondition) : "ours";
 
