@@ -15,6 +15,7 @@ import CurrentUnderstandingPanel from "@/components/preference/CurrentUnderstand
 import ConflictCard from "@/components/preference/ConflictCard";
 import EvidenceDrawer from "@/components/preference/EvidenceDrawer";
 import PostSurveyModal from "@/components/study/PostSurveyModal";
+import { formatStudyPrice, productTitle, tr } from "@/lib/studyI18n";
 
 export default function CurrentStudySession() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -82,6 +83,19 @@ export default function CurrentStudySession() {
   }, [turns, impressionsByTurn, conflicts]);
 
   // ----- actions ------------------------------------------------------------
+  // 답변 칩은 턴 응답과 분리해 따로 받는다 (백엔드 크리티컬 패스 단축, 2026-08-14).
+  const suggestionsReqRef = useRef(0);
+  const loadChipSuggestions = useCallback(() => {
+    const reqId = ++suggestionsReqRef.current;
+    void api.fetchReplySuggestions(sessionId)
+      .then((r) => {
+        if (suggestionsReqRef.current === reqId) {
+          setChipSuggestions(r.suggestions?.length ? r.suggestions : null);
+        }
+      })
+      .catch(() => {});
+  }, [sessionId]);
+
   const sendMessage = useCallback(async (text: string) => {
     // 1) 사용자 메시지를 즉시 화면에 반영 (낙관적 업데이트) — 응답을 기다리지 않음
     const optimisticId = `optimistic_${Date.now()}`;
@@ -103,8 +117,13 @@ export default function CurrentStudySession() {
       }
       if (res.preferenceState) setState(res.preferenceState);
       if (res.conflicts?.length) setConflicts((prev) => [...prev, ...res.conflicts]);
-      // 입력창 위 답변 칩 — 백엔드가 대화 맥락에 맞춰 동적 생성
-      setChipSuggestions(res.replySuggestions?.length ? res.replySuggestions : null);
+      // 입력창 위 답변 칩 — 응답 표시 후 따로 로드 (인라인 제공 시엔 그대로 사용)
+      if (res.replySuggestions?.length) {
+        setChipSuggestions(res.replySuggestions);
+      } else {
+        setChipSuggestions(null);
+        loadChipSuggestions();
+      }
     } catch (e) {
       console.error(e);
       // 느린 턴(LLM ~30초+)에서 연결이 끊겨도 백엔드는 완료해 저장했을 수 있다 —
@@ -122,7 +141,7 @@ export default function CurrentStudySession() {
     } finally {
       setBusy(false);
     }
-  }, [sessionId]);
+  }, [sessionId, loadChipSuggestions]);
 
   const sendFeedback = useCallback(async (productId: string, payload: FeedbackPayload) => {
     setBusy(true);
@@ -137,7 +156,12 @@ export default function CurrentStudySession() {
       // 자세히 클릭 → 에이전트가 상품을 설명하며 궁금점을 되묻는 턴 (조용한 추론 대신 상호작용)
       if (res.agentTurn) {
         setTurns((prev) => [...prev, res.agentTurn]);
-        setChipSuggestions(res.replySuggestions?.length ? res.replySuggestions : null);
+        if (res.replySuggestions?.length) {
+          setChipSuggestions(res.replySuggestions);
+        } else {
+          setChipSuggestions(null);
+          loadChipSuggestions();
+        }
       }
       if (res.chosenRejectedPairsCreated?.length) {
         showToast("반응이 기록됐어요.");
@@ -151,7 +175,7 @@ export default function CurrentStudySession() {
     } finally {
       setBusy(false);
     }
-  }, [sessionId]);
+  }, [sessionId, loadChipSuggestions]);
 
   const resolveConflict = useCallback(async (conflictId: string, optionId: string, manualText?: string) => {
     setBusy(true);
@@ -190,7 +214,7 @@ export default function CurrentStudySession() {
   }, [sessionId]);
 
   const copyConversation = useCallback(async () => {
-    const label = (r: string) => (r === "user" ? "나" : "에이전트");
+    const label = (r: string) => (r === "user" ? tr("나", "Me") : tr("에이전트", "Agent"));
     const lines: string[] = [];
     if (scenarioTitle) lines.push(`# ${scenarioTitle}`, "");
     for (const t of turns) {
@@ -198,16 +222,16 @@ export default function CurrentStudySession() {
       lines.push(`${label(t.role)}: ${t.content}`);
       for (const imp of impressionsByTurn[t.id] ?? []) {
         const p = imp.product;
-        if (p) lines.push(`  · ${p.title}${p.price != null ? ` (${p.price.toLocaleString()}원)` : ""}`);
+        if (p) lines.push(`  · ${productTitle(p)}${p.price != null ? ` (${formatStudyPrice(p.price)})` : ""}`);
       }
       lines.push("");
     }
     const text = lines.join("\n").trim();
     try {
       await navigator.clipboard.writeText(text);
-      showToast("대화를 클립보드에 복사했어요.");
+      showToast(tr("대화를 클립보드에 복사했어요.", "Conversation copied to the clipboard."));
     } catch {
-      showToast("복사 실패 — 브라우저 권한을 확인해 주세요.");
+      showToast(tr("복사 실패 — 브라우저 권한을 확인해 주세요.", "Copy failed. Please check your browser permissions."));
     }
   }, [turns, impressionsByTurn, scenarioTitle]);
 

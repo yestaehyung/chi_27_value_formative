@@ -60,7 +60,12 @@ async def run_preference_commit(
 ) -> PreferenceCommitResult:
     t0 = time.perf_counter()
     pre_existing = get_active_topics(db, session.id)
-    current_state = {"activeTopicLabels": [t.label for t in pre_existing]}
+    current_state = {
+        "activeTopicLabels": [t.label for t in pre_existing],
+        # 사용자가 직접 쓴 문구는 재추출 시 표현이 달라도 그대로 재사용해야 한다
+        # (수정된 라벨은 대화의 자연스러운 표현과 멀어져 중복 칩이 생기기 쉬움)
+        "userAuthoredLabels": [t.label for t in pre_existing if t.status == "corrected_by_user"],
+    }
 
     # 동기 층(M8) 입력 — 새 user 발화가 있는 commit에서만 감지한다.
     # 여기(공통 파이프라인)에 두어 라이브·시뮬레이션·PSCon 배치가 모두 12축을 얻는다.

@@ -38,7 +38,10 @@ async def extract_topics(
             for t in turns if t is not None
         ],
         "feedback": [_feedback_context(db, f) for f in feedback if f is not None],
-        "state": {"activeTopicLabels": (current_state or {}).get("activeTopicLabels", [])},
+        "state": {
+            "activeTopicLabels": (current_state or {}).get("activeTopicLabels", []),
+            "userAuthoredLabels": (current_state or {}).get("userAuthoredLabels", []),
+        },
     }
     messages = [
         LLMMessage(role="system", content=SYSTEM_BY_TASK["topic_extraction"]),

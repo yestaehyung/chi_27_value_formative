@@ -32,22 +32,15 @@ def test_call_retries_on_transient_error(monkeypatch):
     calls = {"n": 0}
 
     class _FakeClient:
-        def __init__(self, *a, **k):
-            pass
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *a):
-            return False
-
         async def post(self, *a, **k):
             calls["n"] += 1
             if calls["n"] < 3:  # 처음 2회 실패 → 3회째 성공
                 raise httpx.ConnectError("transient")
             return _FakeResp()
 
-    monkeypatch.setattr(httpx, "AsyncClient", _FakeClient)
+    # _call은 공유 클라이언트(shared_async_client)를 쓴다 — 그 심을 페이크로 교체
+    fake = _FakeClient()
+    monkeypatch.setattr("app.llm.provider.shared_async_client", lambda: fake)
 
     # __init__(키 필요)을 우회해 순수 _call 경로만 검증
     p = object.__new__(OpenAIProvider)

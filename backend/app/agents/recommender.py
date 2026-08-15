@@ -36,6 +36,10 @@ def _stated_and_confirmed_criteria(
     토픽(confirmed/corrected_by_user). 거부·비활성은 제외.
 
     include_unconfirmed=True(baseline2)면 미확인 추론 토픽도 포함한다 — 위 docstring 참조.
+
+    kind·avoid·mustHave를 함께 넘긴다 (2026-08-14): 추출 설계상 라벨은 극성 없이 '대상'만
+    이름 붙이고(예: 회피 기준 "흔한 디자인" — 이중 부정 오문 방지, prompts.py label 작성 규칙)
+    극성은 kind가 담는다. label만 넘기면 rerank가 회피 기준을 선호로 뒤집어 읽는다.
     """
     topics = (
         db.query(models.IntentionTopic)
@@ -48,7 +52,17 @@ def _stated_and_confirmed_criteria(
         if (include_unconfirmed
                 or t.explicitness == "explicit"
                 or t.status in ("confirmed", "corrected_by_user")):
-            out.append({"label": t.label, "description": t.description})
+            hints = t.hints or {}
+            crit = {
+                "label": t.label,
+                "description": t.description,
+                "kind": hints.get("kind") or "preference",
+            }
+            if hints.get("impliedAvoidance"):
+                crit["avoid"] = hints["impliedAvoidance"]
+            if hints.get("impliedHardConstraint"):
+                crit["mustHave"] = hints["impliedHardConstraint"]
+            out.append(crit)
     return out
 
 
@@ -57,20 +71,24 @@ def select_shown(
     excluded: dict[str, str],
     top_k: int,
     near_miss_cap: int = 3,
+    near_miss_requested: bool = False,
 ) -> tuple[list[ScoredProduct], dict[str, str]]:
-    """노출 셋 확정 (② 부분 정직, 2026-07-07 — 버뮤다 진단 후속).
+    """노출 셋 확정 (2026-08-15 빈손 우선 — ② 부분 정직의 개정).
 
-    rerank의 exclude는 LLM의 판단 **출력 사실**이고, 여기서는 그 사실에만 반응한다:
-    준수 후보 [:top_k] — top_k 미만이면 그만큼만(위반품으로 채우는 fill-5 금지).
-    준수 후보가 0이면 근접 대안(rerank 순위 상위 = 요청과 가장 가까운 순)
-    near_miss_cap개를 이유와 함께 노출한다 — "없다"는 사실을 숨기지도(fill-5),
-    빈손으로 끝내지도(완전 공백) 않는 중간 경로. cap=3은 표시 상수: 전부 위반인
-    세트를 5칸 가득 보여주면 고지가 있어도 정상 추천처럼 읽히기 때문.
+    rerank 행렬의 위반 판정(excluded)은 LLM의 **출력 사실**이고, 여기서는 그 사실에만
+    반응한다: 준수 후보 [:top_k] — top_k 미만이면 그만큼만(위반품으로 채우는 fill-5 금지).
+    준수 후보가 0이면 **기본은 빈손**이다 — 카드를 보여주지 않고 렌더러가 부재와 걸린
+    기준을 설명하며 다음 방향을 묻는다(empty_handed_text). 근접 대안 near_miss_cap개는
+    사용자가 요청했을 때만(near_miss_requested — rerank가 대화에서 판정) 이유와 함께
+    노출한다. cap=3은 표시 상수: 전부 위반인 세트를 5칸 가득 보여주면 고지가 있어도
+    정상 추천처럼 읽히기 때문.
     반환: (노출 셋, {productId: 요청과 다른 점}) — 두 번째가 비어 있지 않으면
     노출 전체가 근접 대안이라는 뜻이다."""
     compliant = [sp for sp in reranked if sp.product.id not in excluded]
     if compliant:
         return compliant[:top_k], {}
+    if not reranked or not near_miss_requested:
+        return [], {}
     shown = reranked[:near_miss_cap]
     return shown, {sp.product.id: excluded.get(sp.product.id, "") for sp in shown}
 
@@ -135,14 +153,20 @@ async def run_recommendation(
         pool_size=pool_size,
     )
     intent_context = build_rerank_context(db, session, recent_turns, constraints_note)
-    reranked, card_texts, excluded = await rg.rerank_by_intent(provider, pool, intent_context)
+    reranked, card_texts, excluded, matrix = await rg.rerank_by_intent(provider, pool, intent_context)
     # 노출 셋 = 준수 후보 상위 top_k, 전멸 시 근접 대안(② 부분 정직 — select_shown).
     # 셋의 대비(관측 도구 속성 — 강점이 서로 다른 후보들)는 rerank 프롬프트의 구성 원칙으로,
     # mock에서는 결정론 priceCue 스프레드로 처리한다(mock은 exclude를 내지 않으므로
     # 기존 데모 경로 그대로). 옛 버킷 규칙은 아마존 풀에서 88%가 단일 버킷으로 형해화됐고,
     # 희소 버킷을 순위 깊은 곳에서 끌어올려 제약 위반품을 승격시키는 부작용만 남았다.
-    scored, near_miss = select_shown(reranked, excluded, top_k)
+    scored, near_miss = select_shown(
+        reranked, excluded, top_k,
+        near_miss_requested=matrix.get("nearMissRequested", False),
+    )
     merge_near_miss_into_cards(card_texts, near_miss)
+    # 빈손 = 후보는 있었는데 행렬상 전부 위반 & 근접 표시 미요청 (풀 자체가 빈 것과 구분)
+    killer = [k for k, _ in sorted(
+        (matrix.get("vioCounts") or {}).items(), key=lambda kv: -kv[1])]
     diag = {
         "searchText": search_text,
         "constraintsNote": constraints_note,
@@ -154,5 +178,10 @@ async def run_recommendation(
         "excludedIds": {pid: reason for pid, reason in excluded.items()},
         "nearMiss": near_miss,
         "shownIds": [sp.product.id for sp in scored],
+        "matrix": {"vioCounts": matrix.get("vioCounts") or {},
+                   "nearMissRequested": matrix.get("nearMissRequested", False),
+                   "verdicts": matrix.get("verdicts") or {}},
+        "matrixKiller": killer[:2],
+        "emptyHanded": bool(pool) and not scored,
     }
     return scored, card_texts, diag

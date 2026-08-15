@@ -837,7 +837,7 @@ def rerank(ctx: dict) -> dict:
             used_cues.add(cue)
         else:
             rest.append(c)
-    ranking = []
+    order, cards = [], []
     for c in spread + rest:
         ltr = round((c.get("longTermReviewRatio") or 0) * 100)
         rating = c.get("rating") or 0
@@ -848,13 +848,16 @@ def rerank(ctx: dict) -> dict:
             matched.append(f"평점이 {rating}로 높은 편이에요")
         if not matched:
             matched.append("기준에 무난하게 맞는 편이에요")
-        ranking.append({
+        order.append(c.get("index"))
+        cards.append({
             "index": c.get("index"),
             "reason": matched[0],
             "matched": matched[:2],
             "weak": [],
         })
-    return {"ranking": ranking}
+    # 행렬 스키마 (2026-08-15) — mock은 위반을 내지 않으므로 verdicts는 빈 셀:
+    # 파서에서 배제 0 = 기존 데모 경로 그대로.
+    return {"verdicts": [], "order": order, "cards": cards, "nearMissRequested": False}
 
 
 def reply_suggestion(ctx: dict) -> dict:
@@ -970,8 +973,39 @@ def generic_text(_prompt: str) -> str:
     return "확인했어요. 제가 이해한 기준이 맞는지 함께 확인해 주세요."
 
 
+def topic_reinterpretation(ctx: dict) -> dict:
+    """사용자가 수정한 칩 라벨의 kind/극성/경계 재판정 (실경로는 LLM 판단; mock은 결정론 규칙)."""
+    label = (ctx.get("newLabel") or "").strip()
+    low = label.lower()
+    price_min = price_max = None
+    m = re.search(r"(\d+)\s*만\s*원", label)
+    if m:
+        won = int(m.group(1)) * 10000
+        if _has(label, "이상", "부터", "넘"):
+            price_min = won
+        else:
+            price_max = won
+    if _has(label, "피하", "싫", "제외", "말고", "않기", "안 보이", "빼고") or _has(low, "avoid", "no ", "not "):
+        kind, avoidance, hard = "avoidance", label, None
+    elif price_min is not None or price_max is not None:
+        kind, avoidance, hard = "constraint", None, None  # 금액 경계는 price 필드가 원본
+    elif _has(label, "이하", "이내", "미만", "이상", "최소", "최대", "필수") or _has(low, "at least", "under ", "must"):
+        kind, avoidance, hard = "constraint", None, label
+    else:
+        kind, avoidance, hard = "preference", None, None
+    return {
+        "kind": kind,
+        "impliedAvoidance": avoidance,
+        "impliedHardConstraint": hard,
+        "priceMin": price_min,
+        "priceMax": price_max,
+        "description": f"사용자가 직접 수정한 기준: {label}",
+    }
+
+
 TASK_HANDLERS = {
     "topic_extraction": topic_extraction,
+    "topic_reinterpretation": topic_reinterpretation,
     "anchor_mapping": anchor_mapping,
     "conceptualization": conceptualization,
     "relation_classification": relation_classification,

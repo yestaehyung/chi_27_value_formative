@@ -46,7 +46,7 @@ import {
   type StudyCondition,
 } from "@/lib/localizedMainSurvey";
 import { completeTask, nextTask } from "@/lib/taskQueue";
-import { STUDY_UI, tr } from "@/lib/studyI18n";
+import { productTitle, STUDY_UI, tr } from "@/lib/studyI18n";
 
 export type UiVariant = "a" | "b" | "c" | "d" | "e";
 
@@ -192,6 +192,20 @@ export default function VariantSession({
   }, [turns, impressionsByTurn, conflicts]);
 
   // ----- actions (기존 페이지의 낙관적 업데이트 + 재동기화 로직 유지) ---------
+  // 답변 칩은 턴 응답과 분리해 따로 받는다 (백엔드 크리티컬 패스 단축, 2026-08-14).
+  // reqId 가드: 칩이 오기 전에 새 턴이 시작되면 낡은 칩을 버린다.
+  const suggestionsReqRef = useRef(0);
+  const loadChipSuggestions = useCallback(() => {
+    const reqId = ++suggestionsReqRef.current;
+    void api.fetchReplySuggestions(sessionId)
+      .then((r) => {
+        if (suggestionsReqRef.current === reqId) {
+          setChipSuggestions(r.suggestions?.length ? r.suggestions : null);
+        }
+      })
+      .catch(() => {});
+  }, [sessionId]);
+
   const sendMessage = useCallback(async (text: string) => {
     const optimisticId = `optimistic_${Date.now()}`;
     setTurns((prev) => [...prev, {
@@ -208,7 +222,12 @@ export default function VariantSession({
       }
       if (res.preferenceState) setState(res.preferenceState);
       if (res.conflicts?.length) setConflicts((prev) => [...prev, ...res.conflicts]);
-      setChipSuggestions(res.replySuggestions?.length ? res.replySuggestions : null);
+      if (res.replySuggestions?.length) {
+        setChipSuggestions(res.replySuggestions); // 구버전 백엔드 호환(인라인 제공 시 그대로)
+      } else {
+        setChipSuggestions(null);
+        loadChipSuggestions();
+      }
     } catch (e) {
       console.error(e);
       try {
@@ -224,7 +243,7 @@ export default function VariantSession({
     } finally {
       setBusy(false);
     }
-  }, [sessionId]);
+  }, [sessionId, loadChipSuggestions]);
 
   const sendFeedback = useCallback(async (productId: string, payload: FeedbackPayload) => {
     setBusy(true);
@@ -235,7 +254,12 @@ export default function VariantSession({
       if (res.newConflicts?.length) setConflicts((prev) => [...prev, ...res.newConflicts]);
       if (res.agentTurn) {
         setTurns((prev) => [...prev, res.agentTurn]);
-        setChipSuggestions(res.replySuggestions?.length ? res.replySuggestions : null);
+        if (res.replySuggestions?.length) {
+          setChipSuggestions(res.replySuggestions);
+        } else {
+          setChipSuggestions(null);
+          loadChipSuggestions();
+        }
       }
       if (payload.type === "purchase") showToast(STUDY_UI.chat.selectedProduct);
     } catch (e) {
@@ -244,7 +268,7 @@ export default function VariantSession({
     } finally {
       setBusy(false);
     }
-  }, [sessionId]);
+  }, [sessionId, loadChipSuggestions]);
 
   const resolveConflict = useCallback(async (conflictId: string, optionId: string, manualText?: string) => {
     setBusy(true);
@@ -305,7 +329,7 @@ export default function VariantSession({
         const fb = feedbackByProduct[imp.productId] ?? [];
         recent.push({
           productId: imp.productId,
-          title: imp.product?.title ?? "",
+          title: imp.product ? productTitle(imp.product) : "",
           price: imp.product?.price ?? null,
           imageUrl: imp.product?.imageUrl ?? null,
           liked: fb.includes("like"),

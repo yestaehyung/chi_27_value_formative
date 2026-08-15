@@ -192,7 +192,15 @@ async def recommend_after_resolution(
     state_for_llm = snapshot.user_visible_summary if snapshot else None
     near_miss = (rec_diag or {}).get("nearMiss") or {}
     rec_note = None
-    if near_miss or not scored:
+    if (rec_diag or {}).get("emptyHanded"):
+        # 행렬상 준수 후보 0 — 빈손 + 걸린 기준 설명 + 근접 후보는 사용자 선택으로
+        rec_note = {
+            "noExactMatch": True,
+            "blockingCriteria": (rec_diag or {}).get("matrixKiller") or [],
+            "nearMissAvailableOnRequest": True,
+        }
+        template = rg.empty_handed_text((rec_diag or {}).get("matrixKiller") or [])
+    elif near_miss or not scored:
         rec_note = {
             "noExactMatch": True,
             "nearestAlternatives": [
@@ -359,7 +367,15 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         # 출력 사실) 정직 초안 + recommendationNote로 렌더러가 부재를 먼저 고지하게 한다.
         near_miss = rec_diag.get("nearMiss") or {}
         rec_note = None
-        if near_miss or not scored:
+        if rec_diag.get("emptyHanded"):
+            # 행렬상 준수 후보 0 — 빈손 + 걸린 기준 설명 + 근접 후보는 사용자 선택으로
+            rec_note = {
+                "noExactMatch": True,
+                "blockingCriteria": rec_diag.get("matrixKiller") or [],
+                "nearMissAvailableOnRequest": True,
+            }
+            template = rg.empty_handed_text(rec_diag.get("matrixKiller") or [])
+        elif near_miss or not scored:
             rec_note = {
                 "noExactMatch": True,
                 "nearestAlternatives": [
@@ -385,10 +401,10 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         )
     logging.info("service_agent.generate_reply_latency_sec=%.3f", time.perf_counter() - t_reply)
 
-    # 입력창 위 답변 칩 — 방금 에이전트 말(text)에 이어지는 사용자 후보 (맥락 의존 → reply 후 생성)
-    reply_suggestions = await rg.generate_reply_suggestions(
-        provider, decision.action, text, state_for_llm,
-    )
+    # 입력창 위 답변 칩은 응답을 막지 않는다 (2026-08-14 지연 개선) — 사용자가 카드를 읽는 동안
+    # 프론트가 POST /sessions/{id}/reply-suggestions 로 따로 받아온다 (그쪽이 마지막 에이전트
+    # 턴 기준으로 같은 내용을 재계산 — 여기서 미리 만들던 것과 입력이 동일).
+    reply_suggestions: list[str] = []
 
     agent_turn = models.Turn(
         id=new_id("turn"),
@@ -431,7 +447,11 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
                 provider=_settings.llm_provider,
                 request={"turnId": agent_turn.id, **{k: rec_diag[k] for k in
                          ("searchText", "constraintsNote", "poolSize", "pool", "rerankContext")}},
-                response={"shownIds": rec_diag["shownIds"]},
+                response={"shownIds": rec_diag["shownIds"],
+                          # 판정 행렬 진단 (2026-08-15) — 셀 감사·빈손 빈도 분석용
+                          "excludedIds": rec_diag.get("excludedIds") or {},
+                          "matrix": rec_diag.get("matrix") or {},
+                          "emptyHanded": rec_diag.get("emptyHanded", False)},
             ))
     except Exception:  # noqa: BLE001
         logging.warning("llm_calls logging failed", exc_info=True)
@@ -582,7 +602,5 @@ async def _handle_detail_view(
     db.add(turn)
     db.commit()
 
-    suggestions = await rg.generate_reply_suggestions(
-        provider, "detail", text, snapshot.user_visible_summary if snapshot else None,
-    )
-    return FeedbackResult(feedback_event=fb, agent_turn=turn, reply_suggestions=suggestions)
+    # 칩 제안은 크리티컬 패스 밖 — 프론트가 reply-suggestions 엔드포인트로 따로 받는다 (위와 동일).
+    return FeedbackResult(feedback_event=fb, agent_turn=turn, reply_suggestions=[])

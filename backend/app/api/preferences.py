@@ -30,13 +30,51 @@ def _topic_state(topic: models.IntentionTopic) -> dict:
     }
 
 
+async def _reinterpret_edited_topic(topic: models.IntentionTopic, new_label: str) -> dict | None:
+    """수정된 라벨로 kind/극성/경계를 재판정한다 (판단은 LLM 몫).
+
+    라벨은 사용자 문구가 최종이지만 kind·impliedAvoidance·priceMax 같은 구조 필드는
+    추출 시점의 해석 산물이라, 문구의 의미가 바뀌면 함께 갱신해야 rerank·하드 필터가
+    수정 전 극성으로 읽는 사고(회피→요구 뒤집힘)를 막는다."""
+    from app.llm.prompts import SYSTEM_BY_TASK, render_user_context
+    from app.llm.provider import LLMMessage, get_provider
+
+    hints = topic.hints or {}
+    context = {
+        "newLabel": new_label,
+        "topic": {
+            "label": topic.label,
+            "description": topic.description,
+            "kind": hints.get("kind"),
+            "impliedAvoidance": hints.get("impliedAvoidance"),
+            "impliedHardConstraint": hints.get("impliedHardConstraint"),
+            "priceMin": hints.get("priceMin"),
+            "priceMax": hints.get("priceMax"),
+        },
+    }
+    messages = [
+        LLMMessage(role="system", content=SYSTEM_BY_TASK["topic_reinterpretation"]),
+        LLMMessage(role="user", content=render_user_context(context)),
+    ]
+    return await get_provider().generate_json(
+        messages, task="topic_reinterpretation", context=context)
+
+
 @router.post("/chips/{topic_id}/action")
-def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Depends(get_db)):
+async def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Depends(get_db)):
     topic = db.get(models.IntentionTopic, topic_id)
     if topic is None:
         raise HTTPException(404, "topic not found")
     session = db.get(models.Session, topic.session_id)
     before_state = _topic_state(topic)
+
+    # edit_label의 LLM 재해석은 어떤 쓰기도 시작하기 전에 끝낸다 (LLM-first, write-last)
+    reinterpreted: dict | None = None
+    if req.action == "edit_label" and req.manualLabel:
+        try:
+            reinterpreted = await _reinterpret_edited_topic(topic, req.manualLabel)
+        except Exception:
+            reinterpreted = None  # 재해석 실패 → 라벨만 반영(종전 동작으로 강등)
 
     def _touch_concepts(new_status: str) -> None:
         """user correction은 linked concept의 lifecycle에도 반영 (이론모듈 §11.2)."""
@@ -68,6 +106,15 @@ def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Depends(g
         topic.label = req.manualLabel
         topic.status = "corrected_by_user"
         topic.confidence = 1.0
+        if isinstance(reinterpreted, dict) and reinterpreted.get("kind") in (
+            "preference", "avoidance", "constraint", "context",
+        ):
+            hints = dict(topic.hints or {})
+            for key in ("kind", "impliedAvoidance", "impliedHardConstraint", "priceMin", "priceMax"):
+                hints[key] = reinterpreted.get(key)
+            topic.hints = hints
+            if reinterpreted.get("description"):
+                topic.description = reinterpreted["description"]
 
     # correction trace (S58: 사용자가 어떤 시점에 무엇을 어떻게 수정했는가)
     if req.action != "show_evidence":

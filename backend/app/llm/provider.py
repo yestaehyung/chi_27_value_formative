@@ -21,6 +21,24 @@ from app.llm.retry import with_retries
 MODEL_OVERRIDE: ContextVar[Optional[str]] = ContextVar("vc_model_override", default=None)
 THINKING_OVERRIDE: ContextVar[Optional[str]] = ContextVar("vc_thinking_override", default=None)
 
+# 이벤트 루프당 하나 재사용하는 httpx 클라이언트 — 턴당 LLM 호출 6회가 각각 TLS 핸드셰이크를
+# 새로 하던 것을 keep-alive로 대체한다 (2026-08-14 지연 개선). uvicorn은 루프가 1개라 사실상
+# 프로세스 전역이고, 스크립트(asyncio.run 반복)는 루프가 바뀔 때 새로 만든다. 슬롯 1개만 유지해
+# 죽은 루프의 클라이언트가 쌓이지 않게 한다. 요청별 timeout은 호출부에서 넘긴다.
+_client_slot: Optional[tuple] = None
+
+
+def shared_async_client():
+    global _client_slot
+    import asyncio
+
+    import httpx
+
+    loop = asyncio.get_running_loop()
+    if _client_slot is None or _client_slot[0] is not loop or _client_slot[1].is_closed:
+        _client_slot = (loop, httpx.AsyncClient(timeout=120))
+    return _client_slot[1]
+
 
 class LLMMessage(BaseModel):
     role: str
@@ -108,8 +126,6 @@ class OpenAIProvider(LLMProvider):
     @with_retries(times=2)
     async def _call(self, msgs: list[dict], max_tokens: int, json_mode: bool,
                     temperature: float = 0.2) -> str:
-        import httpx
-
         model = MODEL_OVERRIDE.get() or self.model     # task-local override(합성 등) 우선
         payload: Dict[str, Any] = {
             "model": model,
@@ -125,15 +141,15 @@ class OpenAIProvider(LLMProvider):
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
         self._augment_payload(payload)  # subclass hook (DeepSeek thinking toggle 등)
-        async with httpx.AsyncClient(timeout=120) as client:
-            resp = await client.post(
-                self.api_url,
-                headers={"Authorization": f"Bearer {self.api_key}"},
-                json=payload,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"] or ""
+        resp = await shared_async_client().post(
+            self.api_url,
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json=payload,
+            timeout=120,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"] or ""
 
     async def generate_text(self, messages, temperature=0.7, max_tokens=1000) -> str:
         msgs = self._prepare_messages(messages, None, None, json_mode=False)
@@ -150,16 +166,14 @@ class OpenAIProvider(LLMProvider):
         return out
 
     async def embed(self, texts: List[str]) -> List[List[float]]:
-        import httpx
-
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.post(
-                "https://api.openai.com/v1/embeddings",
-                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-                json={"model": "text-embedding-3-small", "input": texts},
-            )
-            resp.raise_for_status()
-            return [d["embedding"] for d in resp.json()["data"]]
+        resp = await shared_async_client().post(
+            "https://api.openai.com/v1/embeddings",
+            headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+            json={"model": "text-embedding-3-small", "input": texts},
+            timeout=60,
+        )
+        resp.raise_for_status()
+        return [d["embedding"] for d in resp.json()["data"]]
 
 
 class DeepSeekProvider(OpenAIProvider):
@@ -206,31 +220,29 @@ class AnthropicProvider(LLMProvider):
 
     @with_retries(times=2)
     async def _call(self, messages: List[LLMMessage], temperature: float, max_tokens: int) -> str:
-        import httpx
-
         system = "\n".join(m.content for m in messages if m.role == "system")
         user_messages = [
             {"role": m.role, "content": m.content} for m in messages if m.role != "system"
         ]
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "x-api-key": settings.anthropic_api_key,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json",
-                },
-                json={
-                    "model": settings.anthropic_model,
-                    "max_tokens": max_tokens,
-                    "temperature": temperature,
-                    "system": system or None,
-                    "messages": user_messages or [{"role": "user", "content": "."}],
-                },
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return "".join(b.get("text", "") for b in data.get("content", []))
+        resp = await shared_async_client().post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": settings.anthropic_api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={
+                "model": settings.anthropic_model,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "system": system or None,
+                "messages": user_messages or [{"role": "user", "content": "."}],
+            },
+            timeout=60,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return "".join(b.get("text", "") for b in data.get("content", []))
 
     async def generate_text(self, messages, temperature=0.2, max_tokens=1000) -> str:
         return await self._call(messages, temperature, max_tokens)

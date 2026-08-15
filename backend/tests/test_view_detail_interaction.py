@@ -70,7 +70,10 @@ def test_view_detail_returns_explanation_turn_and_mints_no_topics(client):
     assert turn["role"] == "service_agent"
     assert product["title"] in turn["content"]
     assert "?" in turn["content"]  # 궁금점 질문 포함
-    assert body.get("replySuggestions"), "answer chips must accompany the question"
+    # 답변 칩은 크리티컬 패스 밖 — 별도 엔드포인트가 마지막 에이전트 턴 기준으로 만든다 (2026-08-14)
+    sug = client.post(f"/api/sessions/{sid}/reply-suggestions").json()
+    assert sug["suggestions"], "answer chips must be available for the question"
+    assert sug["forTurnId"] == turn["id"]
 
     # (a) 탐색 클릭은 토픽을 만들지 않는다 (커밋 엔진 미실행)
     assert _topic_count(sid) == topics_before

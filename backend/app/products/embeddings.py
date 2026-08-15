@@ -45,24 +45,35 @@ def cosine(a: list[float], b: list[float]) -> float:
 
 _EMBED_BATCH = 500  # OpenAI 한도: 요청당 입력 2,048개 — 대량 증분(수천 개) 시 청크 필수 (2026-07-04)
 
+# 재사용 클라이언트 — 매 턴의 쿼리 임베딩이 TLS 핸드셰이크를 새로 하지 않게 (2026-08-14).
+# httpx.Client는 요청 단위 thread-safe라 uvicorn 워커 안에서 공유해도 된다.
+_client: httpx.Client | None = None
+
+
+def _http_client() -> httpx.Client:
+    global _client
+    if _client is None or _client.is_closed:
+        _client = httpx.Client(timeout=120)
+    return _client
+
 
 def _embed(texts: list[str]) -> list[list[float]] | None:
     if not texts:
         return []
     out: list[list[float]] = []
     try:
-        with httpx.Client(timeout=120) as client:
-            for i in range(0, len(texts), _EMBED_BATCH):
-                chunk = texts[i:i + _EMBED_BATCH]
-                resp = client.post(
-                    "https://api.openai.com/v1/embeddings",
-                    headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-                    json={"model": settings.embedding_model, "input": chunk, "dimensions": _DIM},
-                )
-                resp.raise_for_status()
-                out.extend(_normalize(d["embedding"]) for d in resp.json()["data"])
-                if len(texts) > _EMBED_BATCH:
-                    _log.info("embedded %d/%d", len(out), len(texts))
+        client = _http_client()
+        for i in range(0, len(texts), _EMBED_BATCH):
+            chunk = texts[i:i + _EMBED_BATCH]
+            resp = client.post(
+                "https://api.openai.com/v1/embeddings",
+                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                json={"model": settings.embedding_model, "input": chunk, "dimensions": _DIM},
+            )
+            resp.raise_for_status()
+            out.extend(_normalize(d["embedding"]) for d in resp.json()["data"])
+            if len(texts) > _EMBED_BATCH:
+                _log.info("embedded %d/%d", len(out), len(texts))
         return out
     except Exception as e:  # noqa: BLE001 — 실패는 키워드 폴백으로 강등
         _log.warning("embedding call failed: %s", e)

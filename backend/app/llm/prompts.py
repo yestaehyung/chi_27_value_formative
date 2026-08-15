@@ -126,13 +126,16 @@ CONFLICT_SYSTEM = """너는 대화형 쇼핑 에이전트의 hidden intention co
 4. 기존 추천 전략을 바꿔야 하는 경우
 5. 사용자가 상품 피드백으로 기존 가설을 반박한 경우
 
-라벨:
-- direct_conflict: 반드시 사용자 확인이 필요함
-- ambiguous_conflict: 가능성이 있어 사용자에게 가볍게 확인하면 좋음
-- no_conflict: 충돌 없음
+라벨 — 먼저 "두 기준을 동시에 만족하는 상품이 있는가"를 묻는다:
+- 있다 → no_conflict 또는 ambiguous_conflict. 다른 축의 기준을 추가·정제하는 것은 충돌이 아니다:
+  "캠핑에 적합한 스피커"에 "가격이 낮을수록 좋음"이 더해지면 저렴한 캠핑용 스피커를 찾으면
+  된다 → no_conflict. 위 1~4 유형은 기본 ambiguous_conflict다.
+- 없다(서로 반대 방향을 요구: "가격이 낮을수록 좋음" vs "너무 저렴해 보이면 싫음"), 또는
+  사용자가 기존 기준을 명시적으로 뒤집거나 반박(5)했다 → 그때만 direct_conflict.
+  direct는 대화를 중단시키는 확인 카드가 되므로 이 기준을 엄격히 지킨다.
 
-Recall-first 원칙을 따른다.
-애매하면 ambiguous_conflict로 분류한다.
+Recall-first 원칙은 ambiguous에 적용한다: 애매하면 ambiguous_conflict로 분류하고,
+direct로 올리지 않는다.
 JSON으로만 응답한다."""
 
 
@@ -290,6 +293,8 @@ AGENT_REPLY_SYSTEM = """너는 네이버 쇼핑형 대화 쇼핑 도우미(servi
    나쁜 예: "당신은 체면을 중시합니다." / 좋은 예: "이번 선물 상황에서는 너무 저렴해 보이지 않는 것을 중요하게 보고 계신 것 같아요."
 2. 기본은 사람처럼 짧게 — 한두 문장. 아래 9번에 해당할 때만 구조를 쓴다.
 3. 상품을 추천할 때: 개별 상품 설명은 카드가 하니, "왜 이 조합을 골랐는지"만 한 문장으로 짚고 카드를 보게 한다. 상품 정보는 주어진 productsToShow만 쓴다.
+   사용자가 "2번", "두 번째 거"처럼 번호로 가리키면 직전에 보여준 카드 목록(previouslyShownProducts,
+   최신 추천이면 productsToShow)의 그 순서 상품이다 — 그 상품을 특정해서 답한다.
 4. 카드 안내는 정말 필요할 때 한 번만 한다 (매 턴 반복하지 않는다).
    화면 위치를 말해야 할 때는 "아래"라고 쓴다 — 추천 카드는 말풍선 바로 아래에 붙는다.
 5. conflictExplanation이 주어진 경우에만: 기준이 바뀐 것 같다는 점을 부드럽게 설명하고
@@ -341,6 +346,11 @@ AGENT_REPLY_SYSTEM = """너는 네이버 쇼핑형 대화 쇼핑 도우미(servi
 
 # Per-task JSON output contracts appended to the user message for real LLM providers.
 FORMAT_BY_TASK = {
+    "topic_reinterpretation": """
+출력 JSON 스키마:
+{"kind":"preference"|"constraint"|"avoidance"|"context",
+"impliedAvoidance":string|null,"impliedHardConstraint":string|null,
+"priceMin":int|null,"priceMax":int|null,"description":string}""",
     "topic_extraction": """
 출력 JSON 스키마:
 {"topics":[{"label":string,"description":string,
@@ -371,6 +381,13 @@ strong_inference(인용 스팬에서 맥락상 명확히 추론) / weak_inferenc
 - topic을 지지하는 evidence id는 빠짐없이 전부 넣어라. sourceEvidence가 비는 topic은 내지 말라.
 - 입력에 없는 내용을 상상해서 topic을 만들지 말라. 새 evidence에서 추론되는 topic이 없으면 {"topics":[]}.
 - state.activeTopicLabels에 이미 있는 기준과 의미가 같으면 같은 label을 그대로 재사용하라(새 표현 금지).
+- state.userAuthoredLabels의 문구는 사용자가 직접 쓴 기준이다. 새 입력이 같은 대상을 다루면
+  표현·언어가 달라도 그 문구를 label로 글자 그대로 재사용하라. 이 규칙은 '한국어 구절' 규칙보다
+  우선한다 — 사용자 문구가 다른 언어라도 번역하거나 바꿔 쓰지 말고 그대로 쓴다.
+  예: userAuthoredLabels에 "20만원 이하만"이 있고 입력이 "예산 안에서 제일 나은 걸로 보여주세요"이면
+  이 기준의 label은 "20만원 이하만"이다.
+  예: userAuthoredLabels에 "no bright colors please"가 있고 입력이 "밝은 색은 부담스러워요"이면
+  이 기준의 label은 "no bright colors please"다.
 - 가격 관련 topic은 사용자가 실제로 가격을 언급했거나 가격 관련 피드백을 남겼을 때만 만든다.""",
     "anchor_mapping": """
 출력 JSON 스키마:
@@ -507,24 +524,27 @@ coverageScore = 해당 pair 수 / 전체 pair 수.""",
 {"suggestions":["더 저렴한 건 없나요?","사실 디자인도 중요해요","오래 쓰는 게 우선이에요"]}""",
     "rerank": """
 출력 JSON 스키마:
-{"ranking":[{"index":int,"reason":string,"matched":[string],"weak":[string],
-"exclude":bool,"excludeReason":string}]}
+{"verdicts":[{"index":int,"cells":{"<cid>":"ok"|"vio"|"unk", ...},"vioNote":string?}],
+"order":[int, ...],
+"cards":[{"index":int,"reason":string,"matched":[string],"weak":[string]}],
+"nearMissRequested":bool}
 
-- index: 입력 후보의 번호를 그대로. **모든 후보를 한 번씩** 포함해 재정렬(좋은 순서대로).
-- reason: 이 순위인 이유 한 문장 (사용자 의도와 연결).
-- matched: 사용자 기준에 부합하는 점 1~2개. weak: 미흡·트레이드오프 0~2개.
-- exclude/excludeReason: 명시 제약·상품 종류·대상을 어기는 후보에만. excludeReason은
-  무엇이 다른지 한 구. 제약을 지키는 후보는 두 필드를 생략.
+- verdicts: **모든 후보**에 대해, criteria의 모든 cid(+statedConstraintsNote가 있으면 "note")를
+  키로 셀을 채운다. vioNote는 "vio" 셀이 하나라도 있을 때, 무엇이 걸렸는지 한 구.
+- order: **모든 후보 index를 한 번씩** 좋은 순서로.
+- cards: order 상위 8개에만.
+- nearMissRequested: 사용자가 근접 후보 표시를 요청한 대화 상황이면 true.
 
-예시 — 사용자 동기가 '가성비', 후보 중 2번이 저가·평점양호, 5번이 고가 유명품일 때:
-{"ranking":[
-{"index":2,"reason":"가성비를 중시하셔서 가격 부담이 적고 평점도 괜찮은 이 제품을 위로 골랐어요","matched":["가격이 낮은 편","평점이 무난함"],"weak":["리뷰 수는 적은 편"]},
-{"index":5,"reason":"품질은 좋지만 가격이 높아 가성비 기준엔 덜 맞아 아래로","matched":["브랜드 인지도 높음"],"weak":["가격대가 높음"]}]}
-
-예시 — "남성용 데님 버뮤다" 요청인데 후보 3번이 여성용 버뮤다, 7번이 남성용 일반 반바지일 때:
-{"ranking":[
-{"index":7,"reason":"남성용이고 종류가 가장 가까워 위로 올렸어요","matched":["남성용"],"weak":["버뮤다 기장은 아님"],"exclude":true,"excludeReason":"버뮤다가 아닌 일반 반바지"},
-{"index":3,"reason":"버뮤다 기장이지만 여성용이라 요청과 달라요","matched":["버뮤다 기장"],"weak":["여성용"],"exclude":true,"excludeReason":"여성용"}]}""",
+예시 — criteria [{cid:"c1",label:"최소 16GB 램",kind:"constraint"},{cid:"c2",label:"화려한
+게임 디자인 피하기",kind:"avoidance"}], statedConstraintsNote "예산 90만원", 후보 0번이
+i5·16GB·95만원, 1번이 셀러론·16GB·46만원, 2번이 i7·16GB·RGB 게이밍·85만원일 때:
+{"verdicts":[
+{"index":0,"cells":{"c1":"ok","c2":"ok","note":"vio"},"vioNote":"95만원 — 예산 90만원 초과"},
+{"index":1,"cells":{"c1":"ok","c2":"ok","note":"ok"}},
+{"index":2,"cells":{"c1":"ok","c2":"vio","note":"ok"},"vioNote":"RGB 게이밍 디자인"}],
+"order":[1,2,0],
+"cards":[{"index":1,"reason":"예산 안에서 16GB 램을 갖춰 조건에 맞아요","matched":["16GB 램","예산 내"],"weak":["셀러론이라 처리 성능은 기본 수준"]}],
+"nearMissRequested":false}""",
     "product_profile": """
 출력 JSON 스키마:
 {"profile":"2~3문장 한국어 — 무엇이고 어떤 사용에 맞는지",
@@ -572,36 +592,38 @@ coverageScore = 해당 pair 수 / 전체 pair 수.""",
 # 부연이 exclude 판정 자체를 흔들어 전멸 풀(compliant=0)의 비공지 위반을 늘렸다.
 RERANK_SYSTEM = """너는 쇼핑 추천 후보를 재정렬하는 reranker다.
 임베딩이 의미로 추려준 후보들을, 사용자가 실제로 말한 조건(statedConstraintsNote)과
-확인된 기준(criteria), 발화 원문(recentUtterances)에 맞춰 순위를 다시 매긴다.
+확인된 기준(criteria — 각 항목에 cid가 붙어 있다), 발화 원문(recentUtterances)에 맞춰
+**판정 먼저, 결론은 그 다음** 순서로 다시 매긴다.
 
-판단 원칙:
-1. **제약이 1순위다.** statedConstraintsNote의 예산·필수·비선호를 어기는 후보는
-   exclude:true와 함께 무엇이 다른지 한 구(excludeReason)를 표기한다 (예: "여성용",
-   "예산 10만원 초과", "커널형"). 예산은 후보의 price로 직접 확인하고, 비선호("커널형
-   싫음" 등)는 후보의 keyAttributes·productType·제목(없으면 설명)에서 해당 특성을 읽어
-   판단한다. 제약을 지키는 후보는 exclude를 생략한다.
-2. **상품 종류·대상 정합.** 대화가 찾는 상품 종류(productType)와 다르거나, 대상(audience)이
-   맞지 않는 후보(성인 쇼핑에 아동용, 남성용 요청에 여성 전용 등)도 exclude:true +
-   excludeReason으로 표기한다.
-3. 제약을 지키는 후보들 사이에서는 criteria와 발화 원문에 잘 맞는 순서로.
-4. [인기 편향 금지] 유명 브랜드·리뷰 많음 자체로 위로 올리지 마라. 사용자가 신뢰·검증을
-   중시한다고 말했을 때만 리뷰·평점이 근거가 된다.
-5. [순서 편향 금지] 입력 후보 번호는 임베딩 유사도순일 뿐 정답이 아니다. 다시 판단하라.
-6. **exclude 없는 상위 5개가 실제로 노출되는 셋이다 — 보완적으로 구성하라.** 제약을
-   지키는 후보들 중에서, 강점이 서로 다른 5개(예: 가성비형 / 검증·신뢰형 / 특색형 /
-   프리미엄형 / 실용 기본형)를 상위에 올려 사용자가 의미 있는 선택을 할 수 있게 한다.
-   거의 같은 상품이 나란히 오는 구성은 피하고, 서로 다른 기준을 대표하는 조합을 만든다.
-   제약을 지키는 후보가 5개 미만이면 그 수만큼만 노출된다 — 그대로 두라. 노출 칸을
-   채우려고 위반 후보의 exclude를 빼는 것보다, 맞는 후보만 정직하게 내보내는 쪽이
-   항상 낫다.
-7. [사실 가드] 주어진 후보 정보로만. 없는 사양(배터리·방수 등)은 지어내지 마라.
-8. 각 후보에 '왜 이 순위인지' 한 문장 이유(reason)와, 사용자 기준에 부합/미흡한 점
-   (matched/weak)을 카드용으로 함께 낸다. 후보에 caveats가 있으면 weak에 반영한다
-   (정직한 한계 고지).
+작업 순서:
 
-모든 입력 후보를 빠짐없이 재정렬한다 — exclude한 후보도 순위는 매긴다(전부 위반이면
-"요청과 가장 가까운 순"이 되고, 시스템은 그 상위를 '가장 가까운 대안'으로 정직하게
-고지하며 보여준다)."""
+① **판정 행렬(verdicts)** — 모든 후보에 대해, 모든 기준을 하나씩 개별 판정한다.
+   기준마다 cid를 키로 셀 하나: "ok"(만족) | "vio"(위반) | "unk"(후보 정보로 알 수 없음).
+   statedConstraintsNote가 비어있지 않으면 그 전체를 cid "note"인 기준 하나로 판정한다.
+   - 판정 근거는 후보의 price·keyAttributes·productType·audience·제목(없으면 설명)이다.
+     후보 텍스트에서 근거를 찾을 수 없는 사양은 "vio"도 "ok"도 아닌 "unk"다 — 지어내지 마라.
+   - criteria의 **kind가 판정 방향이다**: avoidance면 label·avoid가 가리키는 특성이 **있는**
+     후보가 "vio"다. constraint면 mustHave·label의 경계를 벗어나면 "vio". preference·context는
+     같은 방식으로 판정하되 이 셀은 순위에만 쓰인다(위반이어도 배제되지 않는다).
+   - "vio" 셀에는 vioNote 한 구를 함께 쓴다 — 후보의 무엇이 걸렸는지 (예: "셀러론 N5095 —
+     i5 미만", "여성용", "예산 10만원 초과"). vioNote는 후보 텍스트에서 읽은 사실만 담는다.
+② **순위(order)** — 모든 후보 index를 좋은 순서로 나열한다(위반 후보 포함 — 그들끼리는
+   요청과 가까운 순). 행렬에서 hard 기준(constraint·avoidance·note)을 위반한 후보는
+   시스템이 자동으로 노출에서 제외하므로, 상위는 위반 없는 후보들로 구성하라.
+   [순서 편향 금지] 입력 후보 번호는 임베딩 유사도순일 뿐 정답이 아니다.
+   [인기 편향 금지] 유명 브랜드·리뷰 많음 자체는 근거가 아니다 — 사용자가 신뢰·검증을
+   중시한다고 말했을 때만 리뷰·평점을 근거로 쓴다.
+   **보완 구성**: 위반 없는 상위 5개는 강점이 서로 다른 조합(가성비형/검증형/특색형/
+   프리미엄형/기본형)으로. **같은 모델의 변형(제목이 사실상 같은 후보)은 기준에 가장
+   맞는 하나만 상위에 두고 나머지는 아래로** — 같은 상품 두 장은 한 칸 낭비다.
+③ **카드(cards)** — order 상위 8개에만 카드 텍스트를 쓴다: reason(왜 이 순위인지 한 문장),
+   matched(부합점 1~2), weak(미흡·트레이드오프 0~2). **reason과 matched는 행렬의 "ok" 셀에서만,
+   weak는 "vio"·"unk" 셀과 후보의 caveats에서만 유도한다** — 행렬에 없는 주장을 카드에
+   쓰지 마라. "unk"인 기준을 만족한다고 쓰는 것도 금지다.
+
+nearMissRequested — 직전 대화에서 시스템이 "조건에 맞는 상품을 찾지 못했다"고 알렸고
+사용자가 가까운 후보라도 보여달라고 답한 상황이면 true, 아니면 false. true일 때만
+시스템이 위반 후보를 (위반 사실을 카드에 명시한 채) 노출한다."""
 
 
 REPLY_SUGGESTION_SYSTEM = """너는 쇼핑 대화에서 '사용자가 다음에 할 만한 답변'을 제안하는 칩을 만든다.
@@ -653,6 +675,10 @@ ACTION_DECISION_SYSTEM = """너는 쇼핑 대화의 플래너다 — 대화를 �
 - answer: 사용자가 방금 보여준 상품이나 상품 지식에 대해 물었을 때, 새 검색 없이 답한다 (예: "이 둘 차이가 뭐예요?", "노이즈캔슬링이 뭐예요?").
 - close: 사용자가 구매 결정을 밝혔을 때 대화를 마무리한다 (예: "이걸로 할게요"). 단, 결정에 새 요구가 붙어 있으면("좋네요, 근데 무선인 것도…") 대화를 계속한다 — recommend나 answer로.
 
+짧은 긍정 단답("ㅇㅇ", "네", "좋아요", "ㄱㅊ")은 직전 에이전트 발화의 제안·질문을 수락한 것이다 —
+그 제안을 이행하는 행동을 고른다 (비교를 제안했으면 answer로 비교를 실행, 다시 보여주겠다 했으면
+recommend). close는 사용자가 결정("이걸로 할게요")이나 종료 의사를 스스로 밝혔을 때 쓴다.
+
 recommend일 때 인자 2개를 함께 만든다 (사용자 발화 전체 userUtterances와 피드백 feedbackEvents 반영):
 - searchText: 검색 가능한 완결된 한국어 키워드 형태 — **찾는 제품의 종류 + 사용자가 직접 언급한
   선호 특징**(예: '가벼운', '사무용')만 담는다. 그 외 모든 것 — 예산·비선호 요소, 함께 언급된
@@ -677,12 +703,34 @@ lastShownProducts는 직전 턴에 보여준 상품 요약(제목·가격·카�
 clarify일 때는 probe(question, 선택적으로 dimension)를 만든다 — 추측·확인형 hedged 한국어로(§36)."""
 
 
+TOPIC_REINTERPRETATION_SYSTEM = """사용자가 기준 칩의 문구를 직접 수정했다. 새 문구(newLabel)가 이 기준의 최종 의미다.
+새 문구를 기준으로 구조 필드를 다시 판정한다. topic의 기존 해석은 참고 맥락일 뿐이며,
+새 문구와 다르면 새 문구를 따른다.
+
+- kind: preference(잘 맞는 것을 위로) | avoidance(피하려는 특성) | constraint(지켜야 할 경계·필수 조건) | context(상황 설명)
+- impliedAvoidance: kind가 avoidance일 때 피하려는 대상을 명사구로, 그 외 null
+- impliedHardConstraint: kind가 constraint일 때 지켜야 할 경계를 새 문구 기준으로, 그 외 null
+- impliedAvoidance·impliedHardConstraint에는 새 문구가 직접 가리키는 대상만 쓴다.
+  새 문구에 등장하지 않는 기존 해석의 대상은 가져오지 않는다.
+  예: 기존이 {kind:"avoidance", impliedAvoidance:"게임 스타일"}이고 newLabel이 "무난한 걸로"이면
+  결과는 {"kind":"preference","impliedAvoidance":null,...}이다 — "게임 스타일"은 새 문구에 없다.
+- priceMin/priceMax: 새 문구에 금액 경계가 있으면 원화 정수로 넣고 impliedHardConstraint는 null로 둔다. 예: "20만원 이하만"→priceMax:200000
+- description: 새 문구와 정합한 한 문장 설명
+
+예시 — 기존 topic이 {label:"Celeron 성능 부족 피하기", kind:"avoidance"}이고 newLabel이 "최소 8GB RAM과 Core i5 이상"일 때:
+{"kind":"constraint","impliedAvoidance":null,"impliedHardConstraint":"최소 8GB RAM과 Core i5 이상","priceMin":null,"priceMax":null,"description":"메모리 8GB와 Core i5 급 이상의 성능을 요구한다."}
+
+예시 — newLabel이 "번쩍이는 게이밍 디자인은 빼고"일 때:
+{"kind":"avoidance","impliedAvoidance":"번쩍이는 게이밍 디자인","impliedHardConstraint":null,"priceMin":null,"priceMax":null,"description":"화려한 게이밍 스타일의 디자인을 피하려 한다."}"""
+
+
 def render_user_context(context: dict) -> str:
     return json.dumps(context, ensure_ascii=False, indent=1, default=str)
 
 
 SYSTEM_BY_TASK = {
     "topic_extraction": TOPIC_EXTRACTION_SYSTEM,
+    "topic_reinterpretation": TOPIC_REINTERPRETATION_SYSTEM,
     "anchor_mapping": ANCHOR_MAPPING_SYSTEM,
     "conceptualization": CONCEPTUALIZATION_SYSTEM,
     "relation_classification": RELATION_SYSTEM,

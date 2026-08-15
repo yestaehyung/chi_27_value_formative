@@ -58,6 +58,14 @@ export const api = {
       body: JSON.stringify({ role: "user", content }),
     }),
 
+  // 입력창 위 답변 칩 — 턴 응답과 분리 (백엔드가 크리티컬 패스에서 뺌, 2026-08-14).
+  // 턴/피드백 응답 표시 직후 호출한다. forTurnId로 낡은 응답을 걸러낸다.
+  fetchReplySuggestions: (sessionId: string) =>
+    request<{ suggestions: string[]; forTurnId: string | null }>(
+      `/api/sessions/${sessionId}/reply-suggestions`,
+      { method: "POST" },
+    ),
+
   postFeedback: (
     sessionId: string,
     productId: string,

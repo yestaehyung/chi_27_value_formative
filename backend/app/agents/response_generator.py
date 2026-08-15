@@ -30,6 +30,20 @@ def recommend_text(scored: list[ScoredProduct]) -> str:
     )
 
 
+def empty_handed_text(blocking_criteria: list[str]) -> str:
+    """준수 후보 0(행렬의 사실)일 때의 빈손 초안 — 카드를 보여주지 않고, 어떤 기준이
+    후보를 전멸시켰는지 밝힌 뒤 다음 방향(조건 완화 / 근접 후보 보기)을 사용자가 고르게
+    한다. 날조된 세트보다 정확한 빈손이 낫다(fail-loud)."""
+    why = ""
+    if blocking_criteria:
+        crits = "'와 '".join(blocking_criteria[:2])
+        why = f" 특히 '{crits}' 기준을 만족하는 후보를 찾지 못했어요."
+    return (
+        "말씀하신 조건을 모두 만족하는 상품을 지금 카탈로그에서는 찾지 못했어요." + why +
+        " 조건을 조금 넓혀보시겠어요? 아니면 조건에 가장 가까운 후보라도 보여드릴까요?"
+    )
+
+
 def near_miss_text(scored: list[ScoredProduct]) -> str:
     """전 후보가 제약 위반일 때의 정직 초안 (② 부분 정직, 2026-07-07) — 조건에 맞는
     상품의 부재를 먼저 알리고, 근접 대안이 어떤 점에서 다른지는 카드(weak)가 보여주며,
@@ -170,19 +184,23 @@ async def rerank_by_intent(
     provider: LLMProvider,
     scored: list[ScoredProduct],
     intent_context: dict,
-) -> tuple[list[ScoredProduct], dict[str, dict], dict[str, str]]:
-    """사용자 가치·동기로 후보를 재정렬 (LLM4Rerank WWW'25식 Goal-기반 listwise rerank).
-    임베딩이 추려준 후보(scored, 임베딩 순)를, 추출된 의도(intent_context)에 맞춰 순위를 다시 매긴다.
+) -> tuple[list[ScoredProduct], dict[str, dict], dict[str, str], dict]:
+    """판정 행렬 기반 listwise rerank (2026-08-15 — categorical-over-scalar를 rerank에 적용).
 
-    intent_context = {scenario, recentUtterances, topics[{label,description,quotes}],
-                      values(TCV5 raw), motivations(raw)}  — 점수→자연어 하드코딩 변환 안 함.
-    반환: (재정렬된 scored, {productId: {reason,matched,weak}}, {productId: 제외 이유}).
-    제외는 **명시 exclude:true만** 인정 — ranking 누락은 아래 append-back으로 살아나며
-    제외가 아니다(생략≠제외; 노출 억제는 반드시 명시 채널로만, 2026-07-07 ② 부분 정직).
+    LLM 출력 계약: 후보×기준 판정 행렬(verdicts) → 순위(order) → 상위 8개 카드(cards).
+    결론(순위·카드)이 판정(행렬)에서 유도되게 해 복합 조건 부분 준수·허위 이유를 막는다.
+    코드는 기준 내용을 모른다 — 행렬의 구조적 귀결만 집행한다:
+    hard 기준(constraint·avoidance·statedConstraintsNote)의 "vio" 셀 → 노출 배제(excluded),
+    preference·context의 "vio" → 순위에만 반영(배제 아님), "unk" → 배제 아님.
+
+    반환: (재정렬 scored, {pid: {reason,matched,weak}}, {pid: 위반 내용},
+           행렬 진단 {nearMissRequested, vioCounts, verdicts}).
+    구 스키마("ranking" + 명시 exclude)는 폴백으로 계속 파싱한다(스텁·구모델 안전망).
     mock/실패 시 입력 순서 그대로 + 빈 제외 셋 + 사실기반 폴백 카드 (재현성).
     """
+    matrix: dict = {"nearMissRequested": False, "vioCounts": {}, "verdicts": {}}
     if not scored:
-        return scored, {}, {}
+        return scored, {}, {}, matrix
 
     from app.products import profiles
 
@@ -209,7 +227,24 @@ async def rerank_by_intent(
         else:  # 프로필 없는 풀(seed/, seed_naver/) — 기존 산문 유지
             cand["description"] = p.description
         candidates.append(cand)
-    context = {**intent_context, "candidates": candidates}
+
+    # 행렬 셀의 키(cid) 부여 — hard cid의 "vio"만 배제로 이어진다 (기준 내용은 코드 무관)
+    criteria = [dict(c) for c in (intent_context.get("criteria") or [])]
+    for ci, c in enumerate(criteria):
+        c["cid"] = f"c{ci + 1}"
+    hard_cids = {c["cid"] for c in criteria if c.get("kind") in ("constraint", "avoidance")}
+    label_by_cid = {c["cid"]: (c.get("label") or c["cid"]) for c in criteria}
+    if (intent_context.get("statedConstraintsNote") or "").strip():
+        hard_cids.add("note")
+        label_by_cid["note"] = "직접 말씀하신 조건"
+    context = {**intent_context, "criteria": criteria, "candidates": candidates}
+
+    def _parse_card(item: dict) -> dict:
+        return {
+            "reason": (item.get("reason") or "").strip(),
+            "matched": [m for m in (item.get("matched") or []) if isinstance(m, str)][:2],
+            "weak": [w for w in (item.get("weak") or []) if isinstance(w, str)][:2],
+        }
 
     order: list[int] = []
     card_texts: dict[str, dict] = {}
@@ -222,21 +257,46 @@ async def rerank_by_intent(
             # 판정이 런마다 뒤집혔다 (2026-07-07 eval r7: 동일 입력 1.0↔0.0).
             temperature=0.0,
         )
-        for item in (raw or {}).get("ranking", []):
-            idx = item.get("index")
-            if idx in by_index and idx not in order:
-                order.append(idx)
+        raw = raw or {}
+        if "order" in raw or "verdicts" in raw:
+            matrix["nearMissRequested"] = raw.get("nearMissRequested") is True
+            for v in raw.get("verdicts") or []:
+                idx = v.get("index") if isinstance(v, dict) else None
+                if idx not in by_index:
+                    continue
+                cells = v.get("cells") if isinstance(v.get("cells"), dict) else {}
                 pid = by_index[idx].product.id
-                card_texts[pid] = {
-                    "reason": (item.get("reason") or "").strip(),
-                    "matched": [m for m in (item.get("matched") or []) if isinstance(m, str)][:2],
-                    "weak": [w for w in (item.get("weak") or []) if isinstance(w, str)][:2],
-                }
-                if item.get("exclude") is True:
-                    excluded[pid] = (item.get("excludeReason") or "").strip()
+                matrix["verdicts"][pid] = cells
+                vio_cids = [cid for cid, val in cells.items()
+                            if val == "vio" and cid in hard_cids]
+                if vio_cids:
+                    note = (v.get("vioNote") or "").strip() or ", ".join(
+                        label_by_cid.get(cid, cid) for cid in vio_cids)
+                    excluded[pid] = note
+                    for cid in vio_cids:
+                        klabel = label_by_cid.get(cid, cid)
+                        matrix["vioCounts"][klabel] = matrix["vioCounts"].get(klabel, 0) + 1
+            for idx in raw.get("order") or []:
+                if idx in by_index and idx not in order:
+                    order.append(idx)
+            for item in raw.get("cards") or []:
+                idx = item.get("index") if isinstance(item, dict) else None
+                if idx in by_index:
+                    card_texts[by_index[idx].product.id] = _parse_card(item)
+        else:
+            # 구 스키마 폴백 — 명시 exclude:true만 제외로 인정 (2026-07-07 계약)
+            for item in raw.get("ranking", []):
+                idx = item.get("index")
+                if idx in by_index and idx not in order:
+                    order.append(idx)
+                    pid = by_index[idx].product.id
+                    card_texts[pid] = _parse_card(item)
+                    if item.get("exclude") is True:
+                        excluded[pid] = (item.get("excludeReason") or "").strip()
     except Exception:  # noqa: BLE001 — 폴백: 입력 순서 유지, 제외 없음
         order = []
         excluded = {}
+        matrix = {"nearMissRequested": False, "vioCounts": {}, "verdicts": {}}
 
     # 누락된 후보는 원래(임베딩) 순서로 뒤에 붙임 (재현성·완전성; 제외 아님)
     for i in range(len(scored)):
@@ -248,7 +308,7 @@ async def rerank_by_intent(
     for sp in reranked:
         if sp.product.id not in card_texts or not card_texts[sp.product.id]["reason"]:
             card_texts[sp.product.id] = _fallback_card(sp.product)
-    return reranked, card_texts, excluded
+    return reranked, card_texts, excluded, matrix
 
 
 _FALLBACK_SUGGESTIONS = {
