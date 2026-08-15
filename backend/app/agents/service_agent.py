@@ -210,6 +210,9 @@ async def recommend_after_resolution(
         template = rg.near_miss_text(scored)
     else:
         template = rg.recommend_text(scored)
+        unv = (rec_diag or {}).get("unverifiedCriteria") or {}
+        if unv:  # 노출 셋에서 확인 불가로 남은 기준 — 렌더러가 정직하게 밝힌다
+            rec_note = {"unverifiedCriteria": unv, "shownCount": len(scored)}
     text = await rg.generate_reply(
         provider, action="recommend", template_text=template, recent_turns=recent_turns,
         products=products, state_summary=state_for_llm, conflict_explanation=None,
@@ -386,6 +389,9 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             template = rg.near_miss_text(scored)
         else:
             template = rg.recommend_text(scored)
+            unv = rec_diag.get("unverifiedCriteria") or {}
+            if unv:  # 노출 셋에서 확인 불가로 남은 기준 — 렌더러가 정직하게 밝힌다
+                rec_note = {"unverifiedCriteria": unv, "shownCount": len(scored)}
         text = await rg.generate_reply(
             provider, action=decision.action, template_text=template,
             recent_turns=recent_turns, products=products, state_summary=state_for_llm,

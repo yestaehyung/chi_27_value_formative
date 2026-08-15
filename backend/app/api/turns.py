@@ -39,9 +39,17 @@ async def reply_suggestions(session_id: str, db: DbSession = Depends(get_db)):
         .order_by(models.PreferenceStateSnapshot.created_at.desc())
         .first()
     )
+    recent_user = (
+        db.query(models.Turn)
+        .filter(models.Turn.session_id == session_id, models.Turn.role == "user")
+        .order_by(models.Turn.turn_index.desc())
+        .limit(5)
+        .all()
+    )
     suggestions = await rg.generate_reply_suggestions(
         get_provider(), last_agent.agent_action or "recommend", last_agent.content,
         snapshot.user_visible_summary if snapshot else None,
+        recent_user_utterances=[t.content for t in reversed(recent_user)],
     )
     return {"suggestions": suggestions, "forTurnId": last_agent.id}
 

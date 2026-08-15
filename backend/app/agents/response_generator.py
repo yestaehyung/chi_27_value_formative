@@ -237,6 +237,7 @@ async def rerank_by_intent(
     if (intent_context.get("statedConstraintsNote") or "").strip():
         hard_cids.add("note")
         label_by_cid["note"] = "직접 말씀하신 조건"
+    matrix["criterionLabels"] = label_by_cid  # 노출 셋의 unk 집계(확인 불가 고지)에 쓰인다
     context = {**intent_context, "criteria": criteria, "candidates": candidates}
 
     def _parse_card(item: dict) -> dict:
@@ -327,18 +328,26 @@ async def generate_reply_suggestions(
     action: str,
     agent_reply: str,
     state_summary: dict | None,
+    recent_user_utterances: list[str] | None = None,
 ) -> list[str]:
     """입력창 위 '답변 칩' 생성 — 방금 에이전트 말에 이어지는 사용자 1인칭 후보 3개.
-    대화 맥락(에이전트 응답)+가치요약 기반. 실패/mock-빈 시 액션별 정적 폴백."""
+    대화 맥락(에이전트 응답)+가치요약 기반. 사용자가 이미 밝힌 조건(발화 원문)을 실어
+    극성 뒤집힌 제안("RGB 없음" 요청에 "RGB도 있었으면")을 막는다. 실패/mock-빈 시 폴백."""
     fallback = _FALLBACK_SUGGESTIONS.get(action, _FALLBACK_DEFAULT)
     if provider.name == "mock":
         return fallback  # mock은 핸들러가 같은 값 — 호출 절약
     context = {
         "action": action,
         "agentReply": (agent_reply or "")[:500],
+        "userStatedSoFar": [u[:200] for u in (recent_user_utterances or [])[-5:]],
         "userValues": {
             "summary": (state_summary or {}).get("oneSentenceSummary", ""),
-            "chips": [c.get("label") for c in (state_summary or {}).get("chips", [])],
+            # 칩 라벨은 설계상 극성 없는 문구 — type(avoid 등)을 함께 싣지 않으면
+            # 회피 기준을 원한다고 제안하는 극성 역전이 생긴다 (2026-08-15 RGB 사례)
+            "chips": [
+                {"label": c.get("label"), "type": c.get("type")}
+                for c in (state_summary or {}).get("chips", [])
+            ],
         },
     }
     try:

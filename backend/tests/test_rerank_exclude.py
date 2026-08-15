@@ -91,6 +91,21 @@ def test_matrix_missing_card_gets_fallback():
     assert cards["p2"]["reason"]  # cards에 없던 후보도 폴백 카드가 채워진다
 
 
+def test_unverified_criteria_aggregates_unk_over_shown():
+    """노출 셋에서 unk로 남은 기준이 라벨 기준으로 집계된다 (확인 불가 고지의 재료)."""
+    from app.agents.recommender import unverified_criteria
+
+    reranked, cards, excluded, matrix = _run_matrix_stub()
+    assert matrix["criterionLabels"]["c1"] == "최소 16GB 램"
+    shown, _ = select_shown(reranked, excluded, top_k=5)
+    unv = unverified_criteria(matrix, [sp.product.id for sp in shown])
+    # p2만 c1이 unk — 노출 2개(p1, p2) 중 1개에서 '최소 16GB 램' 확인 불가
+    assert unv == {"최소 16GB 램": 1}
+    # 배제된 후보(p0)의 셀은 집계에 들어가지 않는다
+    unv_all_excluded = unverified_criteria(matrix, [])
+    assert unv_all_excluded == {}
+
+
 def test_legacy_ranking_schema_still_parses():
     """구 스키마 폴백 — 명시 exclude:true만 제외, 누락은 append-back (제외 아님)."""
     class _Legacy:

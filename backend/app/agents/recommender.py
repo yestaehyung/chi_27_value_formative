@@ -93,6 +93,23 @@ def select_shown(
     return shown, {sp.product.id: excluded.get(sp.product.id, "") for sp in shown}
 
 
+def unverified_criteria(matrix: dict, shown_ids: list[str]) -> dict[str, int]:
+    """노출 셋에서 'unk'(후보 정보로 확인 불가)로 남은 기준별 개수 — 행렬의 사실 집계.
+
+    핵심 기준이 전 후보에서 확인 불가한데 5장을 채워 보여주면(체형 의자 좌판 높이 사례,
+    2026-08-15 테스트) 확인된 것처럼 읽힌다. 이 집계를 렌더러에 넘겨 '확인되지 않았다'를
+    말하게 한다 — 몇 개부터 언급할지는 렌더러 LLM의 판단."""
+    verdicts = matrix.get("verdicts") or {}
+    labels = matrix.get("criterionLabels") or {}
+    out: dict[str, int] = {}
+    for pid in shown_ids:
+        for cid, val in (verdicts.get(pid) or {}).items():
+            if val == "unk":
+                label = labels.get(cid, cid)
+                out[label] = out.get(label, 0) + 1
+    return out
+
+
 def merge_near_miss_into_cards(card_texts: dict[str, dict], near_miss: dict[str, str]) -> None:
     """근접 대안의 '요청과 다른 점'을 해당 카드 weak 맨 앞에 병합 — 고지가 챗 버블만이
     아니라 카드 단위에도 남게 한다(impression으로 영속 → FS1 분석 가능). in-place."""
@@ -183,5 +200,7 @@ async def run_recommendation(
                    "verdicts": matrix.get("verdicts") or {}},
         "matrixKiller": killer[:2],
         "emptyHanded": bool(pool) and not scored,
+        "unverifiedCriteria": unverified_criteria(
+            matrix, [sp.product.id for sp in scored]),
     }
     return scored, card_texts, diag
