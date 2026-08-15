@@ -21,6 +21,13 @@ export const CATEGORY_EN: Record<string, string> = {
   "후드·맨투맨": "Hoodies & Sweatshirts",
   "니트·가디건": "Sweaters & Cardigans",
   "셔츠·블라우스": "Shirts & Blouses",
+  "이어폰": "Earphones & Earbuds",
+  "헤드폰": "Headphones",
+  "키보드·마우스": "Keyboards & Mice",
+  "모니터": "Monitors",
+  "스마트워치": "Smartwatches",
+  "커피테이블": "Coffee Tables",
+  "책장": "Bookcases",
 };
 
 const CATEGORY_BLURB_EN: Record<string, string> = {
@@ -34,6 +41,13 @@ const CATEGORY_BLURB_EN: Record<string, string> = {
   "편하게 입는 후드·맨투맨": "Hoodies and sweatshirts for casual wear",
   "일상에서 입을 데님": "Denim for everyday wear",
   "출근·일상용 바지": "Pants for work or everyday wear",
+  "음악·통화에 쓸 유선·무선 이어폰": "Wired or wireless earphones for music and calls",
+  "집·이동 중 사용할 헤드폰": "Headphones for home or on the go",
+  "작업·게임용 키보드와 마우스": "Keyboards and mice for work or gaming",
+  "업무·게임·영상용 모니터": "Monitors for work, gaming, or video",
+  "운동·알림·일상용 스마트워치": "Smartwatches for fitness, notifications, and everyday use",
+  "거실에 둘 커피테이블": "Coffee tables for the living room",
+  "책과 소품을 정리할 책장": "Bookcases for organizing books and decor",
 };
 
 export function categoryLabel(category: string): string {
@@ -42,6 +56,31 @@ export function categoryLabel(category: string): string {
 
 export function categoryBlurb(blurb: string): string {
   return IS_ENGLISH_STUDY ? (CATEGORY_BLURB_EN[blurb] ?? blurb) : blurb;
+}
+
+type LocalizableProduct = {
+  title: string;
+  description?: string;
+  attributes?: Record<string, unknown>;
+};
+
+function nonEmptyAttribute(product: LocalizableProduct, key: string): string | undefined {
+  const value = product.attributes?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+/** Use the preserved Amazon source fields on the separately built English study frontend. */
+export function productTitle(product: LocalizableProduct): string {
+  if (!IS_ENGLISH_STUDY) return product.title;
+  return nonEmptyAttribute(product, "titleEn")
+    ?? nonEmptyAttribute(product, "sourceTitleEn")
+    ?? product.title;
+}
+
+export function productDescription(product: LocalizableProduct): string | undefined {
+  if (!IS_ENGLISH_STUDY) return product.description;
+  return nonEmptyAttribute(product, "descriptionEn")
+    ?? nonEmptyAttribute(product, "sourceDescriptionEn");
 }
 
 export function formatStudyPrice(value: number): string {
