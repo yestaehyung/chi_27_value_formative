@@ -4,7 +4,7 @@
 // 인증: 비밀번호 = 백엔드 VC_RESEARCH_KEY. 입력값을 sessionStorage에 두고 모든 요청에
 // X-Research-Key 헤더로 붙인다 — 검증은 백엔드 research_gate가 한다(프론트에 키를 굽지 않음).
 // study 모드 미들웨어 matcher에 /admin이 없으므로 라이브에서도 접근 가능하다.
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const KEY_STORAGE = "vc:adminKey";
 
@@ -33,11 +33,6 @@ type SessionRow = {
   metadata?: { category?: string; studyCondition?: string; familiarity?: string; finalChoice?: { status?: string } } | null;
 };
 type Turn = { role: string; content: string; agentAction?: string | null };
-type SessionDetail = {
-  turns: Turn[];
-  feedback: { type: string; reasonText?: string | null; productId?: string | null }[];
-  impressions: { productId: string; recommendationReason?: string | null; product?: { title?: string; price?: number } }[];
-};
 
 const COND_LABEL: Record<string, string> = {
   baseline1: "베이스라인1 (추론 없음)",
@@ -71,8 +66,6 @@ export default function AdminPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [openSession, setOpenSession] = useState<string | null>(null);
-  const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [hideTest, setHideTest] = useState(false);
 
   // 실험 조건 배정 모드 — null이면 자동 균형, 조건 슬러그면 신규 참가자 전원 그 조건으로
@@ -205,21 +198,7 @@ export default function AdminPage() {
     }
   };
 
-  const toggleSession = async (sid: string) => {
-    if (openSession === sid) {
-      setOpenSession(null);
-      setDetail(null);
-      return;
-    }
-    setOpenSession(sid);
-    setDetail(null);
-    try {
-      const res = await fetch(`/api/sessions/${sid}`);
-      if (res.ok) setDetail(await res.json());
-    } catch {
-      /* 상세 로드 실패는 행 접기만으로 충분 */
-    }
-  };
+
 
   // ---------- 비밀번호 게이트 ----------
   if (!key) {
@@ -365,7 +344,7 @@ export default function AdminPage() {
 
       {/* 세션 */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-gray-500">쇼핑 세션 ({shownSessions.length})</h2>
+        <h2 className="mb-3 text-sm font-semibold text-gray-500">쇼핑 세션 ({shownSessions.length}) — 행을 클릭하면 참가자 화면 그대로 열립니다</h2>
         <div className="overflow-x-auto rounded-xl border border-gray-200">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left text-xs text-gray-500">
@@ -383,80 +362,22 @@ export default function AdminPage() {
             <tbody>
               {shownSessions.map((s) => {
                 const m = s.metadata ?? {};
-                const open = openSession === s.id;
                 return (
-                  <Fragment key={s.id}>
-                    <tr
-                      onClick={() => void toggleSession(s.id)}
-                      className={`cursor-pointer border-t border-gray-100 hover:bg-indigo-50/40 ${isTestId(s.participantId) ? "text-gray-400" : "text-gray-800"} ${open ? "bg-indigo-50/60" : ""}`}
-                    >
-                      <td className="px-3 py-2 font-mono text-xs">{s.id.slice(-10)}</td>
-                      <td className="px-3 py-2 font-mono text-xs">{s.participantId ?? "-"}</td>
-                      <td className="px-3 py-2">{m.category ?? "-"}</td>
-                      <td className="px-3 py-2">{m.studyCondition ?? "-"}</td>
-                      <td className="px-3 py-2">{s.turnCount}</td>
-                      <td className="px-3 py-2">{s.feedbackCount}</td>
-                      <td className="px-3 py-2">{s.topicCount}</td>
-                      <td className="px-3 py-2 text-xs">{m.finalChoice?.status ?? "-"}</td>
-                    </tr>
-                    {open && (
-                      <tr className="border-t border-gray-100 bg-gray-50/60">
-                        <td colSpan={8} className="px-4 py-3">
-                          {!detail ? (
-                            <p className="text-xs text-gray-400">불러오는 중…</p>
-                          ) : (
-                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                              {/* 대화 */}
-                              <div className="space-y-2">
-                                <p className="text-[11px] font-semibold text-gray-500">대화 ({detail.turns.length}턴)</p>
-                                {detail.turns.map((t, i) => (
-                                  <p key={i} className="text-xs leading-relaxed">
-                                    <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-semibold ${t.role === "user" ? "bg-indigo-100 text-indigo-700" : "bg-gray-200 text-gray-600"}`}>
-                                      {t.role === "user" ? "참가자" : "에이전트"}
-                                    </span>
-                                    {t.content}
-                                  </p>
-                                ))}
-                              </div>
-                              {/* 추천·선택 */}
-                              <div className="space-y-2">
-                                <p className="text-[11px] font-semibold text-gray-500">
-                                  추천된 상품 ({detail.impressions.length}) · 선택: {m.finalChoice?.status ?? "미확정"}
-                                </p>
-                                <ul className="space-y-1.5">
-                                  {detail.impressions.map((imp, i) => {
-                                    const fb = detail.feedback.filter((f) => f.productId === imp.productId);
-                                    const liked = fb.some((f) => f.type === "like");
-                                    const disliked = fb.some((f) => f.type === "dislike");
-                                    const purchased = fb.some((f) => f.type === "purchase");
-                                    return (
-                                      <li key={i} className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs">
-                                        <span className="font-medium text-gray-800">{imp.product?.title ?? imp.productId}</span>
-                                        {typeof imp.product?.price === "number" && (
-                                          <span className="ml-1 text-gray-500">{imp.product.price.toLocaleString("ko-KR")}원</span>
-                                        )}
-                                        {purchased && <span className="ml-1 rounded bg-[#4F46E5] px-1 text-[10px] text-white">최종 선택</span>}
-                                        {liked && <span className="ml-1 rounded bg-emerald-100 px-1 text-[10px] text-emerald-700">좋아요</span>}
-                                        {disliked && <span className="ml-1 rounded bg-red-100 px-1 text-[10px] text-red-600">싫어요</span>}
-                                        {imp.recommendationReason && (
-                                          <p className="mt-0.5 text-[11px] text-gray-500">{imp.recommendationReason}</p>
-                                        )}
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                                {detail.feedback.length > 0 && (
-                                  <p className="text-[11px] text-gray-500">
-                                    피드백 이유: {detail.feedback.filter((f) => f.reasonText).map((f) => `"${f.reasonText}"`).join(", ") || "없음"}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
+                  <tr
+                    key={s.id}
+                    onClick={() => window.open(`/study/session/${s.id}`, "_blank")}
+                    title="클릭하면 참가자와 동일한 채팅 화면이 새 탭으로 열립니다"
+                    className={`cursor-pointer border-t border-gray-100 hover:bg-indigo-50/40 ${isTestId(s.participantId) ? "text-gray-400" : "text-gray-800"}`}
+                  >
+                    <td className="px-3 py-2 font-mono text-xs text-[#4F46E5] underline decoration-dotted">{s.id.slice(-10)}</td>
+                    <td className="px-3 py-2 font-mono text-xs">{s.participantId ?? "-"}</td>
+                    <td className="px-3 py-2">{m.category ?? "-"}</td>
+                    <td className="px-3 py-2">{m.studyCondition ?? "-"}</td>
+                    <td className="px-3 py-2">{s.turnCount}</td>
+                    <td className="px-3 py-2">{s.feedbackCount}</td>
+                    <td className="px-3 py-2">{s.topicCount}</td>
+                    <td className="px-3 py-2 text-xs">{m.finalChoice?.status ?? "-"}</td>
+                  </tr>
                 );
               })}
             </tbody>
