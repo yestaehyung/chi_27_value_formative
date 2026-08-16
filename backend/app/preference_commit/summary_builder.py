@@ -27,7 +27,9 @@ def short_rationale(topic: models.IntentionTopic) -> str:
 def build_user_visible_summary(
     ordered_topics: list[models.IntentionTopic],
     has_open_conflict: bool,
-    max_count: int = 5,
+    # 5→8 (2026-08-17): 조건을 많이 말하는 참가자의 후반 기준이 패널·요약에서
+    # 통째로 사라지던 컷 완화 — 프론트는 핵심 3개만 펼치므로 화면 밀도는 그대로.
+    max_count: int = 8,
     llm_sentence: str | None = None,
 ) -> dict:
     top = ordered_topics[:max_count]
@@ -78,7 +80,7 @@ async def fetch_state_summary(
     근거(발화 속 직접 비교, 사용자 확인·수정 상태)가 입력에 있을 때만 쓰도록 프롬프트가
     제한한다 — 라벨만 주면 모든 비교가 날조가 된다(2026-08-16 실측).
     criteria: [{label, priority, status}]. 빈 입력·실패 시 None (→ 폴백)."""
-    criteria = [c for c in (criteria or []) if c.get("label")][:5]
+    criteria = [c for c in (criteria or []) if c.get("label")][:8]
     labels = [c["label"] for c in criteria]
     if not labels:
         return None

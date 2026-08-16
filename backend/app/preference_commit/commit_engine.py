@@ -119,7 +119,7 @@ async def run_preference_commit(
              for t in pre_existing if (t.hints or {}).get("kind") != "context"]
             + [{"label": p["label"], "priority": p.get("priority"), "status": "new"}
                for p in pending_new if p.get("kind") != "context"]
-        )[:6]
+        )[:8]
         scenario = (session.meta or {}).get("shoppingGoal") or (session.meta or {}).get("category") or ""
         # Stages 2-4 + 6 + 요약 fetched concurrently — one network round-trip
         t3 = time.perf_counter()
