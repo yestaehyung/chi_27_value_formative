@@ -81,6 +81,12 @@ class Settings:
         # 전환된다 (core/locale.py + prompts.EN_DIRECTIVES). searchText 등 검색 내부
         # 계약은 언어와 무관하게 한국어 유지. 프론트의 NEXT_PUBLIC_STUDY_LOCALE와 짝.
         self.study_locale = os.environ.get("VC_STUDY_LOCALE", "ko").strip().lower()
+        # 참가자 카테고리 선택 화면에 노출할 카테고리 (쉼표 구분). 미설정이면 DB의 전체
+        # 카테고리 노출(기존 동작). 풀에는 더 많은 카테고리를 두고(검색·향후 확장용)
+        # 스터디는 일부만 제공할 때 쓴다 — 예: 풀 15개 중 10개 노출 (2026-08-17).
+        self.offered_categories = [
+            c.strip() for c in os.environ.get("VC_OFFERED_CATEGORIES", "").split(",") if c.strip()
+        ]
         # 연구자 API(research/exports) 보호 키 — 참가자 설문·대화 전체를 읽는 표면.
         # 설정되면 X-Research-Key 헤더(또는 ?key=)가 일치해야 통과. 미설정이면
         # study 모드에선 잠금(fail-closed), 그 외(로컬)는 기존처럼 개방.

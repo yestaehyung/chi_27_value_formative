@@ -71,6 +71,12 @@ def category_options(db: DbSession = Depends(get_db)):
         .all()
     )
     counts = {c: n for c, n in rows}
+    # 노출 화이트리스트(VC_OFFERED_CATEGORIES) — 풀에는 더 많은 카테고리가 있어도
+    # 스터디 선택지는 지정된 것만 (미설정 = 전체, 기존 동작).
+    from app.core.config import settings
+
+    if settings.offered_categories:
+        counts = {c: n for c, n in counts.items() if c in settings.offered_categories}
     # CATEGORY_LABELS 순서를 유지한다 — 매번 같은 순서로 보여야 선택 편향이 일정하다.
     # (순서 자체의 편향은 참가자별 카운터밸런싱으로 다룬다.)
     out = [
