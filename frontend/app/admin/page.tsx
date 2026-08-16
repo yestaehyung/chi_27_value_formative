@@ -181,6 +181,14 @@ export default function AdminPage() {
 
   const saveForcedCondition = async (value: string | null) => {
     if (!key) return;
+    if (value === forcedCondition) return; // 같은 조건 재클릭 = 변경 없음
+    // 실수 클릭 방지: 어떤 조건에서 어떤 조건으로 바뀌는지 보여주고 한 번 더 확인
+    const from = forcedCondition ? (COND_LABEL[forcedCondition] ?? forcedCondition) : "미설정";
+    const to = value ? (COND_LABEL[value] ?? value) : "자동 균형";
+    const ok = window.confirm(
+      `배정 조건을 변경할까요?\n\n${from} → ${to}\n\n지금부터 설문을 제출하는 신규 참가자는 '${to}'(으)로 배정됩니다.\n이미 배정된 참가자는 바뀌지 않습니다.`,
+    );
+    if (!ok) return;
     setSavingConfig(true);
     try {
       const res = await fetch("/api/research/study-config", {
