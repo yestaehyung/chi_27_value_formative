@@ -752,6 +752,7 @@ EN_DIRECTIVES = {
         " \"budget under 200,000 KRW\", \"avoiding flashy gaming looks\")."
         " The label-reuse rules still apply — reuse existing labels verbatim in whatever"
         " language they are. Keep sourceEvidence quoteOrSummary in the utterance's original language."
+        " English softeners are polite rejection signals — treat phrases like \"not really my thing\", \"I guess it's fine\", \"meh\", \"I'm not sure about…\" as avoidance candidates, just like the Korean euphemism rules below."
     ),
     "topic_reinterpretation": "Write `description` in the same language as newLabel.",
     "state_summary": (
