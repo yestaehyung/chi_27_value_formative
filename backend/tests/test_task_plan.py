@@ -98,4 +98,18 @@ def test_progress_without_plan_is_empty(client):
     r = client.post("/api/study/survey", json={"answers": {}, "profile": {}})
     pid2 = r.json()["participantId"]
     p = client.get(f"/api/study/participants/{pid2}/task-progress").json()
-    assert p == {"tasks": [], "remaining": 0, "next": None}
+    assert p == {"tasks": [], "remaining": 0, "next": None, "knowledgeDone": []}
+
+
+def test_knowledge_survey_merges_per_category(client, pid):
+    """과제 직전 카테고리 단위 제출(2026-08-17) — 병합 저장, knowledgeDone 노출."""
+    r = client.put(f"/api/study/participants/{pid}/knowledge-survey",
+                   json={"answers": {"k:헤드폰:SPK_1": "5"}, "scores": {"헤드폰": 4.2},
+                         "categories": ["헤드폰"]})
+    assert r.status_code == 200
+    r = client.put(f"/api/study/participants/{pid}/knowledge-survey",
+                   json={"answers": {"k:노트북:SPK_1": "3"}, "scores": {"노트북": 2.8},
+                         "categories": ["노트북"]})
+    assert r.json()["scores"] == {"헤드폰": 4.2, "노트북": 2.8}, "이전 카테고리 점수가 보존돼야 한다"
+    p = client.get(f"/api/study/participants/{pid}/task-progress").json()
+    assert p["knowledgeDone"] == ["헤드폰", "노트북"]

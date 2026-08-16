@@ -278,10 +278,14 @@ def submit_knowledge_survey(
     if participant is None:
         raise HTTPException(404, "participant not found")
     survey = dict(participant.survey or {})
+    # 과제 직전 카테고리 단위 제출(2026-08-17)로 바뀌어 **병합** 저장한다 — 각 제출은
+    # 해당 카테고리 분만 담고, 이전 카테고리 응답을 덮어쓰면 안 된다. 같은 카테고리
+    # 재제출은 마지막 응답이 유효(기존 의미 유지).
+    pk = dict(survey.get("productKnowledge") or {})
     survey["productKnowledge"] = {
-        "answers": req.answers,
-        "scores": req.scores or {},
-        "categories": req.categories,
+        "answers": {**(pk.get("answers") or {}), **req.answers},
+        "scores": {**(pk.get("scores") or {}), **(req.scores or {})},
+        "categories": list(dict.fromkeys(list(pk.get("categories") or []) + list(req.categories))),
         "submittedAt": datetime.now(timezone.utc).isoformat(),
     }
     participant.survey = survey
@@ -525,6 +529,10 @@ def task_progress(participant_id: str, db: DbSession = Depends(get_db)):
     tasks = [{**t, "done": t["category"] in completed_categories} for t in plan]
     next_task = next((t for t in tasks if not t["done"]), None)
     remaining = sum(1 for t in tasks if not t["done"])
+    # 과제 직전 지식 설문(카테고리 단위) 완료 목록 — 프론트가 이미 제출한 카테고리는
+    # 재질문 없이 바로 세션을 연다 (새로고침 멱등).
+    knowledge_done = (((part.survey or {}).get("productKnowledge") or {}).get("categories")) or []
     return {"tasks": tasks, "remaining": remaining,
+            "knowledgeDone": knowledge_done,
             "next": ({"category": next_task["category"], "familiarity": next_task["familiarity"]}
                      if next_task else None)}

@@ -142,16 +142,19 @@ export default function VariantSession({
     }
   }, [study, finished, participantId]);
 
-  /** 다음 카테고리로 새 세션을 열고 이동한다 — 서버 계획 우선, 로컬 큐 폴백. */
+  /** 다음 과제로 이동 — 과제 직전 지식 설문(/study/knowledge)을 경유한다 (2026-08-17).
+      설문 페이지가 서버 진행(task-progress)에서 다음 카테고리를 정하고, 그 카테고리의
+      지식 설문을 받은 뒤 세션을 연다 (이미 낸 카테고리는 재질문 없이 바로 쇼핑). */
   const startNextTask = async () => {
-    let task = nextTask(participantId || undefined);
+    if (startingNext) return;
     if (participantId) {
-      try {
-        const p = await api.getTaskProgress(participantId);
-        if (p.tasks.length > 0) task = p.next;
-      } catch { /* 서버 실패 시 로컬 큐 폴백 유지 */ }
+      setStartingNext(true);
+      router.push(`/study/knowledge?pid=${participantId}`);
+      return;
     }
-    if (!task || startingNext) return;
+    // pid 없는 개발 폴백 — 종전처럼 로컬 큐에서 바로 세션 생성
+    const task = nextTask(undefined);
+    if (!task) return;
     setStartingNext(true);
     try {
       const res = await api.createCategorySession(

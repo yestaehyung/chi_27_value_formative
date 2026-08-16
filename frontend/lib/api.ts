@@ -200,6 +200,7 @@ export const api = {
     request<{
       tasks: { category: string; familiarity: Familiarity; done: boolean }[];
       remaining: number;
+      knowledgeDone?: string[];
       next: { category: string; familiarity: Familiarity } | null;
     }>(`/api/study/participants/${participantId}/task-progress`),
 
