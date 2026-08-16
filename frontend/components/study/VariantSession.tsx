@@ -46,7 +46,7 @@ import {
   type StudyCondition,
 } from "@/lib/localizedMainSurvey";
 import { completeTask, nextTask } from "@/lib/taskQueue";
-import { productTitle, STUDY_UI, tr } from "@/lib/studyI18n";
+import { categoryLabel, productTitle, STUDY_UI, tr } from "@/lib/studyI18n";
 
 export type UiVariant = "a" | "b" | "c" | "d" | "e";
 
@@ -463,7 +463,7 @@ export default function VariantSession({
       <div className="flex items-center justify-between gap-2 border-b border-[#f0f2f4] px-3 py-2.5 sm:px-5 sm:py-3">
         <div className="min-w-0 truncate text-sm font-bold text-[#191919]">
           {STUDY_UI.chat.title}
-          {scenarioTitle && <span className="ml-1 text-xs font-normal text-[#9aa0a6]">— {scenarioTitle}</span>}
+          {scenarioTitle && <span className="ml-1 text-xs font-normal text-[#9aa0a6]">— {categoryLabel(scenarioTitle)}</span>}
         </div>
         {study ? (
           <button onClick={openFinalChoice} className="btn btn-primary shrink-0 whitespace-nowrap px-2.5 py-1 text-xs">

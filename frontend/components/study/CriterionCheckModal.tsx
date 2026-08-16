@@ -12,7 +12,8 @@
 import { useMemo, useState } from "react";
 
 import {
-  AUDIT_INFLUENCE_LOCALIZED, AUDIT_NECESSITY_LOCALIZED, CRITERION_CHECK_LOCALIZED as CRITERION_CHECK,
+  AUDIT_INFLUENCE_LOCALIZED, AUDIT_NECESSITY_LOCALIZED, canonicalAuditValue,
+  CRITERION_CHECK_LOCALIZED as CRITERION_CHECK,
 } from "@/lib/localizedMainSurvey";
 import { QuestionRow } from "@/components/study/MainSurveyForm";
 import { tr } from "@/lib/studyI18n";
@@ -32,6 +33,15 @@ export type CriterionAnswer = {
 };
 
 /** 화면 표기 → 저장 값 (분석 시 문자열 비교가 깨지지 않게 짧은 키로 박제) */
+const MATCH_CODE: Record<string, string> = {
+  "정확히 일치": "일치",
+  "일부만 일치하며 수정 필요": "부분일치",
+  "내 기준이 아님": "기준아님",
+  "Matches exactly": "일치",
+  "Partially matches; needs revision": "부분일치",
+  "Not my criterion": "기준아님",
+};
+
 const FORMATION_CODE: Record<string, string> = {
   "대화 전부터 중요했고 처음부터 말했다": "처음부터_말함",
   "대화 전부터 중요했지만 처음에는 말하지 않았다": "처음부터_미표현",
@@ -156,7 +166,7 @@ export default function CriterionCheckModal({
       return {
         topicId: c.topic.id,
         topicLabel: c.topic.label,
-        matches: a["CRIT_MATCH"],
+        matches: a["CRIT_MATCH"] ? (MATCH_CODE[a["CRIT_MATCH"]] ?? a["CRIT_MATCH"]) : undefined,
         formation: raw ? (FORMATION_CODE[raw] ?? raw) : undefined,
       };
     });
@@ -164,7 +174,12 @@ export default function CriterionCheckModal({
       ...own.filter((_, i) => missingPicked.has(i)).map((c) => c.label),
       ...extraMissing.split("\n").map((s) => s.trim()).filter(Boolean),
     ];
-    onSubmit(items, own, missing);
+    const ownCanonical = own.map((c) => ({
+      ...c,
+      necessity: canonicalAuditValue("necessity", c.necessity),
+      influence: canonicalAuditValue("influence", c.influence),
+    }));
+    onSubmit(items, ownCanonical, missing);
   };
 
   return (
@@ -201,7 +216,7 @@ export default function CriterionCheckModal({
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); addOwn(); } }}
-                  placeholder={tr("예: 예산 10만원 이내, 배터리 오래감…", "e.g., budget under $100, long battery life…")}
+                  placeholder={tr("예: 예산 10만원 이내, 배터리 오래감…", "e.g., budget under KRW 150,000, long battery life…")}
                   className="min-w-0 flex-1 rounded-lg border border-[#e4e8eb] px-3 py-2 text-xs focus:border-[#4f46e5] focus:outline-none"
                 />
                 <button onClick={addOwn} disabled={!draft.trim()} className="btn btn-primary shrink-0 px-3 py-2 text-xs">

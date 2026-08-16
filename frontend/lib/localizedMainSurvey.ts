@@ -76,3 +76,13 @@ export function canonicalizeStudyAnswers<T extends Record<string, unknown>>(answ
   }
   return out as T;
 }
+
+/** 감사 파트 응답을 정본(한국어) 값으로 — EN 표시값은 index 매핑으로 변환해 저장한다.
+ *  (ko/en 세션의 분석 값이 갈라지지 않게; FORMATION_CODE와 같은 원칙) */
+export function canonicalAuditValue(kind: "necessity" | "influence", value?: string): string | undefined {
+  if (!IS_ENGLISH_STUDY || !value) return value;
+  const en = kind === "necessity" ? AUDIT_NECESSITY_EN : AUDIT_INFLUENCE_EN;
+  const ko = kind === "necessity" ? AUDIT_NECESSITY : AUDIT_INFLUENCE;
+  const i = (en as readonly string[]).indexOf(value);
+  return i >= 0 ? ko[i] : value;
+}

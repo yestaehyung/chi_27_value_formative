@@ -22,7 +22,7 @@ export function middleware(req: NextRequest) {
 // /demo는 matcher에 없다 = study 모드에서도 열린다 (상품 풀 확인용, mode="demo"라 실험 데이터와 분리).
 export const config = {
   matcher: [
-    "/", "/simulate/:path*", "/research/:path*", "/pscon/:path*",
+    "/", "/simulate/:path*", "/research/:path*", "/pscon/:path*", "/study/session/new",
     "/study/compare/:path*", "/study/session/:sessionId/v/:path*", "/study/session/:sessionId/compare/:path*",
     "/study/vdemo/:path*",
   ],

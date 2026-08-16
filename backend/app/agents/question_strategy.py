@@ -11,17 +11,24 @@
 """
 from sqlalchemy.orm import Session as DbSession
 
+from app.core.locale import L
 from app.db import models
 
 # S6 질문 전략: 불확실 anchor → 가치 수준 질문
 VALUE_QUESTIONS = {
-    "Social": "받는 분이나 주변에서 이 선택을 어떻게 느끼면 좋겠어요?",
-    "Emotional": "고르실 때 가장 불안하거나 꼭 피하고 싶은 상황이 있을까요? 반대로 어떤 느낌이면 기분이 좋으실까요?",
-    "Functional": "성능, 가격, 오래 쓰는 신뢰 중에 무엇을 가장 포기하기 어려우세요?",
-    "Conditional": "주로 어떤 상황에서 쓰게 될까요? 쓰실 분이나 용도를 알려주시면 좋아요.",
-    "Epistemic": "비교하실 때 어떤 점이 가장 헷갈리세요? 기준을 같이 잡아드릴게요.",
+    "Social": L("받는 분이나 주변에서 이 선택을 어떻게 느끼면 좋겠어요?",
+                "How would you like the recipient — or people around you — to feel about this choice?"),
+    "Emotional": L("고르실 때 가장 불안하거나 꼭 피하고 싶은 상황이 있을까요? 반대로 어떤 느낌이면 기분이 좋으실까요?",
+                   "Is there anything you're worried about or want to avoid? And what would make this feel like a great pick?"),
+    "Functional": L("성능, 가격, 오래 쓰는 신뢰 중에 무엇을 가장 포기하기 어려우세요?",
+                    "Between performance, price, and long-term reliability, which is hardest to give up?"),
+    "Conditional": L("주로 어떤 상황에서 쓰게 될까요? 쓰실 분이나 용도를 알려주시면 좋아요.",
+                     "When and where will it mostly be used? Knowing who it's for or the use case helps."),
+    "Epistemic": L("비교하실 때 어떤 점이 가장 헷갈리세요? 기준을 같이 잡아드릴게요.",
+                   "What's most confusing when you compare options? We can work out the criteria together."),
 }
-DEFAULT_QUESTION = "이번 쇼핑에서 가장 중요하게 보는 기준을 하나만 꼽는다면 무엇일까요?"
+DEFAULT_QUESTION = L("이번 쇼핑에서 가장 중요하게 보는 기준을 하나만 꼽는다면 무엇일까요?",
+                     "If you had to name one criterion that matters most for this purchase, what would it be?")
 
 
 def most_uncertain_anchor(snapshot: models.PreferenceStateSnapshot | None) -> str | None:

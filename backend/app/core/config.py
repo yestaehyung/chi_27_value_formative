@@ -77,6 +77,10 @@ class Settings:
         # 않는다(참가자 스터디 DB에 시뮬 데이터가 구조적으로 못 들어감). 기본 "" =
         # 전체 마운트(로컬 개발·연구). 프론트의 APP_MODE=study와 짝으로 설정한다.
         self.app_mode = os.environ.get("VC_APP_MODE", "").strip().lower()
+        # 참가자 화면 언어 (ko | en) — en이면 참가자 대면 LLM 산출물·템플릿이 영어로
+        # 전환된다 (core/locale.py + prompts.EN_DIRECTIVES). searchText 등 검색 내부
+        # 계약은 언어와 무관하게 한국어 유지. 프론트의 NEXT_PUBLIC_STUDY_LOCALE와 짝.
+        self.study_locale = os.environ.get("VC_STUDY_LOCALE", "ko").strip().lower()
         # 연구자 API(research/exports) 보호 키 — 참가자 설문·대화 전체를 읽는 표면.
         # 설정되면 X-Research-Key 헤더(또는 ?key=)가 일치해야 통과. 미설정이면
         # study 모드에선 잠금(fail-closed), 그 외(로컬)는 기존처럼 개방.

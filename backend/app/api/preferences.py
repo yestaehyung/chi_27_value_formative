@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DbSession
 
+from app.core.locale import L
 from app.db import models, serializers
 from app.db.database import get_db
 from app.db.schemas import ChipActionRequest
@@ -13,11 +14,13 @@ PRIORITY_UP = {"low": "medium", "medium": "high", "high": "must_have", "must_hav
 PRIORITY_DOWN = {"must_have": "high", "high": "medium", "medium": "low", "low": "low"}
 
 MESSAGES = {
-    "confirm": "이 기준을 확인했어요. 더 확실하게 반영할게요.",
-    "reject": "이 기준은 잘못 이해한 것이었네요. 제외할게요.",
-    "increase_priority": "이 기준의 중요도를 높였어요.",
-    "decrease_priority": "이 기준의 중요도를 낮췄어요.",
-    "edit_label": "기준을 수정했어요.",
+    "confirm": L("이 기준을 확인했어요. 더 확실하게 반영할게요.",
+                 "Got it — I'll weight this criterion more firmly."),
+    "reject": L("이 기준은 잘못 이해한 것이었네요. 제외할게요.",
+                "My mistake — I'll drop this criterion."),
+    "increase_priority": L("이 기준의 중요도를 높였어요.", "Raised this criterion's priority."),
+    "decrease_priority": L("이 기준의 중요도를 낮췄어요.", "Lowered this criterion's priority."),
+    "edit_label": L("기준을 수정했어요.", "Criterion updated."),
 }
 
 
@@ -36,7 +39,7 @@ async def _reinterpret_edited_topic(topic: models.IntentionTopic, new_label: str
     라벨은 사용자 문구가 최종이지만 kind·impliedAvoidance·priceMax 같은 구조 필드는
     추출 시점의 해석 산물이라, 문구의 의미가 바뀌면 함께 갱신해야 rerank·하드 필터가
     수정 전 극성으로 읽는 사고(회피→요구 뒤집힘)를 막는다."""
-    from app.llm.prompts import SYSTEM_BY_TASK, render_user_context
+    from app.llm.prompts import render_user_context, system_for
     from app.llm.provider import LLMMessage, get_provider
 
     hints = topic.hints or {}
@@ -53,7 +56,7 @@ async def _reinterpret_edited_topic(topic: models.IntentionTopic, new_label: str
         },
     }
     messages = [
-        LLMMessage(role="system", content=SYSTEM_BY_TASK["topic_reinterpretation"]),
+        LLMMessage(role="system", content=system_for("topic_reinterpretation")),
         LLMMessage(role="user", content=render_user_context(context)),
     ]
     return await get_provider().generate_json(
@@ -169,7 +172,7 @@ async def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Dep
     return {
         "updatedTopic": serializers.topic_to_dict(topic),
         "newPreferenceState": serializers.snapshot_to_dict(snapshot),
-        "message": MESSAGES.get(req.action, "반영했어요."),
+        "message": MESSAGES.get(req.action, L("반영했어요.", "Done.")),
     }
 
 

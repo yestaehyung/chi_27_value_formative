@@ -741,6 +741,57 @@ def render_user_context(context: dict) -> str:
     return json.dumps(context, ensure_ascii=False, indent=1, default=str)
 
 
+# 참가자 화면 언어가 영어일 때(VC_STUDY_LOCALE=en) 태스크별로 시스템 프롬프트 끝에
+# 붙는 지시 — 참가자에게 보이는 필드만 영어로 바꾸고, 검색·내부 계약은 그대로 둔다.
+# (판단 로직은 손대지 않는다: 무엇을 쓸지는 기존 프롬프트, 어떤 언어로 쓸지만 여기서.)
+EN_DIRECTIVES = {
+    "topic_extraction": (
+        "Write `label` and `description` in natural English (short noun phrases, e.g."
+        " \"budget under 200,000 KRW\", \"avoiding flashy gaming looks\")."
+        " The label-reuse rules still apply — reuse existing labels verbatim in whatever"
+        " language they are. Keep sourceEvidence quoteOrSummary in the utterance's original language."
+    ),
+    "topic_reinterpretation": "Write `description` in the same language as newLabel.",
+    "state_summary": (
+        "Write `summary` in English — hedged tone (\"It seems you're prioritizing …\"),"
+        " ending with a request to confirm."
+    ),
+    "conflict_detection": (
+        "Write explanationForUser and every suggestedResolutions label/resultingStatePreview"
+        " in English (shown directly to the participant). Keep explanationForResearcher in Korean."
+    ),
+    "reply_suggestion": "Write every suggestion in natural first-person shopper English (e.g. \"Anything cheaper?\").",
+    "action_decision": (
+        "Write probe.question in English. IMPORTANT: keep searchText in KOREAN —"
+        " the search index is Korean-only; an English query would return nothing."
+    ),
+    "rerank": "Write reason, matched, weak, and vioNote in English — they appear verbatim on product cards.",
+}
+
+
+def system_for(task: str | None) -> str | None:
+    """태스크의 시스템 프롬프트 + (영어 모드면) 언어 지시. 프로바이더 공용 진입점."""
+    if not task or task not in SYSTEM_BY_TASK:
+        return None
+    base = SYSTEM_BY_TASK[task]
+    from app.core.locale import is_en
+
+    if is_en():
+        extra = EN_DIRECTIVES.get(task)
+        if extra:
+            # 앞에 배치 + 영어 지시 + 명시적 오버라이드 선언 — 베이스 프롬프트의
+            # "한국어로 써라" 지시·한국어 예시(few-shot 앵커)가 상단 지시를 이기는 것을
+            # 실측으로 확인(2026-08-16). 충돌 시 이 블록이 우선함을 못박는다.
+            return (
+                f"[Participant-facing output language: ENGLISH]\n{extra}\n"
+                "This language requirement OVERRIDES any instruction below that says to"
+                " write in Korean (한국어), and the Korean examples below illustrate"
+                " format only — write your actual output in English.\n\n"
+                f"{base}"
+            )
+    return base
+
+
 SYSTEM_BY_TASK = {
     "topic_extraction": TOPIC_EXTRACTION_SYSTEM,
     "topic_reinterpretation": TOPIC_REINTERPRETATION_SYSTEM,

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 // 헤더(연구자 네비)는 (researcher) route group layout에서만 렌더 — 참가자 /study/*는 헤더 없음.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang={process.env.NEXT_PUBLIC_STUDY_LOCALE === "en" ? "en" : "ko"}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

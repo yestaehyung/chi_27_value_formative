@@ -2,7 +2,7 @@
 from sqlalchemy.orm import Session as DbSession
 
 from app.db import models
-from app.llm.prompts import SYSTEM_BY_TASK, render_user_context
+from app.llm.prompts import render_user_context, system_for
 from app.llm.provider import LLMMessage, LLMProvider
 
 
@@ -44,7 +44,7 @@ async def extract_topics(
         },
     }
     messages = [
-        LLMMessage(role="system", content=SYSTEM_BY_TASK["topic_extraction"]),
+        LLMMessage(role="system", content=system_for("topic_extraction")),
         LLMMessage(role="user", content=render_user_context(context)),
     ]
     out = await provider.generate_json(messages, task="topic_extraction", context=context)

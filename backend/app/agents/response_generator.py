@@ -4,6 +4,7 @@ Templates below are the deterministic fallback (and the mock provider's output).
 When a real LLM provider is configured, `generate_reply` rewrites the template
 grounded on conversation context, product data, and the preference state.
 """
+from app.core.locale import L, is_en
 from app.db import models
 from app.llm.prompts import AGENT_REPLY_SYSTEM, render_user_context
 from app.llm.provider import LLMMessage, LLMProvider
@@ -11,22 +12,31 @@ from app.products.search import ScoredProduct
 
 def clarify_text(category: str | None) -> str:
     if category is None:
-        return (
+        return L(
             "어떤 상품을 찾고 계세요? 쓰실 분(본인/선물), 용도, 대략의 예산을 "
-            "알려주시면 더 잘 찾아드릴 수 있어요."
+            "알려주시면 더 잘 찾아드릴 수 있어요.",
+            "What are you looking for? Telling me who it's for (yourself or a gift), "
+            "how it will be used, and a rough budget will help me find better options.",
         )
-    return "어떤 분이 쓰실 물건인가요? 용도나 예산도 알려주시면 후보를 더 잘 좁힐 수 있어요."
+    return L(
+        "어떤 분이 쓰실 물건인가요? 용도나 예산도 알려주시면 후보를 더 잘 좁힐 수 있어요.",
+        "Who will be using it? Sharing the use case or budget will help me narrow things down.",
+    )
 
 
 def recommend_text(scored: list[ScoredProduct]) -> str:
     """챗 버블 초안 — 상품 개별 설명은 카드가 하므로(③ 역할 분리), 여기선 '왜 이 조합인지'
     비교 관점만 안내한다. 상품별 나열은 카드가 하므로 중복하지 않는다."""
     n = len(scored)
-    return (
+    return L(
         f"말씀해주신 기준에 맞춰 서로 다른 방향의 상품 {n}가지를 골라봤어요. "
         "가격·신뢰·특별함처럼 강조점이 다른 후보들이라, 어떤 쪽이 더 끌리는지 보시면 "
         "기준을 더 정확히 잡아드릴 수 있어요.\n\n"
-        "각 카드의 설명을 보고 좋아요·싫어요로 반응해주시면 돼요."
+        "각 카드의 설명을 보고 좋아요·싫어요로 반응해주시면 돼요.",
+        f"Based on what you told me, I picked {n} options that each take a different angle — "
+        "some lean toward price, others toward reliability or something distinctive. "
+        "Seeing which one appeals to you will help me sharpen the criteria.\n\n"
+        "Take a look at each card and react with like or dislike.",
     )
 
 
@@ -34,6 +44,15 @@ def empty_handed_text(blocking_criteria: list[str]) -> str:
     """준수 후보 0(행렬의 사실)일 때의 빈손 초안 — 카드를 보여주지 않고, 어떤 기준이
     후보를 전멸시켰는지 밝힌 뒤 다음 방향(조건 완화 / 근접 후보 보기)을 사용자가 고르게
     한다. 날조된 세트보다 정확한 빈손이 낫다(fail-loud)."""
+    if is_en():
+        why = ""
+        if blocking_criteria:
+            crits = "' and '".join(blocking_criteria[:2])
+            why = f" In particular, I couldn't find candidates that satisfy '{crits}'."
+        return (
+            "I couldn't find any product in the catalog that meets all of your conditions." + why +
+            " Would you like to relax a condition, or shall I show the closest matches instead?"
+        )
     why = ""
     if blocking_criteria:
         crits = "'와 '".join(blocking_criteria[:2])
@@ -49,34 +68,45 @@ def near_miss_text(scored: list[ScoredProduct]) -> str:
     상품의 부재를 먼저 알리고, 근접 대안이 어떤 점에서 다른지는 카드(weak)가 보여주며,
     다음 방향(조건 완화/다른 방향)은 사용자가 정한다. mock 출력 겸 실패 폴백."""
     if not scored:
-        return (
+        return L(
             "말씀하신 조건에 맞는 상품을 지금 카탈로그에서는 찾지 못했어요. "
-            "조건을 조금 넓혀볼까요, 아니면 다른 종류의 상품을 찾아볼까요?"
+            "조건을 조금 넓혀볼까요, 아니면 다른 종류의 상품을 찾아볼까요?",
+            "I couldn't find a product in the catalog that matches your conditions. "
+            "Shall we relax them a little, or look at a different kind of product?",
         )
     n = len(scored)
-    return (
+    return L(
         f"말씀하신 조건에 딱 맞는 상품은 지금 카탈로그에서 찾지 못했어요. "
         f"대신 가장 가까운 후보 {n}가지를 보여드릴게요 — 각 카드에 조건과 다른 점을 "
-        "표시해두었어요. 조건을 조금 넓혀볼까요, 아니면 다른 방향으로 찾아볼까요?"
+        "표시해두었어요. 조건을 조금 넓혀볼까요, 아니면 다른 방향으로 찾아볼까요?",
+        f"I couldn't find products that exactly match your conditions, so here are the {n} "
+        "closest candidates — each card notes where it falls short. Shall we relax a "
+        "condition, or try a different direction?",
     )
 
 
 def explain_text(products: list[models.Product]) -> str:
     if not products:
-        return "조금 더 구체적으로 어떤 점이 궁금하신지 알려주시면 비교해드릴게요."
-    lines = ["최근 보여드린 후보를 기준으로 비교해드릴게요.", ""]
+        return L("조금 더 구체적으로 어떤 점이 궁금하신지 알려주시면 비교해드릴게요.",
+                 "Let me know what you're curious about and I'll compare the options for you.")
+    lines = [L("최근 보여드린 후보를 기준으로 비교해드릴게요.",
+               "Here's a comparison of the recently shown candidates."), ""]
     for p in products:
         ltr = f"{round((p.long_term_review_ratio or 0) * 100)}%"
-        lines.append(
+        lines.append(L(
             f"- {p.title}: 평점 {p.rating}, 리뷰 {p.review_count:,}개, "
-            f"한달사용 리뷰 비율 {ltr}, 셀러 등급 {p.seller_grade}."
-        )
+            f"한달사용 리뷰 비율 {ltr}, 셀러 등급 {p.seller_grade}.",
+            f"- {p.title}: rating {p.rating}, {p.review_count:,} reviews, "
+            f"{ltr} long-term-use reviews, seller grade {p.seller_grade}.",
+        ))
     best = max(products, key=lambda p: p.long_term_review_ratio or 0)
     lines.append("")
-    lines.append(
+    lines.append(L(
         f"오래 쓰는 관점에서는 한달사용 리뷰 비율이 가장 높은 '{best.title}' 쪽이 "
-        "오래 써도 괜찮을 가능성이 높아 보여요. 다만 이건 리뷰만 본 거라, 직접 기준을 알려주시면 더 정확해져요."
-    )
+        "오래 써도 괜찮을 가능성이 높아 보여요. 다만 이건 리뷰만 본 거라, 직접 기준을 알려주시면 더 정확해져요.",
+        f"For long-term use, '{best.title}' looks most promising given its long-term-use "
+        "review ratio — though that's only from reviews, so telling me your own criteria will make this sharper.",
+    ))
     return "\n".join(lines)
 
 
@@ -84,14 +114,15 @@ def detail_text(p: models.Product, prof: dict | None = None) -> str:
     """자세히 클릭에 대한 결정론 초안 (mock 출력 겸 실패 폴백) — 상품 사실 + 프로필
     (오프라인 enrichment의 keyAttributes/caveats)로 설명하고, 무엇이 궁금한지 묻는다.
     질문이 핵심: 탐색 클릭의 의미를 시스템이 추측하는 대신 사용자가 직접 말하게 한다."""
-    lines = [f"'{p.title}'에 대해 더 알려드릴게요."]
+    lines = [L(f"'{p.title}'에 대해 더 알려드릴게요.",
+               f"Here's more about '{p.title}'.")]
     facts = []
     if p.price is not None:
-        facts.append(f"가격 {p.price:,}원")
+        facts.append(L(f"가격 {p.price:,}원", f"price {p.price:,} KRW"))
     if p.rating:
-        facts.append(f"평점 {p.rating}")
+        facts.append(L(f"평점 {p.rating}", f"rating {p.rating}"))
     if p.review_count:
-        facts.append(f"리뷰 {p.review_count:,}개")
+        facts.append(L(f"리뷰 {p.review_count:,}개", f"{p.review_count:,} reviews"))
     if facts:
         lines.append(" · ".join(facts))
     if prof:
@@ -99,19 +130,23 @@ def detail_text(p: models.Product, prof: dict | None = None) -> str:
             lines.append(str(prof["profile"]))
         attrs = prof.get("keyAttributes") or []
         if attrs:
-            lines.append("주요 특징: " + ", ".join(str(a) for a in attrs[:5]))
+            lines.append(L("주요 특징: ", "Key attributes: ") + ", ".join(str(a) for a in attrs[:5]))
         caveats = prof.get("caveats") or []
         if caveats:
-            lines.append("참고할 점: " + " / ".join(str(c) for c in caveats[:2]))
+            lines.append(L("참고할 점: ", "Worth noting: ") + " / ".join(str(c) for c in caveats[:2]))
     elif p.description:
         lines.append(p.description[:200])
-    lines.append("이 상품에서 어떤 점이 궁금하신가요? 그냥 둘러보신 거라도 편하게 말씀해 주세요.")
+    lines.append(L("이 상품에서 어떤 점이 궁금하신가요? 그냥 둘러보신 거라도 편하게 말씀해 주세요.",
+                   "What would you like to know about this product? If you were just browsing, that's fine too."))
     return "\n\n".join(lines)
 
 
 def conflict_text(conflict: models.PreferenceConflict) -> str:
-    base = conflict.explanation_for_user or "말씀해주신 기준 사이에 충돌이 있는 것 같아요."
-    return f"기준이 바뀐 것 같아요.\n\n{base}\n\n어느 쪽을 우선할지 알려주세요."
+    base = conflict.explanation_for_user or L(
+        "말씀해주신 기준 사이에 충돌이 있는 것 같아요.",
+        "Some of your criteria seem to be in tension with each other.")
+    return L(f"기준이 바뀐 것 같아요.\n\n{base}\n\n어느 쪽을 우선할지 알려주세요.",
+             f"It looks like your criteria may have shifted.\n\n{base}\n\nWhich direction should take priority?")
 
 
 async def generate_reply(
@@ -166,8 +201,14 @@ async def generate_reply(
         "draftTemplate": template_text,
     }
     try:
+        reply_system = AGENT_REPLY_SYSTEM
+        if is_en():
+            reply_system += ("\n\n[참가자 화면 언어]\n모든 응답을 자연스러운 영어로 쓴다"
+                             " (hedged tone: \"it seems\", \"you might\")."
+                             " draftTemplate이 영어면 그 사실 정보를 유지하며 다듬는다."
+                             " 화폐는 KRW 표기를 유지한다 (예: 45,000 KRW).")
         messages = [
-            LLMMessage(role="system", content=AGENT_REPLY_SYSTEM),
+            LLMMessage(role="system", content=reply_system),
             LLMMessage(role="user", content=render_user_context(context)),
         ]
         text = _strip_markdown((await provider.generate_text(messages, max_tokens=700)).strip())
@@ -236,7 +277,7 @@ async def rerank_by_intent(
     label_by_cid = {c["cid"]: (c.get("label") or c["cid"]) for c in criteria}
     if (intent_context.get("statedConstraintsNote") or "").strip():
         hard_cids.add("note")
-        label_by_cid["note"] = "직접 말씀하신 조건"
+        label_by_cid["note"] = L("직접 말씀하신 조건", "your stated conditions")
     matrix["criterionLabels"] = label_by_cid  # 노출 셋의 unk 집계(확인 불가 고지)에 쓰인다
     context = {**intent_context, "criteria": criteria, "candidates": candidates}
 
@@ -313,14 +354,24 @@ async def rerank_by_intent(
 
 
 _FALLBACK_SUGGESTIONS = {
-    "clarify": ["네, 그게 중요해요", "아니요, 그건 아니에요", "잘 모르겠어요"],
-    "recommend": ["더 저렴한 건 없나요?", "사실 디자인도 중요해요", "오래 쓰는 게 우선이에요"],
-    "answer": ["다른 기준으로 비교해줘", "이걸로 정할게요", "더 보여줄 수 있나요?"],
+    "clarify": [L("네, 그게 중요해요", "Yes, that matters to me"),
+                L("아니요, 그건 아니에요", "No, not really"),
+                L("잘 모르겠어요", "I'm not sure")],
+    "recommend": [L("더 저렴한 건 없나요?", "Anything cheaper?"),
+                  L("사실 디자인도 중요해요", "Design matters to me too"),
+                  L("오래 쓰는 게 우선이에요", "Durability comes first")],
+    "answer": [L("다른 기준으로 비교해줘", "Compare them on other criteria"),
+               L("이걸로 정할게요", "I'll go with this one"),
+               L("더 보여줄 수 있나요?", "Can you show me more?")],
     # 자세히 클릭 후 — "그냥 둘러봤어요"가 핵심 칩: 호기심 클릭을 명시적으로 캡처해
     # 시스템이 추측할 여지를 없앤다.
-    "detail": ["가격이 적당한지 궁금해요", "기능·사양이 궁금해요", "그냥 둘러봤어요"],
+    "detail": [L("가격이 적당한지 궁금해요", "Is the price reasonable?"),
+               L("기능·사양이 궁금해요", "Tell me about the specs"),
+               L("그냥 둘러봤어요", "Just browsing")],
 }
-_FALLBACK_DEFAULT = ["좀 더 추천해줘", "가격이 가장 중요해요", "잘 모르겠어요"]
+_FALLBACK_DEFAULT = [L("좀 더 추천해줘", "Show me more options"),
+                     L("가격이 가장 중요해요", "Price matters most"),
+                     L("잘 모르겠어요", "I'm not sure")]
 
 
 async def generate_reply_suggestions(
@@ -367,11 +418,12 @@ def _fallback_card(p: models.Product) -> dict:
     ltr = round((p.long_term_review_ratio or 0) * 100)
     matched = []
     if ltr >= 30:
-        matched.append(f"한달사용 리뷰 비율이 {ltr}%로 높은 편이에요")
+        matched.append(L(f"한달사용 리뷰 비율이 {ltr}%로 높은 편이에요",
+                         f"{ltr}% of reviews come after a month of use"))
     if (p.rating or 0) >= 4.5:
-        matched.append(f"평점 {p.rating}로 만족도가 높아요")
+        matched.append(L(f"평점 {p.rating}로 만족도가 높아요", f"Rated {p.rating} by buyers"))
     if not matched:
-        matched.append("말씀하신 기준에 무난하게 맞는 편이에요")
+        matched.append(L("말씀하신 기준에 무난하게 맞는 편이에요", "A reasonable fit for your criteria"))
     return {"reason": matched[0], "matched": matched[:2], "weak": []}
 
 
@@ -395,8 +447,11 @@ def _strip_markdown(text: str) -> str:
 
 def close_text(product: models.Product | None) -> str:
     if product is None:
-        return "결정을 도와드려서 기뻤어요. 필요하시면 언제든 다시 찾아주세요."
+        return L("결정을 도와드려서 기뻤어요. 필요하시면 언제든 다시 찾아주세요.",
+                 "Glad I could help you decide. Come back anytime!")
     return (
-        f"'{product.title}'(으)로 결정하셨네요. 좋은 선택이에요! "
-        "이번 대화에서 제가 이해한 기준이 다르게 느껴진 부분이 있었다면 알려주세요."
+        L(f"'{product.title}'(으)로 결정하셨네요. 좋은 선택이에요! "
+          "이번 대화에서 제가 이해한 기준이 다르게 느껴진 부분이 있었다면 알려주세요.",
+          f"You've decided on '{product.title}' — great choice! "
+          "If any of the criteria I picked up felt off during this conversation, let me know.")
     )

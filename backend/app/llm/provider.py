@@ -107,17 +107,25 @@ class OpenAIProvider(LLMProvider):
 
     def _prepare_messages(self, messages: List[LLMMessage], task: Optional[str],
                           context: Optional[Dict[str, Any]], json_mode: bool) -> list[dict]:
-        from app.llm.prompts import FORMAT_BY_TASK, SYSTEM_BY_TASK, render_user_context
+        from app.llm.prompts import FORMAT_BY_TASK, SYSTEM_BY_TASK, render_user_context, system_for
 
         msgs = [{"role": m.role, "content": m.content} for m in messages]
         # some call sites pass bare/empty messages and rely on task+context
         if task and not any(m["role"] == "system" for m in msgs) and task in SYSTEM_BY_TASK:
-            msgs.insert(0, {"role": "system", "content": SYSTEM_BY_TASK[task]})
+            msgs.insert(0, {"role": "system", "content": system_for(task)})
         if not any(m["role"] == "user" for m in msgs):
             msgs.append({"role": "user", "content": render_user_context(context or {})})
         if json_mode:
             fmt = FORMAT_BY_TASK.get(task or "", "")
-            msgs[-1] = {**msgs[-1], "content": msgs[-1]["content"] + "\n" + fmt + "\n\n반드시 유효한 JSON 객체로만 응답하라."}
+            # 영어 모드: 언어 지시를 유저 메시지 말미(최신 위치)에도 주입 — 시스템 상단
+            # 지시만으로는 flash가 베이스의 한국어 예시를 따라갔다 (2026-08-16 실측).
+            lang_line = ""
+            from app.core.locale import is_en
+            from app.llm.prompts import EN_DIRECTIVES
+
+            if is_en() and task in EN_DIRECTIVES:
+                lang_line = "\n\n[LANGUAGE] " + EN_DIRECTIVES[task]
+            msgs[-1] = {**msgs[-1], "content": msgs[-1]["content"] + "\n" + fmt + lang_line + "\n\n반드시 유효한 JSON 객체로만 응답하라."}
         return msgs
 
     def _augment_payload(self, payload: Dict[str, Any]) -> None:

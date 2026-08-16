@@ -134,12 +134,12 @@ async def fetch_plan(provider, context: dict, fallback_search_text: str) -> Plan
     dimension ∉ 12-vocab → None. answer·close는 노출 이력이 없으면 성립하지 않으므로
     현실(hasRecommendations)과 대조해 recommend로 강등한다.
     """
-    from app.llm.prompts import SYSTEM_BY_TASK, render_user_context
+    from app.llm.prompts import render_user_context, system_for
     from app.llm.provider import LLMMessage
 
     try:
         out = await provider.generate_json(
-            [LLMMessage(role="system", content=SYSTEM_BY_TASK["action_decision"]),
+            [LLMMessage(role="system", content=system_for("action_decision")),
              LLMMessage(role="user", content=render_user_context(context))],
             task="action_decision", context=context,
         )

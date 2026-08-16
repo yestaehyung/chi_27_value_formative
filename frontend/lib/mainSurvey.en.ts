@@ -47,7 +47,7 @@ export const PRE_STUDY_EN: MSection[] = [
       sg("DEM_GENDER", "Please select your gender.", [
         "Woman", "Man", "Other / prefer not to say",
       ]),
-      sg("DEM_JOB", "Please select your current occupation status.", [
+      sg("DEM_JOB", "Please select your current employment status.", [
         "Student", "Employed", "Self-employed/Freelancer", "Homemaker", "Unemployed/Job-seeking", "Other",
       ]),
     ],
@@ -82,15 +82,15 @@ export const KNOWLEDGE_SECTIONS_EN: MSection[] = [
       lk("SPK_3", 'Among my circle of friends, I am one of the "experts" on "{category}".'),
       lk("SPK_4", 'Compared to most other people, I know less about "{category}".', true),
       lk("SPK_5", 'When it comes to "{category}", I really do not know a lot.', true),
-      sg("EXP_BUY", 'How many times have you purchased a "{category}" product yourself?', [
+      sg("EXP_BUY", 'How many times have you purchased products in the "{category}" category yourself?', [
         "Never", "Once", "2–3 times", "4+ times",
       ]),
-      lk("INIT_CLARITY", 'Right now, I clearly know what to look for when choosing a "{category}" product.'),
+      lk("INIT_CLARITY", 'Right now, I clearly know what to look for when choosing a product in the "{category}" category.'),
       {
         id: "INIT_CRITERIA_FREE",
         type: "text",
-        label: 'Please list all the conditions or criteria you currently consider important when choosing a "{category}" product.',
-        placeholder: 'e.g., budget under $100, weight, design… write "undecided" if you have not decided yet',
+        label: 'Please list all the conditions or criteria you currently consider important when choosing a product in the "{category}" category.',
+        placeholder: 'e.g., budget under KRW 150,000, weight, design… write "undecided" if you have not decided yet',
       },
     ],
   },
@@ -103,8 +103,8 @@ export const POST_TASK_EN: MSection[] = [
     title: "Confidence in Your Final Choice",
     desc: "Please answer with the shopping task you just completed in mind.",
     questions: [
-      lk("CC_1", "It was impossible to be confident which product best matches my preferences.", true),
-      lk("CC_2", "I was confident in singling out one product that best matches my preferences."),
+      lk("CC_1", "It was impossible to be sure which product best matched my preferences.", true),
+      lk("CC_2", "I was confident I could single out the one product that best matched my preferences."),
       lk("CC_3", "I am confident that I found the product that best meets my needs."),
     ],
   },
@@ -114,10 +114,10 @@ export const AUDIT_NECESSITY_EN = ["Had to be met", "Preferably met", "Not impor
 export const AUDIT_INFLUENCE_EN = ["Yes", "No", "Hard to say"] as const;
 
 export const CRITERION_CHECK_EN: MQuestion[] = [
-  sg("CRIT_MATCH", "How well does this criterion shown by the agent match your actual purchase criterion?", [
+  sg("CRIT_MATCH", "How well does this criterion, shown by the agent, match the criteria you actually used?", [
     "Matches exactly", "Partially matches; needs revision", "Not my criterion",
   ]),
-  sg("CRIT_FORMATION", "Since when has this criterion been important to you?", [
+  sg("CRIT_FORMATION", "When did this criterion become important to you?", [
     "Important before the conversation, and I stated it from the start",
     "Important before the conversation, but I did not state it at first",
     "Became important during the conversation after seeing products or comparisons",
@@ -159,7 +159,7 @@ export const POST_STUDY_EN: MSection[] = [
     title: "Satisfaction with Recommendations",
     questions: [
       lk("SAT_1", "I am satisfied with the recommendations this shopping agent provided."),
-      lk("SAT_2", "The recommendation results of this shopping agent were satisfying."),
+      lk("SAT_2", "The recommendations this shopping agent provided were satisfactory."),
       lk("SAT_3", "Overall, the recommendations of this shopping agent satisfied me."),
     ],
   },
@@ -167,9 +167,9 @@ export const POST_STUDY_EN: MSection[] = [
     id: "trust",
     title: "Trust in the AI Shopping Agent",
     questions: [
-      lk("TRUST_1", "I am confident in the AI shopping agent."),
-      lk("TRUST_2", "The AI shopping agent is dependable."),
-      lk("TRUST_3", "I can trust the AI shopping agent."),
+      lk("TRUST_1", "I am confident in this AI shopping agent."),
+      lk("TRUST_2", "This AI shopping agent is dependable."),
+      lk("TRUST_3", "I can trust this AI shopping agent."),
     ],
   },
   {

@@ -16,8 +16,7 @@ import { api } from "@/lib/api";
 import MainSurveyForm from "@/components/study/MainSurveyForm";
 import {
   KNOWLEDGE_SECTIONS_LOCALIZED, TEST_SURVEY_SKIP, computeKnowledgeScore,
-  fillTemplate,
-} from "@/lib/localizedMainSurvey";
+  fillTemplate, canonicalizeStudyAnswerValue } from "@/lib/localizedMainSurvey";
 import { allQuestions, type MSection } from "@/lib/mainSurvey";
 import { nextTask, queuedTasks } from "@/lib/taskQueue";
 import { STUDY_UI, categoryLabel, tr } from "@/lib/studyI18n";
@@ -80,7 +79,15 @@ function KnowledgeInner() {
         const s = computeKnowledgeScore(answers, `k:${cat}:`);
         if (s !== null) scores[cat] = s;
       }
-      if (pid) await api.submitKnowledgeSurvey(pid, answers, scores, categories);
+      // EN 모드: 표시값(영어 선택지)을 정본(한국어 선택지)으로 변환해 저장 — id가
+      // k:{카테고리}:{문항id} 접두형이라 내부 문항 id로 벗겨서 매핑한다.
+      const canonicalAnswers = Object.fromEntries(
+        Object.entries(answers).map(([k, v]) => {
+          const innerId = k.split(":").pop() ?? k;
+          return [k, canonicalizeStudyAnswerValue(innerId, v)];
+        }),
+      );
+      if (pid) await api.submitKnowledgeSurvey(pid, canonicalAnswers, scores, categories);
       await startFirstTask();
     } catch (e) {
       console.error(e);

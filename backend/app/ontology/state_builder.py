@@ -2,6 +2,7 @@
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.ids import new_id
+from app.core.locale import L
 from app.db import models
 from app.ontology.anchor_mapper import VALUE_ANCHORS
 from app.preference_commit.summary_builder import build_user_visible_summary
@@ -141,7 +142,7 @@ def build_snapshot(
         if constraint and constraint not in hard_constraints:
             hard_constraints.append(constraint)
         elif avoid:
-            label = f"{avoid} 제외"
+            label = L(f"{avoid} 제외", f"avoid: {avoid}")
             if label not in avoidances:
                 avoidances.append(label)
         elif t.priority in ("high", "medium") and hints.get("kind") != "context":

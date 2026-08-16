@@ -3,6 +3,7 @@
 Internal ontology terms (Social, Emotional, confidence…) are translated into
 context-limited, correctable phrasing — never definitive statements about the user.
 """
+from app.core.locale import L
 from app.db import models
 
 CHIP_TYPE_BY_PRIORITY = {"must_have": "must_have", "high": "important", "medium": "nice_to_have", "low": "nice_to_have"}
@@ -57,9 +58,11 @@ def build_user_visible_summary(
         sentence = llm_sentence.strip()
     elif labels:
         head = ", ".join(labels[:3])
-        sentence = f"지금은 '{head}' 기준을 중요하게 보고 있다고 이해했어요. 맞는지 확인해 주세요."
+        sentence = L(f"지금은 '{head}' 기준을 중요하게 보고 있다고 이해했어요. 맞는지 확인해 주세요.",
+                     f"It seems you're currently prioritizing '{head}'. Please confirm whether that's right.")
     else:
-        sentence = "아직 기준을 파악하는 중이에요. 원하시는 조건을 자유롭게 말씀해 주세요."
+        sentence = L("아직 기준을 파악하는 중이에요. 원하시는 조건을 자유롭게 말씀해 주세요.",
+                     "I'm still learning your criteria — feel free to tell me what matters to you.")
 
     needs_confirmation = has_open_conflict or any(t.status in ("candidate", "inferred") for t in top)
     return {"chips": chips, "oneSentenceSummary": sentence, "needsConfirmation": needs_confirmation}
@@ -71,13 +74,13 @@ async def fetch_state_summary(provider, labels, scenario: str | None = None) -> 
     labels = [l for l in (labels or []) if l][:5]
     if not labels:
         return None
-    from app.llm.prompts import SYSTEM_BY_TASK, render_user_context
+    from app.llm.prompts import render_user_context, system_for
     from app.llm.provider import LLMMessage
 
     ctx = {"labels": labels, "scenario": scenario or ""}
     try:
         out = await provider.generate_json(
-            [LLMMessage(role="system", content=SYSTEM_BY_TASK["state_summary"]),
+            [LLMMessage(role="system", content=system_for("state_summary")),
              LLMMessage(role="user", content=render_user_context(ctx))],
             task="state_summary", context=ctx,
         )

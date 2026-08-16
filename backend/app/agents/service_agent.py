@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.ids import new_id
+from app.core.locale import L
 from app.db import models
 from app.llm.provider import LLMMessage, get_provider
 from app.agents import planner, recommender
@@ -592,7 +593,8 @@ async def _handle_detail_view(
         provider, action="answer", template_text=template,
         recent_turns=recent_turns, products=[product],
         state_summary=snapshot.user_visible_summary if snapshot else None,
-        must_ask_question="이 상품에서 어떤 점이 궁금하신가요?",
+        must_ask_question=L("이 상품에서 어떤 점이 궁금하신가요?",
+                            "What would you like to know about this product?"),
         previously_shown=_last_recommended_products(db, session.id),
     )
 

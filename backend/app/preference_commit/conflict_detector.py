@@ -2,8 +2,9 @@
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.ids import new_id
+from app.core.locale import L
 from app.db import models
-from app.llm.prompts import SYSTEM_BY_TASK, render_user_context
+from app.llm.prompts import render_user_context, system_for
 from app.llm.provider import LLMMessage, LLMProvider
 
 SEVERITY_BY_LABEL = {"direct_conflict": "direct", "ambiguous_conflict": "ambiguous"}
@@ -24,20 +25,20 @@ def _normalize_resolutions(options: list, old_assumption: str, new_signal: str) 
         o.setdefault("resultingStatePreview", "")
     if len(valid) >= 3:
         if not any(o["action"] == "manual_edit" for o in valid):
-            valid.append({"id": "manual_edit", "label": "직접 수정하기", "action": "manual_edit",
-                          "resultingStatePreview": "기준을 직접 수정합니다."})
+            valid.append({"id": "manual_edit", "label": L("직접 수정하기", "Edit it myself"), "action": "manual_edit",
+                          "resultingStatePreview": L("기준을 직접 수정합니다.", "You edit the criterion directly.")})
         return valid
-    short = (new_signal or "새 기준")[:40]
-    old_short = (old_assumption or "기존 기준")[:40]
+    short = (new_signal or L("새 기준", "the new criterion"))[:40]
+    old_short = (old_assumption or L("기존 기준", "the earlier criterion"))[:40]
     return [
-        {"id": "accept_new", "label": f"새 기준을 우선하기 — {short}", "action": "accept_new",
-         "resultingStatePreview": "새 기준을 우선해서 추천합니다."},
-        {"id": "keep_old", "label": f"기존 기준 유지하기 — {old_short}", "action": "keep_old",
-         "resultingStatePreview": "기존 기준을 유지합니다."},
-        {"id": "merge", "label": "두 기준을 절충해서 반영하기", "action": "merge",
-         "resultingStatePreview": "두 기준을 모두 고려해 추천합니다."},
-        {"id": "manual_edit", "label": "직접 수정하기", "action": "manual_edit",
-         "resultingStatePreview": "기준을 직접 수정합니다."},
+        {"id": "accept_new", "label": L(f"새 기준을 우선하기 — {short}", f"Prioritize the new criterion — {short}"), "action": "accept_new",
+         "resultingStatePreview": L("새 기준을 우선해서 추천합니다.", "Recommendations will follow the new criterion.")},
+        {"id": "keep_old", "label": L(f"기존 기준 유지하기 — {old_short}", f"Keep the earlier criterion — {old_short}"), "action": "keep_old",
+         "resultingStatePreview": L("기존 기준을 유지합니다.", "Recommendations will keep the earlier criterion.")},
+        {"id": "merge", "label": L("두 기준을 절충해서 반영하기", "Balance both criteria"), "action": "merge",
+         "resultingStatePreview": L("두 기준을 모두 고려해 추천합니다.", "Recommendations will consider both criteria.")},
+        {"id": "manual_edit", "label": L("직접 수정하기", "Edit it myself"), "action": "manual_edit",
+         "resultingStatePreview": L("기준을 직접 수정합니다.", "You edit the criterion directly.")},
     ]
 
 
@@ -54,7 +55,7 @@ async def fetch_conflicts(
         "newTopics": [{"label": l} for l in new_topic_labels],
     }
     messages = [
-        LLMMessage(role="system", content=SYSTEM_BY_TASK["conflict_detection"]),
+        LLMMessage(role="system", content=system_for("conflict_detection")),
         LLMMessage(role="user", content=render_user_context(context)),
     ]
     out = await provider.generate_json(messages, task="conflict_detection", context=context)
