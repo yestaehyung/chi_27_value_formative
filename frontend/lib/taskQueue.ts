@@ -19,7 +19,12 @@ export type PlannedTask = { category: string; familiarity: Familiarity };
 
 const KEY = "vc:taskQueue";
 
-type StoredQueue = { participantId: string; tasks: PlannedTask[]; done: number };
+type StoredQueue = {
+  participantId: string;
+  tasks: PlannedTask[];
+  done: number;
+  advancedSessions?: string[]; // 큐를 전진시킨 세션 id — 재방문/리마운트 이중 전진 방지
+};
 
 /** 친숙 2 + 비친숙 2를 합쳐 무작위 순서로 정한다 (Fisher–Yates). */
 export function randomOrder(familiar: string[], unfamiliar: string[]): PlannedTask[] {
@@ -65,10 +70,14 @@ export function nextTask(participantId?: string): PlannedTask | null {
   return q.tasks[q.done] ?? null;
 }
 
-/** 한 과제를 마쳤다고 표시하고, 남은 개수를 돌려준다. */
-export function completeTask(): number {
+/** 한 과제를 마쳤다고 표시하고, 남은 개수를 돌려준다.
+ * sessionId를 주면 같은 세션은 한 번만 전진한다(완료 화면 재방문·리마운트 안전). */
+export function completeTask(sessionId?: string): number {
   const q = read();
   if (!q) return 0;
+  const advanced = q.advancedSessions ?? [];
+  if (sessionId && advanced.includes(sessionId)) return q.tasks.length - q.done;
+  if (sessionId) q.advancedSessions = [...advanced, sessionId];
   q.done = Math.min(q.done + 1, q.tasks.length);
   sessionStorage.setItem(KEY, JSON.stringify(q));
   return q.tasks.length - q.done;

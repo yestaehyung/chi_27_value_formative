@@ -472,3 +472,59 @@ def ground_truth_gap(session_id: str, db: DbSession = Depends(get_db)):
         "recall": recall,
         "discoveryCount": len(extra),
     }
+
+
+# ─────────────────────────── 본실험 과제 계획 (서버 진실) ───────────────────────────
+# 진행 상태가 sessionStorage에만 있으면 탭 유실·이전 라운드 잔존 큐로 "전부 완료"가
+# 조기 표시된다(2026-08-16 실측). 계획은 Participant.task_plan에 저장하고, 완료는
+# 세션의 finalChoice+postSurvey 마커(둘 다 종료 플로우의 필수 단계)로 서버가 센다.
+
+class TaskPlanRequest(BaseModel):
+    tasks: list[dict]  # [{category: str, familiarity: "familiar"|"unfamiliar"}]
+
+
+@router.put("/participants/{participant_id}/task-plan")
+def save_task_plan(participant_id: str, req: TaskPlanRequest, db: DbSession = Depends(get_db)):
+    from datetime import datetime, timezone
+
+    part = db.get(models.Participant, participant_id)
+    if part is None:
+        raise HTTPException(404, "participant not found")
+    tasks = []
+    for t in req.tasks[:8]:
+        cat = str(t.get("category") or "").strip()
+        fam = t.get("familiarity")
+        if not cat or fam not in ("familiar", "unfamiliar"):
+            raise HTTPException(422, "each task needs category + familiarity")
+        tasks.append({"category": cat, "familiarity": fam})
+    if not tasks:
+        raise HTTPException(422, "tasks must not be empty")
+    part.task_plan = {"tasks": tasks,
+                      "savedAt": datetime.now(timezone.utc).isoformat()}
+    db.commit()
+    return {"ok": True, "count": len(tasks)}
+
+
+@router.get("/participants/{participant_id}/task-progress")
+def task_progress(participant_id: str, db: DbSession = Depends(get_db)):
+    """계획 대비 진행 — done은 세션 meta의 finalChoice+postSurvey 존재로 판정.
+    next = 계획 순서상 첫 미완료 과제. 계획이 없으면 tasks=[] (클라이언트 큐 폴백)."""
+    part = db.get(models.Participant, participant_id)
+    if part is None:
+        raise HTTPException(404, "participant not found")
+    plan = ((part.task_plan or {}).get("tasks")) or []
+    sessions = db.query(models.Session).filter(
+        models.Session.participant_id == participant_id).all()
+    completed_categories = set()
+    for s in sessions:
+        meta = s.meta or {}
+        if meta.get("finalChoice") and meta.get("postSurvey"):
+            cat = meta.get("category") or (s.scenario_id or "").removeprefix("cat:")
+            if cat:
+                completed_categories.add(cat)
+    tasks = [{**t, "done": t["category"] in completed_categories} for t in plan]
+    next_task = next((t for t in tasks if not t["done"]), None)
+    remaining = sum(1 for t in tasks if not t["done"])
+    return {"tasks": tasks, "remaining": remaining,
+            "next": ({"category": next_task["category"], "familiarity": next_task["familiarity"]}
+                     if next_task else None)}

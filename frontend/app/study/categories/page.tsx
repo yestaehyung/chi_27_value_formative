@@ -60,11 +60,14 @@ export default function CategorySelectPage() {
   };
 
   const start = () => {
-    if (unfamiliar.length !== NEED_PER_SIDE || starting) return;
+    if (familiar.length !== NEED_PER_SIDE || unfamiliar.length !== NEED_PER_SIDE || starting) return;
     setStarting(true);
     // 순서는 여기서 무작위로 확정된다 — 고른 순서도, 친숙/비친숙 교차도 아니다.
     const tasks = randomOrder(familiar, unfamiliar);
     saveQueue(participantId || "anon", tasks);
+    // 서버에도 계획을 저장 — 진행(남은 과제/다음 과제)의 진실은 서버가 갖는다.
+    // 실패해도 진행은 막지 않는다(로컬 큐 폴백); 서버 저장은 유실 대비 안전망.
+    if (participantId) void api.saveTaskPlan(participantId, tasks).catch(() => {});
     // 첫 세션은 지식 행렬(측정 계획 §4)을 마친 뒤에 연다 — "초기" 지식·기준이
     // 대화에 오염되기 전에 잠겨야 한다.
     router.push(participantId ? `/study/knowledge?pid=${participantId}` : "/study/knowledge");

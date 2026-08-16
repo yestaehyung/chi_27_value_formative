@@ -190,6 +190,19 @@ export const api = {
       body: JSON.stringify({ answers, profile }),
     }),
 
+  // 본실험 과제 계획(4과제)의 서버 저장 + 서버 기준 진행 조회 — sessionStorage 큐는 캐시일 뿐
+  saveTaskPlan: (participantId: string, tasks: { category: string; familiarity: Familiarity }[]) =>
+    request<{ ok: boolean; count: number }>(`/api/study/participants/${participantId}/task-plan`, {
+      method: "PUT",
+      body: JSON.stringify({ tasks }),
+    }),
+  getTaskProgress: (participantId: string) =>
+    request<{
+      tasks: { category: string; familiarity: Familiarity; done: boolean }[];
+      remaining: number;
+      next: { category: string; familiarity: Familiarity } | null;
+    }>(`/api/study/participants/${participantId}/task-progress`),
+
   // FS1 사전 설문 → 참가자 생성(설문 저장). 본실험 사전 설문도 같은 채널을 쓴다(문항 id만 다름).
   submitSurvey: (answers: Record<string, unknown>, profile: Record<string, number>, label?: string) =>
     request<{ participantId: string; label: string; studyCondition?: string }>("/api/study/survey", {

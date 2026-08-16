@@ -46,6 +46,9 @@ class Participant(Base):
     # 같은 조건이어야 한다(세션마다 지정하면 중간에 갈릴 수 있다).
     # baseline | explanation_only | correctable
     study_condition: Mapped[str | None] = mapped_column(String, default=None)
+    # 본실험 과제 계획 {tasks:[{category, familiarity}], savedAt} — 진행 상태의 서버 진실.
+    # sessionStorage 큐는 캐시일 뿐(탭 유실·이전 라운드 잔존으로 조기 "전부 완료" 발생).
+    task_plan: Mapped[dict | None] = mapped_column(JSON, default=None)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 

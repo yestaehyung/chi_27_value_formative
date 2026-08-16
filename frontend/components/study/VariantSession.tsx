@@ -129,15 +129,28 @@ export default function VariantSession({
   };
 
   // 과제를 마치면 큐를 한 칸 전진 — "남은 쇼핑 N번" 표시와 다음 버튼 노출의 근거가 된다.
+  // 로컬 큐는 즉시값일 뿐, 서버 진행(task-progress: finalChoice+postSurvey 마커 집계)이
+  // 도착하면 그 값으로 덮는다 — 탭 유실·이전 라운드 잔존 큐의 조기 "전부 완료" 방지.
   useEffect(() => {
     if (!study || !finished || advancedRef.current) return;
     advancedRef.current = true;
-    setQueueLeft(completeTask());
-  }, [study, finished]);
+    setQueueLeft(completeTask(sessionId));
+    if (participantId) {
+      api.getTaskProgress(participantId)
+        .then((p) => { if (p.tasks.length > 0) setQueueLeft(p.remaining); })
+        .catch(() => {});
+    }
+  }, [study, finished, participantId]);
 
-  /** 큐의 다음 카테고리로 새 세션을 열고 이동한다. */
+  /** 다음 카테고리로 새 세션을 열고 이동한다 — 서버 계획 우선, 로컬 큐 폴백. */
   const startNextTask = async () => {
-    const task = nextTask(participantId || undefined);
+    let task = nextTask(participantId || undefined);
+    if (participantId) {
+      try {
+        const p = await api.getTaskProgress(participantId);
+        if (p.tasks.length > 0) task = p.next;
+      } catch { /* 서버 실패 시 로컬 큐 폴백 유지 */ }
+    }
     if (!task || startingNext) return;
     setStartingNext(true);
     try {
