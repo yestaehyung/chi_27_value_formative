@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DbSession
 
-from app.core.locale import L
+from app.core.locale import L, product_display_title
 from app.db import models, serializers
 from app.db.database import get_db
 from app.db.schemas import ChipActionRequest
@@ -204,7 +204,7 @@ def build_topic_evidence(db: DbSession, topic: models.IntentionTopic) -> list[di
                 entry.update(
                     type="feedback",
                     feedbackType=fb.type,
-                    productTitle=product.title if product else fb.product_id,
+                    productTitle=product_display_title(product) or fb.product_id,
                     quote=fb.reason_text or stored.get(ev_id, {}).get("quoteOrSummary", fb.type),
                     productCues=(product.cue_summary or {}) if product else {},
                 )

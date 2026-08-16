@@ -216,7 +216,7 @@ export const tutorialPreferenceState: PreferenceState = {
       },
       {
         id: "t_budget",
-        label: tr("예산 20만원 이하?", "Budget under KRW 200,000?"),
+        label: tr("예산 20만원 이하?", "Budget under $150?"),
         type: "uncertain",
         userEditable: true,
         evidenceCount: 1,

@@ -4,7 +4,7 @@ Templates below are the deterministic fallback (and the mock provider's output).
 When a real LLM provider is configured, `generate_reply` rewrites the template
 grounded on conversation context, product data, and the preference state.
 """
-from app.core.locale import L, is_en
+from app.core.locale import L, is_en, product_display_title, usd
 from app.db import models
 from app.llm.prompts import AGENT_REPLY_SYSTEM, render_user_context
 from app.llm.provider import LLMMessage, LLMProvider
@@ -115,10 +115,10 @@ def detail_text(p: models.Product, prof: dict | None = None) -> str:
     (오프라인 enrichment의 keyAttributes/caveats)로 설명하고, 무엇이 궁금한지 묻는다.
     질문이 핵심: 탐색 클릭의 의미를 시스템이 추측하는 대신 사용자가 직접 말하게 한다."""
     lines = [L(f"'{p.title}'에 대해 더 알려드릴게요.",
-               f"Here's more about '{p.title}'.")]
+               f"Here's more about '{product_display_title(p)}'.")]
     facts = []
     if p.price is not None:
-        facts.append(L(f"가격 {p.price:,}원", f"price {p.price:,} KRW"))
+        facts.append(L(f"가격 {p.price:,}원", f"priced at {usd(p.price)}"))
     if p.rating:
         facts.append(L(f"평점 {p.rating}", f"rating {p.rating}"))
     if p.review_count:
@@ -171,7 +171,7 @@ async def generate_reply(
     # 제목+정체 필드만 — 과거 주장의 근거로 충분하고 토큰을 아낀다.
     prev_products = []
     for p in previously_shown or []:
-        entry: dict = {"title": p.title}
+        entry: dict = {"title": product_display_title(p)}
         prof = profiles.get(p.id)
         if prof:
             entry["productType"] = prof.get("productType")
@@ -186,11 +186,16 @@ async def generate_reply(
         "previouslyShownProducts": prev_products,
         "productsToShow": [
             {
-                "title": p.title, "price": p.price, "rating": p.rating,
+                # EN 모드는 가격을 $ 문자열로 선계산해 싣는다 — 모델이 KRW를 암산
+                # 변환하다 틀리는 것을 막고, 응답은 이 값을 그대로 인용하면 된다.
+                "title": product_display_title(p),
+                "price": usd(p.price) if is_en() and p.price is not None else p.price,
+                "rating": p.rating,
                 "reviewCount": p.review_count,
                 "longTermReviewRatio": p.long_term_review_ratio,
                 "recentSalesCount": p.recent_sales_count,
-                "sellerGrade": p.seller_grade, "deliveryFee": p.delivery_fee,
+                "sellerGrade": p.seller_grade,
+                "deliveryFee": usd(p.delivery_fee) if is_en() and p.delivery_fee else p.delivery_fee,
                 "cues": p.cue_summary or {},
             }
             for p in products
@@ -206,7 +211,8 @@ async def generate_reply(
             reply_system += ("\n\n[참가자 화면 언어]\n모든 응답을 자연스러운 영어로 쓴다"
                              " (hedged tone: \"it seems\", \"you might\")."
                              " draftTemplate이 영어면 그 사실 정보를 유지하며 다듬는다."
-                             " 화폐는 KRW 표기를 유지한다 (예: 45,000 KRW).")
+                             " 가격은 컨텍스트에 이미 $ 문자열로 주어져 있다 — 그대로"
+                             " 인용하고, KRW 금액을 새로 계산하거나 언급하지 않는다.")
         messages = [
             LLMMessage(role="system", content=reply_system),
             LLMMessage(role="user", content=render_user_context(context)),

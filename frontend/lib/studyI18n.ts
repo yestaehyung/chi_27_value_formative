@@ -83,8 +83,16 @@ export function productDescription(product: LocalizableProduct): string | undefi
     ?? nonEmptyAttribute(product, "sourceDescriptionEn");
 }
 
+// seed_ms_v2 가격은 USD 원가 × 1350으로 빌드됨 — 표시할 때 같은 환율로 역산해야
+// 참가자의 달러 감각과 데이터가 일치한다. backend core/locale.KRW_PER_USD와 동일 유지.
+const KRW_PER_USD = 1350;
+
 export function formatStudyPrice(value: number): string {
-  if (IS_ENGLISH_STUDY) return `KRW ${value.toLocaleString("en-US")}`;
+  if (IS_ENGLISH_STUDY)
+    return `$${(value / KRW_PER_USD).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   return `${value.toLocaleString("ko-KR")}원`;
 }
 

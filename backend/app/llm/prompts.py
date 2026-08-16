@@ -42,9 +42,12 @@ label은 맥락 없이 한 줄로 읽어도 뜻이 분명한 자족적 표현으
 - 무엇을 거부하는지(싫어요·안 돼요)가 핵심이면 avoidance로 두고 '피할 대상'을 이름 붙인다.
   예: "흔한 건 싫어요" → label "흔한 디자인" (avoidance). "너무 저렴해 보이면 안 돼요" → label "초저가로 보이는 상품" (avoidance).
 
-## 한국어 완곡 표현 해석
-다음은 완곡한 거절/회피 신호다. 놓치지 말고 avoidance 후보로 검토하라:
-"좀 그래요"(부정적), "굳이…"(불필요·회피), "나쁘진 않은데…"(미온적 거절), "음…"(망설임·불만).
+## 완곡 표현 해석 (언어 불문)
+미온적·완곡한 반응은 구절 자체가 아니라 맥락 속에서 무엇을 향한 반응인지로 판정하라:
+- 평가 중인 상품·속성을 향한 미온 반응은 완곡한 거절 신호 — avoidance 후보로 검토하라.
+  예: "좀 그래요"(부정적), "굳이…"(불필요), "나쁘진 않은데…"(미온적 거절), "음…"(망설임), "meh", "I guess it's fine".
+- 같은 표현이라도 에이전트의 직접 질문에 대한 답이면 그 질문의 답으로 해석하라.
+  예: 에이전트 "이 가격 괜찮으세요?" → 사용자 "뭐 괜찮아요" = 가격 수락 (avoidance 토픽 아님).
 
 ## evidence 인용 규율
 - topic을 지지하는 evidence id를 빠짐없이 전부 sourceEvidence에 넣어라 (하나만 고르지 말 것).
@@ -749,10 +752,11 @@ def render_user_context(context: dict) -> str:
 EN_DIRECTIVES = {
     "topic_extraction": (
         "Write `label` and `description` in natural English (short noun phrases, e.g."
-        " \"budget under 200,000 KRW\", \"avoiding flashy gaming looks\")."
+        " \"budget under $150\", \"avoiding flashy gaming looks\")."
         " The label-reuse rules still apply — reuse existing labels verbatim in whatever"
         " language they are. Keep sourceEvidence quoteOrSummary in the utterance's original language."
-        " English softeners are polite rejection signals — treat phrases like \"not really my thing\", \"I guess it's fine\", \"meh\", \"I'm not sure about…\" as avoidance candidates, just like the Korean euphemism rules below."
+        " Hedged English softeners follow the same euphemism rules as Korean ones —"
+        " judge them by what they are aimed at in context, never by the phrase itself."
     ),
     "topic_reinterpretation": "Write `description` in the same language as newLabel.",
     "state_summary": (
@@ -763,13 +767,30 @@ EN_DIRECTIVES = {
         "Write explanationForUser and every suggestedResolutions label/resultingStatePreview"
         " in English (shown directly to the participant). Keep explanationForResearcher in Korean."
     ),
-    "reply_suggestion": "Write every suggestion in natural first-person shopper English (e.g. \"Anything cheaper?\").",
+    "reply_suggestion": (
+        "Write every suggestion in natural first-person shopper English."
+        " The Korean examples above show only the JSON shape — your output must look like:"
+        " {\"suggestions\":[\"Mostly for the office\",\"I also walk a lot at work\",\"Both, actually\"]} (clarify)"
+        " or {\"suggestions\":[\"Anything cheaper?\",\"I like the first one\",\"Do any resist wrinkles?\"]} (recommend)."
+    ),
     "action_decision": (
         "Write probe.question in English. IMPORTANT: keep searchText in KOREAN —"
         " the search index is Korean-only; an English query would return nothing."
+        " In constraintsNote write price limits in KRW with the user's USD figure in"
+        " parentheses (e.g. \"가격 67,500원 이하 ($50)\") — the rerank compares KRW prices."
     ),
     "rerank": "Write reason, matched, weak, and vioNote in English — they appear verbatim on product cards.",
 }
+
+# 통화 규칙(EN 모드 전 태스크 공통): 참가자는 달러로 생각하고, 저장 가격은 KRW다.
+# 환율은 시드 빌드 상수 1350에 고정 — 프롬프트마다 임의 환율(실측: 1200)을 쓰면
+# 예산 해석이 데이터와 어긋난다. core/locale.KRW_PER_USD와 동일해야 한다.
+_EN_MONEY_RULE = (
+    " Money: participants see US dollars. In any participant-facing text convert stored"
+    " KRW amounts at exactly 1 USD = 1,350 KRW (67,500 KRW → $50; $100 → 135,000 KRW)."
+    " Structured KRW fields (priceMin/priceMax, searchText) stay in KRW."
+)
+EN_DIRECTIVES = {task: directive + _EN_MONEY_RULE for task, directive in EN_DIRECTIVES.items()}
 
 
 def system_for(task: str | None) -> str | None:

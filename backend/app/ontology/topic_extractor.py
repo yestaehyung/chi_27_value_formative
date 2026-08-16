@@ -1,6 +1,7 @@
 """Stage 1 — Intention Topic Extraction (spec §15.1)."""
 from sqlalchemy.orm import Session as DbSession
 
+from app.core.locale import product_display_title
 from app.db import models
 from app.llm.prompts import render_user_context, system_for
 from app.llm.provider import LLMMessage, LLMProvider
@@ -15,7 +16,7 @@ def _feedback_context(db: DbSession, fb: models.FeedbackEvent) -> dict:
         "reasonCode": fb.reason_code,
         "reasonText": fb.reason_text,
         "productId": fb.product_id,
-        "productTitle": product.title if product else None,
+        "productTitle": product_display_title(product),
         "productCues": (product.cue_summary or {}) if product else {},
         "price": product.price if product else None,
         "longTermReviewRatio": product.long_term_review_ratio if product else None,

@@ -17,3 +17,25 @@ def is_en() -> bool:
 def L(ko: str, en: str) -> str:
     """참가자 대면 문자열의 로케일 선택 (프론트 studyI18n.tr()의 백엔드 판)."""
     return en if is_en() else ko
+
+
+# seed_ms_v2 가격은 USD 원가 × 1350으로 빌드됨 (scripts/build_staged_amazon_catalog.py
+# DEFAULT_USDKRW). 표시·프롬프트가 같은 환율로 역산해야 예산 해석이 어긋나지 않는다.
+# 프론트 studyI18n.formatStudyPrice의 KRW_PER_USD와 반드시 동일하게 유지.
+KRW_PER_USD = 1350
+
+
+def usd(krw: float) -> str:
+    """KRW 저장가 → 참가자 표시용 USD 문자열 (빌드 환율 역산)."""
+    return f"${krw / KRW_PER_USD:,.2f}"
+
+
+def product_display_title(product) -> str | None:
+    """참가자 표시·LLM 컨텍스트용 상품명 — EN 모드면 아마존 원문 제목을 우선한다."""
+    if product is None:
+        return None
+    if is_en():
+        t = ((getattr(product, "attributes", None) or {}).get("titleEn") or "").strip()
+        if t:
+            return t
+    return product.title

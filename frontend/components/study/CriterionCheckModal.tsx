@@ -216,7 +216,7 @@ export default function CriterionCheckModal({
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); addOwn(); } }}
-                  placeholder={tr("예: 예산 10만원 이내, 배터리 오래감…", "e.g., budget under KRW 150,000, long battery life…")}
+                  placeholder={tr("예: 예산 10만원 이내, 배터리 오래감…", "e.g., budget under $110, long battery life…")}
                   className="min-w-0 flex-1 rounded-lg border border-[#e4e8eb] px-3 py-2 text-xs focus:border-[#4f46e5] focus:outline-none"
                 />
                 <button onClick={addOwn} disabled={!draft.trim()} className="btn btn-primary shrink-0 px-3 py-2 text-xs">

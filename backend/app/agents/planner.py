@@ -14,6 +14,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session as DbSession
 
+from app.core.locale import product_display_title
 from app.db import models
 
 ACTIONS = ("recommend", "clarify", "answer", "close")
@@ -87,7 +88,7 @@ def build_planner_context(
             p = db.get(models.Product, fb.product_id) if fb.product_id else None
             feedback_events.append({
                 "type": fb.type,
-                "productTitle": p.title if p else None,
+                "productTitle": product_display_title(p),
                 "reasonText": fb.reason_text or fb.reason_code,
             })
     else:  # DB 없이 호출되는 경우(테스트 등) — 최근 턴에서 유도

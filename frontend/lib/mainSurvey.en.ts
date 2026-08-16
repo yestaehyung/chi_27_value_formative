@@ -90,7 +90,7 @@ export const KNOWLEDGE_SECTIONS_EN: MSection[] = [
         id: "INIT_CRITERIA_FREE",
         type: "text",
         label: 'Please list all the conditions or criteria you currently consider important when choosing a product in the "{category}" category.',
-        placeholder: 'e.g., budget under KRW 150,000, weight, design… write "undecided" if you have not decided yet',
+        placeholder: 'e.g., budget under $110, weight, design… write "undecided" if you have not decided yet',
       },
     ],
   },
