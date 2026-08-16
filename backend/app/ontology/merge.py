@@ -207,6 +207,20 @@ def merge_topics(
                 )
             if PRIORITY_RANK.get(ext.get("priority", "medium"), 1) > PRIORITY_RANK.get(match.priority, 1):
                 match.priority = ext["priority"]
+            # 정제 병합: 같은 의도가 새 가격 값으로 재추출되면 최신 값이 현재 제약이다.
+            # 증거만 쌓고 값을 안 바꾸면 "$150로 좁혔는데 $300 유지" 스테일이 생긴다
+            # (2026-08-16 라이브 실측). 라벨은 값을 표시하므로 함께 갱신하되,
+            # 사용자가 직접 쓴 라벨(corrected_by_user)은 보존한다.
+            new_pmin, new_pmax = ext.get("priceMin"), ext.get("priceMax")
+            if new_pmin is not None or new_pmax is not None:
+                hints = dict(match.hints or {})
+                if (hints.get("priceMin"), hints.get("priceMax")) != (new_pmin, new_pmax):
+                    hints["priceMin"], hints["priceMax"] = new_pmin, new_pmax
+                    match.hints = hints
+                    if match.status != "corrected_by_user":
+                        match.label = label
+                        if ext.get("description"):
+                            match.description = ext["description"]
             touched.append(match)
         else:
             explicitness = structural_explicitness(ext, source)
