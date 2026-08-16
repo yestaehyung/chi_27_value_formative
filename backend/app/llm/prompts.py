@@ -570,9 +570,10 @@ i5·16GB·95만원, 1번이 셀러론·16GB·46만원, 2번이 i7·16GB·RGB 게
 출력 JSON 스키마:
 {"summary": string}
 
-- 한국어 한 문장. 주어진 labels만 반영하고, 그 기준들 사이의 암묵적 trade-off/우선순위를 짚되 hedged하게.
-예시 — labels=["내구성","선물 인상","저렴해 보이지 않기"]:
-{"summary":"최저가보다 오래 쓰는 내구성과 선물로서의 인상을 더 중요하게 보시는 것 같아요. 맞는지 확인해 주세요."}""",
+- 한 문장, hedged, 확인 요청으로 끝맺음. 주어진 criteria와 recentUtterances에
+  나타난 것만 말한다 — 입력에 없는 관계나 우선순위를 지어내지 않는다.
+예시 — criteria=["내구성","선물 인상"]:
+{"summary":"오래 쓰는 내구성과 선물로서의 인상을 중요하게 보고 계신 것 같아요. 맞는지 확인해 주세요."}""",
     "action_decision": """
 출력 JSON 스키마:
 {"action":"recommend"|"clarify"|"answer"|"close","reason":string,
@@ -760,7 +761,7 @@ EN_DIRECTIVES = {
     ),
     "topic_reinterpretation": "Write `description` in the same language as newLabel.",
     "state_summary": (
-        "Write `summary` in English — hedged tone (\"It seems you're prioritizing …\"),"
+        "Write `summary` in English — hedged tone (\"It seems … matter to you\"),"
         " ending with a request to confirm."
     ),
     "conflict_detection": (

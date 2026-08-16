@@ -112,9 +112,13 @@ async def run_preference_commit(
             for t in pre_existing
         ]
         # 요약용 provisional 칩 라벨 (context 토픽 제외). 병합 전이라 라벨은 최종과 동일.
-        prov_labels = (
-            [t.label for t in pre_existing if (t.hints or {}).get("kind") != "context"]
-            + [p["label"] for p in pending_new if p.get("kind") != "context"]
+        # 요약 근거: 라벨 + 사용자 우선순위/확인 상태 — 비교("A보다 B")는 이 근거가
+        # 있을 때만 쓰도록 프롬프트가 제한한다 (라벨만 주면 비교가 전부 날조).
+        prov_criteria = (
+            [{"label": t.label, "priority": t.priority, "status": t.status}
+             for t in pre_existing if (t.hints or {}).get("kind") != "context"]
+            + [{"label": p["label"], "priority": p.get("priority"), "status": "new"}
+               for p in pending_new if p.get("kind") != "context"]
         )[:6]
         scenario = (session.meta or {}).get("shoppingGoal") or (session.meta or {}).get("category") or ""
         # Stages 2-4 + 6 + 요약 fetched concurrently — one network round-trip
@@ -126,7 +130,8 @@ async def run_preference_commit(
             _safe(fetch_relations(provider, all_labels), [], "relation_classification"),
             _safe(fetch_conflicts(provider, existing_ctx, [p["label"] for p in pending_new]),
                   [], "conflict_detection"),
-            _safe(fetch_state_summary(provider, prov_labels, scenario), None, "state_summary"),
+            _safe(fetch_state_summary(provider, prov_criteria, scenario, user_contents),
+                  None, "state_summary"),
         )
         t4 = time.perf_counter()
         logger.info("commit_engine.stage2_4_6_latency_sec=%.3f (anchors+concepts+relations+conflicts+summary)", t4 - t3)

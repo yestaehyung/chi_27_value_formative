@@ -68,16 +68,29 @@ def build_user_visible_summary(
     return {"chips": chips, "oneSentenceSummary": sentence, "needsConfirmation": needs_confirmation}
 
 
-async def fetch_state_summary(provider, labels, scenario: str | None = None) -> str | None:
-    """LLM phase (no DB) — 칩 라벨 사이의 trade-off를 hedged 한 문장으로 합성.
-    빈 입력·실패 시 None (→ build_snapshot이 직전 문장 또는 B1로 폴백)."""
-    labels = [l for l in (labels or []) if l][:5]
+async def fetch_state_summary(
+    provider,
+    criteria: list[dict],
+    scenario: str | None = None,
+    recent_utterances: list[str] | None = None,
+) -> str | None:
+    """LLM phase (no DB) — 기준들을 hedged 한 문장으로 요약. 우선순위/trade-off 비교는
+    근거(발화 속 직접 비교, 사용자 확인·수정 상태)가 입력에 있을 때만 쓰도록 프롬프트가
+    제한한다 — 라벨만 주면 모든 비교가 날조가 된다(2026-08-16 실측).
+    criteria: [{label, priority, status}]. 빈 입력·실패 시 None (→ 폴백)."""
+    criteria = [c for c in (criteria or []) if c.get("label")][:5]
+    labels = [c["label"] for c in criteria]
     if not labels:
         return None
     from app.llm.prompts import render_user_context, system_for
     from app.llm.provider import LLMMessage
 
-    ctx = {"labels": labels, "scenario": scenario or ""}
+    ctx = {
+        "labels": labels,  # mock 핸들러(B1 폴백 형태)가 읽는 키 — 유지
+        "criteria": criteria,
+        "recentUtterances": [u[:200] for u in (recent_utterances or [])[-3:]],
+        "scenario": scenario or "",
+    }
     try:
         out = await provider.generate_json(
             [LLMMessage(role="system", content=system_for("state_summary")),
