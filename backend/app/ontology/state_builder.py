@@ -122,7 +122,11 @@ def build_snapshot(
     turn_index = last_turn.turn_index if last_turn else 0
 
     rank = {"must_have": 3, "high": 2, "medium": 1, "low": 0}
-    ordered = sorted(topics, key=lambda t: (rank.get(t.priority, 1), t.confidence), reverse=True)
+    # 사용자가 직접 확인·수정·승격한 기준은 같은 priority 안에서 confidence보다 앞선다 —
+    # "중요도를 올렸는데 화면에서 안 올라간다"(2026-08-16) 방지: 사용자 행위 > 모델 확신.
+    user_backed = {"confirmed", "corrected_by_user"}
+    ordered = sorted(topics, key=lambda t: (rank.get(t.priority, 1),
+                                            t.status in user_backed, t.confidence), reverse=True)
 
     hard_constraints: list[str] = list(meta.get("extraHardConstraints", []))
     soft_preferences: list[str] = []

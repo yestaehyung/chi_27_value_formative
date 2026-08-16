@@ -3,7 +3,7 @@
 import { Impression } from "@/lib/types";
 import ProductCueBadges from "./ProductCueBadges";
 import ProductFeedbackButtons, { FeedbackPayload } from "./ProductFeedbackButtons";
-import { formatStudyPrice, tr } from "@/lib/studyI18n";
+import { formatStudyPrice, productTitle, tr } from "@/lib/studyI18n";
 
 const LETTERS = ["A", "B", "C", "D", "E"];
 
@@ -22,6 +22,7 @@ export default function ProductCard({
 }) {
   const p = impression.product;
   if (!p) return null;
+  const displayTitle = productTitle(p);
   const ltr = Math.round((p.longTermReviewRatio ?? 0) * 100);
   const showLtr = (p.longTermReviewRatio ?? 0) > 0;                                // Amazon엔 한달리뷰 없음(0) → 숨김
   const showSales = !!p.recentSalesCount && p.recentSalesCount !== p.reviewCount;  // Amazon은 판매량 없어 리뷰수 프록시 → 숨김
@@ -40,7 +41,7 @@ export default function ProductCard({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={p.imageUrl}
-              alt={p.title}
+              alt={displayTitle}
               loading="lazy"
               className="h-full w-full object-contain"
               style={{ outline: "1px solid rgba(0,0,0,0.1)", outlineOffset: "-1px" }}
@@ -53,7 +54,7 @@ export default function ProductCard({
             <span className="brand-mark mt-px h-6 w-6 shrink-0 rounded-md text-[11px]">
               {LETTERS[index] ?? index + 1}
             </span>
-            <span className="min-h-[2.4rem] text-sm font-bold leading-snug text-[#191919]">{p.title}</span>
+            <span className="min-h-[2.4rem] text-sm font-bold leading-snug text-[#191919]">{displayTitle}</span>
           </div>
           <div className="shrink-0 whitespace-nowrap text-right tabular-nums">
             <div className="text-base font-extrabold tracking-tight text-[#191919]">
@@ -118,7 +119,7 @@ export default function ProductCard({
           given={givenFeedback}
           disabled={disabled}
           onFeedback={(payload) => onFeedback(p.id, payload)}
-          productTitle={p.title}
+          productTitle={displayTitle}
         />
       </div>
     </div>

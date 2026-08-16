@@ -7,7 +7,7 @@
 
 import { Impression } from "@/lib/types";
 import ProductFeedbackButtons, { FeedbackPayload } from "./ProductFeedbackButtons";
-import { formatStudyPrice, tr } from "@/lib/studyI18n";
+import { formatStudyPrice, productDescription, productTitle, tr } from "@/lib/studyI18n";
 
 const LETTERS = ["A", "B", "C", "D", "E"];
 
@@ -26,6 +26,8 @@ export default function ProductListRow({
 }) {
   const p = impression.product;
   if (!p) return null;
+  const displayTitle = productTitle(p);
+  const displayDescription = productDescription(p);
   // build-time price is the median 정가(list); 실거래가 = 정가 × (1 − 평균 할인율)
   const discountPct = p.discountRate && p.discountRate > 0 ? Math.round(p.discountRate * 100) : 0;
   const realPrice = discountPct > 0 ? Math.round((p.price * (1 - p.discountRate!)) / 10) * 10 : p.price;
@@ -33,7 +35,7 @@ export default function ProductListRow({
   return (
     <div className="msg-in py-5 first:pt-1" style={{ animationDelay: `${index * 80}ms` }}>
       {/* 상품명 헤더 */}
-      <div className="mb-3 text-[15px] font-bold leading-snug text-[#191919]">{p.title}</div>
+      <div className="mb-3 text-[15px] font-bold leading-snug text-[#191919]">{displayTitle}</div>
 
       <div className="flex gap-5">
         {/* 큰 이미지 (없으면 레터마크 폴백) */}
@@ -42,7 +44,7 @@ export default function ProductListRow({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={p.imageUrl}
-              alt={p.title}
+              alt={displayTitle}
               loading="lazy"
               className="h-full w-full object-contain"
               style={{ outline: "1px solid rgba(0,0,0,0.1)", outlineOffset: "-1px" }}
@@ -111,16 +113,16 @@ export default function ProductListRow({
             given={givenFeedback}
             disabled={disabled}
             onFeedback={(payload) => onFeedback(p.id, payload)}
-            productTitle={p.title}
+            productTitle={displayTitle}
           />
         </div>
       </div>
 
       {/* 상품별 설명 — 사양 문단(상품 데이터의 description) + 개인화 근거(rerank의
           recommendationReason)를 본문 크기로. 스크린샷처럼 사실 → 맥락 순서. */}
-      {(p.description || impression.recommendationReason) && (
+      {(displayDescription || impression.recommendationReason) && (
         <div className="mt-4 space-y-2 text-pretty text-[15px] leading-relaxed text-[#191919]">
-          {p.description && <p>{p.description}</p>}
+          {displayDescription && <p>{displayDescription}</p>}
           {impression.recommendationReason && (
             <p>
               {impression.recommendationReason}

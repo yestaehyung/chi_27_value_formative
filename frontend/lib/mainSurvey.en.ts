@@ -60,7 +60,7 @@ export const PRE_STUDY_EN: MSection[] = [
         "Not at all", "Less than once a month", "1–3 times a month", "1–2 times a week", "3+ times a week",
       ]),
       sg("FACT_AI_REC", "How often have you asked generative AI (ChatGPT, Claude, Gemini, etc.) for product recommendations or purchase advice?", [
-        "Never", "1–2 times", "3–5 times", "1–3 times a month", "Weekly or more",
+        "Never", "1–3 times a month", "1–2 times a week", "3–5 times a week", "Daily",
       ]),
       lk("FACT_COMPARE", "I tend to compare multiple candidates before purchasing a product."),
     ],
@@ -83,7 +83,7 @@ export const KNOWLEDGE_SECTIONS_EN: MSection[] = [
       lk("SPK_4", 'Compared to most other people, I know less about "{category}".', true),
       lk("SPK_5", 'When it comes to "{category}", I really do not know a lot.', true),
       sg("EXP_BUY", 'How many times have you purchased products in the "{category}" category yourself?', [
-        "Never", "Once", "2–3 times", "4+ times",
+        "Never", "Once", "2–3 times", "4–6 times", "7+ times",
       ]),
       lk("INIT_CLARITY", 'Right now, I clearly know what to look for when choosing a product in the "{category}" category.'),
       {

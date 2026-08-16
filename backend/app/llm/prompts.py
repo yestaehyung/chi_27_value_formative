@@ -132,6 +132,8 @@ CONFLICT_SYSTEM = """너는 대화형 쇼핑 에이전트의 hidden intention co
   된다 → no_conflict. 위 1~4 유형은 기본 ambiguous_conflict다.
 - 없다(서로 반대 방향을 요구: "가격이 낮을수록 좋음" vs "너무 저렴해 보이면 싫음"), 또는
   사용자가 기존 기준을 명시적으로 뒤집거나 반박(5)했다 → 그때만 direct_conflict.
+  뒤집기 예: 기존 "독특한 기능 선호"에 대해 "이제 심플한 게 좋아요"라고 하면 direct_conflict다
+  — 앞서 말한 방향의 반대를 새로 요구한 것이므로 사용자 확인이 필요하다.
   direct는 대화를 중단시키는 확인 카드가 되므로 이 기준을 엄격히 지킨다.
 
 Recall-first 원칙은 ambiguous에 적용한다: 애매하면 ambiguous_conflict로 분류하고,

@@ -463,7 +463,7 @@ export default function VariantSession({
       <div className="flex items-center justify-between gap-2 border-b border-[#f0f2f4] px-3 py-2.5 sm:px-5 sm:py-3">
         <div className="min-w-0 truncate text-sm font-bold text-[#191919]">
           {STUDY_UI.chat.title}
-          {scenarioTitle && <span className="ml-1 text-xs font-normal text-[#9aa0a6]">— {categoryLabel(scenarioTitle)}</span>}
+          {scenarioTitle && <span className="ml-1.5 rounded-md bg-indigo-50 px-2 py-0.5 text-sm font-semibold text-[#4F46E5]">{categoryLabel(scenarioTitle)}</span>}
         </div>
         {study ? (
           <button onClick={openFinalChoice} className="btn btn-primary shrink-0 whitespace-nowrap px-2.5 py-1 text-xs">
@@ -484,6 +484,14 @@ export default function VariantSession({
             <div className="mt-3 text-xl font-extrabold text-[#191919]">
               {STUDY_UI.chat.greeting} <span className="text-[#4f46e5]">{STUDY_UI.chat.prompt}</span>
             </div>
+            {scenarioTitle && (
+              <div className="mt-2 rounded-lg bg-indigo-50/60 px-3 py-2 text-xs leading-relaxed text-[#4b5563]">
+                {tr(
+                  `'${categoryLabel(scenarioTitle)}'을(를) 구매하는 상황이라고 생각하고, 에이전트와 대화하며 실제로 살 만한 상품을 찾아보세요.`,
+                  `Imagine you're shopping for ${categoryLabel(scenarioTitle).toLowerCase()}. Chat with the agent to find one you would actually buy.`,
+                )}
+              </div>
+            )}
             {initialNeed && <div className="mt-2 text-xs text-[#9aa0a6]">{STUDY_UI.chat.example}: &quot;{initialNeed}&quot;</div>}
           </div>
         )}
