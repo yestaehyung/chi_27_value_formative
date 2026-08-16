@@ -15,6 +15,7 @@ export type SeenProduct = {
   productId: string;
   title: string;
   price: number | null;
+  priceUsd?: number | null;
   imageUrl: string | null;
   liked: boolean;
   purchased: boolean;
@@ -142,7 +143,7 @@ export default function FinalChoiceModal({
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-xs font-medium text-[#191919]">{p.title}</div>
                     <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[#9aa0a6]">
-                      {p.price != null && <span className="tabular-nums">{formatStudyPrice(p.price)}</span>}
+                      {p.price != null && <span className="tabular-nums">{formatStudyPrice(p.price, p.priceUsd)}</span>}
                       {p.purchased && <span className="font-semibold text-[#047857]">{tr("구매 누른 상품", "Marked for purchase")}</span>}
                       {p.liked && !p.purchased && <span className="text-[#4f46e5]">♥ {tr("좋아요한 상품", "Liked product")}</span>}
                     </div>

@@ -30,6 +30,22 @@ def usd(krw: float) -> str:
     return f"${krw / KRW_PER_USD:,.2f}"
 
 
+def product_display_price(product) -> str | None:
+    """EN 참가자 표시용 가격 — 아마존 원본 정가(attributes.priceUsd, 배포 KRW와
+    정합 검증된 상품에만 존재)를 우선하고, 없으면 빌드 환율 역산."""
+    price = getattr(product, "price", None)
+    if product is None or price is None:
+        return None
+    raw = (getattr(product, "attributes", None) or {}).get("priceUsd")
+    try:
+        val = float(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        val = None
+    if val and val > 0:
+        return f"${val:,.2f}"
+    return usd(price)
+
+
 def product_display_title(product) -> str | None:
     """참가자 표시·LLM 컨텍스트용 상품명 — EN 모드면 아마존 원문 제목을 우선한다."""
     if product is None:

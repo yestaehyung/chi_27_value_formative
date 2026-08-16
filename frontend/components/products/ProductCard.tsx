@@ -3,7 +3,7 @@
 import { Impression } from "@/lib/types";
 import ProductCueBadges from "./ProductCueBadges";
 import ProductFeedbackButtons, { FeedbackPayload } from "./ProductFeedbackButtons";
-import { formatStudyPrice, productTitle, tr } from "@/lib/studyI18n";
+import { formatStudyPrice, productTitle, productUsd, tr } from "@/lib/studyI18n";
 
 const LETTERS = ["A", "B", "C", "D", "E"];
 
@@ -58,11 +58,11 @@ export default function ProductCard({
           </div>
           <div className="shrink-0 whitespace-nowrap text-right tabular-nums">
             <div className="text-base font-extrabold tracking-tight text-[#191919]">
-              {formatStudyPrice(realPrice)}
+              {formatStudyPrice(realPrice, discountPct > 0 ? null : productUsd(p))}
             </div>
             {discountPct > 0 && (
               <div className="text-[10px] leading-tight">
-                <span className="text-[#b0b8c1] line-through">{formatStudyPrice(p.price)}</span>{" "}
+                <span className="text-[#b0b8c1] line-through">{formatStudyPrice(p.price, productUsd(p))}</span>{" "}
                 <span className="font-bold text-[#e5392f]">{discountPct}%↓</span>
               </div>
             )}

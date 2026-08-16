@@ -15,7 +15,7 @@ import CurrentUnderstandingPanel from "@/components/preference/CurrentUnderstand
 import ConflictCard from "@/components/preference/ConflictCard";
 import EvidenceDrawer from "@/components/preference/EvidenceDrawer";
 import PostSurveyModal from "@/components/study/PostSurveyModal";
-import { formatStudyPrice, productTitle, tr } from "@/lib/studyI18n";
+import { formatStudyPrice, productTitle, productUsd, tr } from "@/lib/studyI18n";
 
 export default function CurrentStudySession() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -222,7 +222,7 @@ export default function CurrentStudySession() {
       lines.push(`${label(t.role)}: ${t.content}`);
       for (const imp of impressionsByTurn[t.id] ?? []) {
         const p = imp.product;
-        if (p) lines.push(`  · ${productTitle(p)}${p.price != null ? ` (${formatStudyPrice(p.price)})` : ""}`);
+        if (p) lines.push(`  · ${productTitle(p)}${p.price != null ? ` (${formatStudyPrice(p.price, productUsd(p))})` : ""}`);
       }
       lines.push("");
     }

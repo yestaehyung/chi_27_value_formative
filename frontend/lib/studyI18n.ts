@@ -87,12 +87,21 @@ export function productDescription(product: LocalizableProduct): string | undefi
 // 참가자의 달러 감각과 데이터가 일치한다. backend core/locale.KRW_PER_USD와 동일 유지.
 const KRW_PER_USD = 1350;
 
-export function formatStudyPrice(value: number): string {
-  if (IS_ENGLISH_STUDY)
-    return `$${(value / KRW_PER_USD).toLocaleString("en-US", {
+/** 아마존 원본 정가(attributes.priceUsd) — 배포 KRW와 정합 검증된 상품에만 존재. */
+export function productUsd(product: LocalizableProduct | null | undefined): number | null {
+  const raw = Number(product?.attributes?.["priceUsd"]);
+  return Number.isFinite(raw) && raw > 0 ? raw : null;
+}
+
+export function formatStudyPrice(value: number, priceUsd?: number | null): string {
+  if (IS_ENGLISH_STUDY) {
+    // 원본 USD 정가가 있으면 그대로($6.99), 없으면 빌드 환율 역산($6.96)
+    const v = priceUsd && priceUsd > 0 ? priceUsd : value / KRW_PER_USD;
+    return `$${v.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
+  }
   return `${value.toLocaleString("ko-KR")}원`;
 }
 

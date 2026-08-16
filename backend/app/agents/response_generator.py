@@ -4,7 +4,7 @@ Templates below are the deterministic fallback (and the mock provider's output).
 When a real LLM provider is configured, `generate_reply` rewrites the template
 grounded on conversation context, product data, and the preference state.
 """
-from app.core.locale import L, is_en, product_display_title, usd
+from app.core.locale import L, is_en, product_display_price, product_display_title, usd
 from app.db import models
 from app.llm.prompts import AGENT_REPLY_SYSTEM, render_user_context
 from app.llm.provider import LLMMessage, LLMProvider
@@ -118,7 +118,7 @@ def detail_text(p: models.Product, prof: dict | None = None) -> str:
                f"Here's more about '{product_display_title(p)}'.")]
     facts = []
     if p.price is not None:
-        facts.append(L(f"가격 {p.price:,}원", f"priced at {usd(p.price)}"))
+        facts.append(L(f"가격 {p.price:,}원", f"priced at {product_display_price(p)}"))
     if p.rating:
         facts.append(L(f"평점 {p.rating}", f"rating {p.rating}"))
     if p.review_count:
@@ -189,7 +189,7 @@ async def generate_reply(
                 # EN 모드는 가격을 $ 문자열로 선계산해 싣는다 — 모델이 KRW를 암산
                 # 변환하다 틀리는 것을 막고, 응답은 이 값을 그대로 인용하면 된다.
                 "title": product_display_title(p),
-                "price": usd(p.price) if is_en() and p.price is not None else p.price,
+                "price": product_display_price(p) if is_en() else p.price,
                 "rating": p.rating,
                 "reviewCount": p.review_count,
                 "longTermReviewRatio": p.long_term_review_ratio,

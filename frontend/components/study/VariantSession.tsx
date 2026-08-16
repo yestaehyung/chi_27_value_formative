@@ -46,7 +46,7 @@ import {
   type StudyCondition,
 } from "@/lib/localizedMainSurvey";
 import { completeTask, nextTask } from "@/lib/taskQueue";
-import { categoryLabel, productTitle, STUDY_UI, tr } from "@/lib/studyI18n";
+import { categoryLabel, productTitle, productUsd, STUDY_UI, tr } from "@/lib/studyI18n";
 
 export type UiVariant = "a" | "b" | "c" | "d" | "e";
 
@@ -331,6 +331,7 @@ export default function VariantSession({
           productId: imp.productId,
           title: imp.product ? productTitle(imp.product) : "",
           price: imp.product?.price ?? null,
+          priceUsd: imp.product ? productUsd(imp.product) : null,
           imageUrl: imp.product?.imageUrl ?? null,
           liked: fb.includes("like"),
           purchased: fb.includes("purchase"),

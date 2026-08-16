@@ -7,7 +7,7 @@
 
 import { Impression } from "@/lib/types";
 import ProductFeedbackButtons, { FeedbackPayload } from "./ProductFeedbackButtons";
-import { formatStudyPrice, productDescription, productTitle, tr } from "@/lib/studyI18n";
+import { formatStudyPrice, productDescription, productTitle, productUsd, tr } from "@/lib/studyI18n";
 
 const LETTERS = ["A", "B", "C", "D", "E"];
 
@@ -58,13 +58,13 @@ export default function ProductListRow({
         <div className="min-w-0 flex-1 space-y-1.5">
           {discountPct > 0 && (
             <div className="text-[13px] text-[#b0b8c1] line-through tabular-nums">
-              {formatStudyPrice(p.price)}
+              {formatStudyPrice(p.price, productUsd(p))}
             </div>
           )}
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             {discountPct > 0 && <span className="text-lg font-extrabold text-[#e5392f]">{discountPct}%</span>}
             <span className="text-xl font-extrabold tracking-tight text-[#191919] tabular-nums">
-              {formatStudyPrice(realPrice)}
+              {formatStudyPrice(realPrice, discountPct > 0 ? null : productUsd(p))}
             </span>
             <span className="text-xs text-[#606060]">
               {p.deliveryFee ? `${tr("배송비", "Shipping")} ${formatStudyPrice(p.deliveryFee)}` : tr("무료배송", "Free shipping")}
