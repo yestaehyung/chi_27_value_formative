@@ -779,7 +779,11 @@ EN_DIRECTIVES = {
         " In constraintsNote write price limits in KRW with the user's USD figure in"
         " parentheses (e.g. \"가격 67,500원 이하 ($50)\") — the rerank compares KRW prices."
     ),
-    "rerank": "Write reason, matched, weak, and vioNote in English — they appear verbatim on product cards.",
+    "rerank": (
+        "Write reason, matched, weak, and vioNote in English — they appear verbatim on"
+        " product cards. When citing a candidate's Korean keyAttributes/caveats in"
+        " matched/weak, translate them into natural English."
+    ),
 }
 
 # 통화 규칙(EN 모드 전 태스크 공통): 참가자는 달러로 생각하고, 저장 가격은 KRW다.

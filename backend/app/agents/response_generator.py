@@ -256,7 +256,8 @@ async def rerank_by_intent(
     for i, sp in enumerate(scored):
         p = sp.product
         cand = {
-            "index": i, "title": p.title, "category": p.category,
+            # EN 모드는 영어 원제목 — 카드 필드가 영어 어휘에 그라운딩되게 한다
+            "index": i, "title": product_display_title(p), "category": p.category,
             "price": p.price, "rating": p.rating, "reviewCount": p.review_count,
             "longTermReviewRatio": p.long_term_review_ratio,
             "priceCue": (p.cue_summary or {}).get("priceCue"),
