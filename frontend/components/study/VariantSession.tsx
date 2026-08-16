@@ -249,6 +249,17 @@ export default function VariantSession({
         if (d.preferenceState) setState(d.preferenceState);
         setConflicts(d.conflicts);
         showToast(STUDY_UI.chat.reloaded);
+        // 연결이 끊겨도 서버는 응답 생성을 완주한다(백엔드 shield) — 잠시 뒤 다시
+        // 불러와 완성된 답변을 자동으로 붙인다 (생성 시간 ~20초 커버).
+        for (const delay of [8000, 20000]) {
+          setTimeout(() => {
+            api.getSession(sessionId).then((d2) => {
+              setTurns(d2.turns);
+              if (d2.preferenceState) setState(d2.preferenceState);
+              setConflicts(d2.conflicts);
+            }).catch(() => {});
+          }, delay);
+        }
       } catch {
         setTurns((prev) => prev.filter((t) => t.id !== optimisticId));
         showToast(STUDY_UI.chat.sendFailed);
