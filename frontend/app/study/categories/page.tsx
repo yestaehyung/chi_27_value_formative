@@ -5,7 +5,7 @@
 // 2단계 플로우:
 //   1단계  평소 잘 아는 상품군 2개 선택
 //   2단계  (남은 것 중) 잘 모르는 상품군 2개 선택
-//   → 4개를 무작위 순서로 섞어 첫 쇼핑 시작
+//   → (친숙 1 → 비친숙 1) 묶음 × 2 순서로 첫 쇼핑 시작 (측 내부만 무작위)
 //
 // 왜 두 단계로 나누나: 한 화면에서 카드마다 "잘 알아요/잘 몰라요"를 고르게 하면 두
 // 판단이 섞여 기준이 흐려진다. 단계를 나누면 참가자가 한 번에 한 질문("아는 것은?" →
@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { api } from "@/lib/api";
-import { randomOrder, saveQueue } from "@/lib/taskQueue";
+import { pairedOrder, saveQueue } from "@/lib/taskQueue";
 import type { CategoryOption } from "@/lib/types";
 import { categoryBlurb, categoryLabel, STUDY_UI } from "@/lib/studyI18n";
 
@@ -62,8 +62,8 @@ export default function CategorySelectPage() {
   const start = () => {
     if (familiar.length !== NEED_PER_SIDE || unfamiliar.length !== NEED_PER_SIDE || starting) return;
     setStarting(true);
-    // 순서는 여기서 무작위로 확정된다 — 고른 순서도, 친숙/비친숙 교차도 아니다.
-    const tasks = randomOrder(familiar, unfamiliar);
+    // 순서는 여기서 확정된다 — (친숙→비친숙) 묶음 × 2, 측 내부만 무작위.
+    const tasks = pairedOrder(familiar, unfamiliar);
     saveQueue(participantId || "anon", tasks);
     // 서버에도 계획을 저장 — 진행(남은 과제/다음 과제)의 진실은 서버가 갖는다.
     // 실패해도 진행은 막지 않는다(로컬 큐 폴백); 서버 저장은 유실 대비 안전망.
