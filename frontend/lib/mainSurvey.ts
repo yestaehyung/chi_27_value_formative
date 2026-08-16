@@ -45,7 +45,7 @@ export type MSection = {
 
 /** 테스트용 설문 건너뛰기 노출 여부 — ⚠️ 본실험 모집 시작 전 반드시 false로.
  *  건너뛴 설문은 저장되지 않는다 (새로고침 시 다시 뜸). */
-export const TEST_SURVEY_SKIP = true;
+export const TEST_SURVEY_SKIP = false;
 
 export const LIKERT_POINTS = 7;
 export const LIKERT_MIN = "전혀 그렇지 않다";
