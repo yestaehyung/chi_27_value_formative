@@ -545,8 +545,11 @@ coverageScore = 해당 pair 수 / 전체 pair 수.""",
 "cards":[{"index":int,"reason":string,"matched":[string],"weak":[string]}],
 "nearMissRequested":bool}
 
-- verdicts: **모든 후보**에 대해, criteria의 모든 cid(+statedConstraintsNote가 있으면 "note")를
-  키로 셀을 채운다. vioNote는 "vio" 셀이 하나라도 있을 때, 무엇이 걸렸는지 한 구.
+- verdicts: **모든 후보**에 대해 판단하되, cells에는 **"vio"와 "unk"만** 기록한다 —
+  적는 셀이 없으면 cells는 빈 객체(전 기준 충족 의미). "ok"는 쓰지 않는다(생략=ok;
+  출력을 짧게 유지해 후보 30개 × 기준 10개에서도 잘리지 않게).
+  대상 cid는 criteria 전체(+statedConstraintsNote가 있으면 "note").
+  vioNote는 "vio" 셀이 하나라도 있을 때, 무엇이 걸렸는지 한 구.
 - order: **모든 후보 index를 한 번씩** 좋은 순서로.
 - cards: order 상위 8개에만.
 - nearMissRequested: 사용자가 근접 후보 표시를 요청한 대화 상황이면 true.

@@ -306,6 +306,10 @@ async def rerank_by_intent(
             # 집행 레이어는 최대 결정론 — temp 0.1에서도 전멸 풀(준수후보 0)의 exclude
             # 판정이 런마다 뒤집혔다 (2026-07-07 eval r7: 동일 입력 1.0↔0.0).
             temperature=0.0,
+            # 행렬(후보 30 × 기준 ~10 셀)은 기본 1500토큰에 잘린다 — 기준 7개+에서
+            # 파싱 실패→무필터 폴백이 3턴 연속 발생 (2026-08-18 라이브 실측).
+            # max_tokens는 상한이지 비용이 아니다(미사용분 소모 0) — 여유 있게.
+            max_tokens=10000,
         )
         raw = raw or {}
         if "order" in raw or "verdicts" in raw:
@@ -360,7 +364,12 @@ async def rerank_by_intent(
     except Exception:  # noqa: BLE001 — 폴백: 입력 순서 유지, 제외 없음
         order = []
         excluded = {}
-        matrix = {"nearMissRequested": False, "vioCounts": {}, "verdicts": {}}
+        matrix = {"nearMissRequested": False, "vioCounts": {}, "verdicts": {},
+                  "hardUnk": {}, "hardUnkCounts": {}, "failed": True}
+    if not matrix.get("verdicts") and not order:
+        # 응답이 왔지만 행렬도 순서도 없음(잘림·형식 붕괴) — 판정 실패로 표기.
+        # 필수 기준이 있는 대화에서 무필터 노출을 막는 근거가 된다 (recommender).
+        matrix["failed"] = True
 
     # 누락된 후보는 원래(임베딩) 순서로 뒤에 붙임 (재현성·완전성; 제외 아님)
     for i in range(len(scored)):

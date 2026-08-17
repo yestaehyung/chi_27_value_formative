@@ -175,6 +175,20 @@ async def run_recommendation(
     )
     intent_context = build_rerank_context(db, session, recent_turns, constraints_note)
     reranked, card_texts, excluded, matrix = await rg.rerank_by_intent(provider, pool, intent_context)
+    # 판정 실패(행렬 부재 — 출력 잘림·형식 붕괴) + 필수 기준 존재 = 무필터 노출 금지.
+    # 검증 안 된 상품을 정상 카드처럼 내보내면 "정확히 27인치" 세션에 24인치가 나간다
+    # (2026-08-18 라이브 실측). 정직하게 재시도를 청한다 (fail-loud).
+    if matrix.get("failed"):
+        hard_present = bool((intent_context.get("statedConstraintsNote") or "").strip()) or any(
+            c.get("kind") in ("constraint", "avoidance")
+            for c in (intent_context.get("criteria") or []))
+        if hard_present:
+            diag = {
+                "searchText": search_text, "constraintsNote": constraints_note,
+                "poolIds": [sp.product.id for sp in pool],
+                "rerankFailed": True, "matrix": matrix,
+            }
+            return [], {}, diag
     # 노출 셋 = 준수 후보 상위 top_k, 전멸 시 근접 대안(② 부분 정직 — select_shown).
     # 셋의 대비(관측 도구 속성 — 강점이 서로 다른 후보들)는 rerank 프롬프트의 구성 원칙으로,
     # mock에서는 결정론 priceCue 스프레드로 처리한다(mock은 exclude를 내지 않으므로

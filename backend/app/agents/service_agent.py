@@ -384,7 +384,13 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         # 출력 사실) 정직 초안 + recommendationNote로 렌더러가 부재를 먼저 고지하게 한다.
         near_miss = rec_diag.get("nearMiss") or {}
         rec_note = None
-        if rec_diag.get("emptyHanded"):
+        if rec_diag.get("rerankFailed"):
+            # 기준 대조가 완료되지 못함 — 미검증 상품을 보여주는 대신 재시도를 청한다.
+            rec_note = {"verificationFailed": True}
+            template = ("I wasn't able to finish checking the options against your"
+                        " criteria just now. Could you send that once more and I'll"
+                        " run the check again?")
+        elif rec_diag.get("emptyHanded"):
             # 행렬상 준수 후보 0 — 빈손 + 걸린 기준 설명 + 근접 후보는 사용자 선택으로
             rec_note = {
                 "noExactMatch": True,
