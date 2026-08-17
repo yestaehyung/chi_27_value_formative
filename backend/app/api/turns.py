@@ -12,6 +12,11 @@ from app.db.schemas import TurnRequest
 
 router = APIRouter(prefix="/api/sessions", tags=["turns"])
 
+# 처리 중 세션 레지스트리 (단일 프로세스) — shield로 계속 도는 원본 파이프라인과
+# 재시도/재전송이 같은 세션에 파이프라인을 겹쳐 돌리는 경합 방지 (2026-08-18 자체
+# 점검에서 발견: 네트워크 단절 후 배너 재시도가 이중 응답을 만들 수 있었음).
+_inflight_sessions: set[str] = set()
+
 
 @router.post("/{session_id}/reply-suggestions")
 async def reply_suggestions(session_id: str, db: DbSession = Depends(get_db)):
@@ -67,6 +72,7 @@ async def _process_turn_to_payload(session_id: str, content: str, role: str,
     직렬화까지 이 안에서 끝내야 세션 종료 후 detached ORM 접근이 없다.
     retry_turn_id(2026-08-18): 응답 없는 기존 사용자 턴을 새 턴 없이 재처리."""
     db = SessionLocal()
+    _inflight_sessions.add(session_id)
     try:
         session = db.get(models.Session, session_id)
         existing = db.get(models.Turn, retry_turn_id) if retry_turn_id else None
@@ -99,6 +105,7 @@ async def _process_turn_to_payload(session_id: str, content: str, role: str,
             "replySuggestions": result.reply_suggestions,
         }
     finally:
+        _inflight_sessions.discard(session_id)
         db.close()
 
 
@@ -110,6 +117,10 @@ async def post_turn(session_id: str, req: TurnRequest, background_tasks: Backgro
         raise HTTPException(404, "session not found")
     if session.status != "active":
         raise HTTPException(400, "session is not active")
+
+    if session_id in _inflight_sessions:
+        # 같은 세션의 응답이 아직 생성 중 — 겹쳐 돌리지 않는다 (프론트: 잠시 후 재조회)
+        raise HTTPException(409, "reply generation in progress")
 
     # 멱등 (2026-08-18): 같은 clientRequestId의 턴이 이미 있으면 새로 만들지 않는다 —
     # 502/타임아웃 후 재전송이 같은 발화를 두 번 저장하는 것을 구조적으로 차단.
@@ -153,6 +164,8 @@ async def retry_turn(session_id: str, turn_id: str, background_tasks: Background
                 .first())
     if answered is not None:
         raise HTTPException(409, "turn already answered")
+    if session_id in _inflight_sessions:
+        raise HTTPException(409, "reply generation in progress")
 
     task = asyncio.create_task(_process_turn_to_payload(
         session_id, turn.content, turn.role, retry_turn_id=turn_id))

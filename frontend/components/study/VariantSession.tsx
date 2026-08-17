@@ -243,7 +243,21 @@ export default function VariantSession({
       loadChipSuggestions();
     } catch (e) {
       console.error(e);
-      showToast(tr("다시 시도해 주세요.", "Please try again."));
+      // 409 = 원본 파이프라인이 아직 생성 중 (shield) — 겹쳐 돌리지 않고 기다린다
+      const stillWorking = e instanceof Error && e.message.startsWith("API 409");
+      showToast(stillWorking
+        ? tr("응답을 아직 만드는 중이에요 — 잠시 후 자동으로 나타나요.",
+             "The reply is still being generated — it will appear shortly.")
+        : tr("다시 시도해 주세요.", "Please try again."));
+      if (stillWorking) {
+        setTimeout(() => {
+          api.getSession(sessionId).then((d) => {
+            setTurns(d.turns);
+            if (d.preferenceState) setState(d.preferenceState);
+            setConflicts(d.conflicts);
+          }).catch(() => {});
+        }, 10000);
+      }
     } finally {
       setBusy(false);
     }

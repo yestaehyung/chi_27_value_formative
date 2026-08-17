@@ -80,3 +80,21 @@ def test_orphan_turn_retry_recovers_without_duplicate(client):
     # 응답이 생긴 턴의 재시도는 거부된다 (이중 응답 방지)
     r2 = client.post(f"/api/sessions/{sid}/turns/{orphan_id}/retry")
     assert r2.status_code == 409
+
+
+def test_inflight_guard_rejects_overlapping_pipelines(client):
+    """shield로 진행 중인 원본과 재시도가 같은 세션에 겹쳐 돌지 못한다 (이중 응답 방지)."""
+    from app.api import turns as turns_api
+    sid = _new_session(client)
+    r = client.post(f"/api/sessions/{sid}/turns", json={"content": "스마트워치 추천해줘"})
+    assert r.status_code == 200
+    turn_id = r.json()["turn"]["id"]
+
+    turns_api._inflight_sessions.add(sid)
+    try:
+        r2 = client.post(f"/api/sessions/{sid}/turns", json={"content": "또 보내기"})
+        assert r2.status_code == 409
+        r3 = client.post(f"/api/sessions/{sid}/turns/{turn_id}/retry")
+        assert r3.status_code == 409
+    finally:
+        turns_api._inflight_sessions.discard(sid)
