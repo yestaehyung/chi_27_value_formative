@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { captureProlificParams, getProlificParams, prolificScreenoutUrl } from "@/lib/prolific";
 import { LIKERT_MID, SurveyQuestion } from "@/lib/survey";
 // 본실험 사전 설문 (2026-07-27). FS1의 A–F 설문은 fs1-frozen 브랜치에 그대로 남아 있다 —
 // 본실험은 3조건 비교가 목적이라 TCV/동기 프로파일링(D·E)을 재지 않는다.
@@ -25,6 +26,9 @@ export default function SurveyPage() {
   const [answers, setAnswers] = useState<Answers>({});
   const [submitting, setSubmitting] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
+
+  // Prolific 모집 파라미터 — 첫 진입 URL에서 캡처해 전체 플로우 동안 보관
+  useEffect(() => { captureProlificParams(); }, []);
 
   const set = (id: string, value: string | string[]) => setAnswers((p) => ({ ...p, [id]: value }));
   const toggleMulti = (id: string, opt: string) =>
@@ -56,7 +60,7 @@ export default function SurveyPage() {
     try {
       const profile = computeProfile(answers);
       const canonicalAnswers = canonicalizeStudyAnswers(answers);
-      const res = await api.submitSurvey(canonicalAnswers, profile); // 비어 있어도 참가자 생성(흐름 동일)
+      const res = await api.submitSurvey(canonicalAnswers, profile, undefined, getProlificParams()); // 비어 있어도 참가자 생성(흐름 동일)
       // 배정된 조건을 튜토리얼에 넘긴다 — 조건별로 안내할 단계가 다르다
       // (기준을 안 보여주는 조건에 '기준 확인'을 설명하면 조작이 깨진다).
       // URL이 아니라 sessionStorage로: 주소창·히스토리에 조건 라벨이 보이면
@@ -107,7 +111,17 @@ export default function SurveyPage() {
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
           <div className="text-xs">
             {excluded ? (
-              <span className="font-semibold text-rose-600">{STUDY_UI.survey.ineligible}</span>
+              <span className="font-semibold text-rose-600">
+                {STUDY_UI.survey.ineligible}
+                {prolificScreenoutUrl() && (
+                  <a
+                    href={prolificScreenoutUrl()!}
+                    className="ml-2 font-semibold text-[#4f46e5] underline"
+                  >
+                    {STUDY_UI.survey.returnToProlific}
+                  </a>
+                )}
+              </span>
             ) : missing.length > 0 ? (
               <span className="text-slate-500">{STUDY_UI.survey.requiredRemaining(missing.length)}</span>
             ) : (

@@ -117,6 +117,7 @@ export const STUDY_UI = {
     submitting: tr("제출 중…", "Submitting…"),
     submit: tr("제출하고 대화 시작하기", "Submit and Continue"),
     responseExcluded: tr("이 응답은 연구 참여 제외 사유입니다.", "This response makes you ineligible to participate in the study."),
+    returnToProlific: tr("Prolific으로 돌아가기", "Return your submission on Prolific"),
   },
   categories: {
     step: (step: number) => tr(`${step}단계 / 2단계`, `Step ${step} of 2`),
@@ -239,5 +240,10 @@ export const STUDY_UI = {
     doneTitle: tr("연구가 모두 끝났어요", "You Have Completed the Study"),
     doneBody: tr("참여해 주셔서 감사합니다. 응답은 모두 저장되었으며, 연구 목적으로만 사용됩니다.", "Thank you for participating. Your responses have been saved and will be used only for research purposes."),
     close: tr("이제 이 창을 닫으셔도 됩니다.", "You may now close this window."),
+    prolificRedirecting: tr(
+      "잠시 후 Prolific으로 자동 이동합니다…",
+      "You will be redirected to Prolific in a few seconds…",
+    ),
+    prolificReturn: tr("Prolific으로 돌아가기", "Return to Prolific"),
   },
 } as const;

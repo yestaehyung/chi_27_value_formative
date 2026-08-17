@@ -204,6 +204,7 @@ def list_participants(db: DbSession = Depends(get_db)):
             "surveyCount": len(answers),
             "studyCondition": p.study_condition,
             "hasPostStudy": bool(survey.get("postStudy")),
+            "prolificPid": (p.prolific or {}).get("pid"),
             "createdAt": serializers.iso(p.created_at),
         })
     return {"participants": out}

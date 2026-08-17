@@ -56,6 +56,7 @@ def _migrate() -> None:
             ("survey", "TEXT DEFAULT '{}'"),
             ("study_condition", "TEXT"),
             ("task_plan", "TEXT"),
+            ("prolific", "TEXT"),
         ],
         "intention_relations": [
             ("verification", "TEXT DEFAULT 'unverified'"),

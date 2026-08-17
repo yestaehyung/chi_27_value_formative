@@ -209,10 +209,15 @@ export const api = {
     }>(`/api/study/participants/${participantId}/task-progress`),
 
   // FS1 사전 설문 → 참가자 생성(설문 저장). 본실험 사전 설문도 같은 채널을 쓴다(문항 id만 다름).
-  submitSurvey: (answers: Record<string, unknown>, profile: Record<string, number>, label?: string) =>
+  submitSurvey: (
+    answers: Record<string, unknown>,
+    profile: Record<string, number>,
+    label?: string,
+    prolific?: { pid?: string; studyId?: string; sessionId?: string },
+  ) =>
     request<{ participantId: string; label: string; studyCondition?: string }>("/api/study/survey", {
       method: "POST",
-      body: JSON.stringify({ answers, profile, label }),
+      body: JSON.stringify({ answers, profile, label, prolific }),
     }),
 
   // ── 본실험(메인 스터디) 설문 ─────────────────────────────────────────

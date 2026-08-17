@@ -56,6 +56,8 @@ class SurveyRequest(BaseModel):
     answers: dict                       # {questionId: value}
     profile: Optional[dict] = None      # 파생 점수 (Functional/Social/.../Utilitarian/Hedonic 평균)
     label: Optional[str] = None         # 참가자 표시명 (선택)
+    # Prolific 모집 파라미터 {pid, studyId, sessionId} — 승인/보상 매칭용 (2026-08-19)
+    prolific: Optional[dict] = None
 
 
 @router.post("/survey")
@@ -65,13 +67,21 @@ def submit_survey(req: SurveyRequest, db: DbSession = Depends(get_db)):
     from app.core.conditions import assign_condition
 
     pid = new_id("part")
-    label = req.label or f"P-{pid.split('_')[-1][:6]}"
+    prolific = {
+        k: str(v)[:64] for k, v in (req.prolific or {}).items()
+        if k in ("pid", "studyId", "sessionId") and v
+    }
+    # Prolific PID가 있으면 라벨에 앞 8자를 붙여 관리자 화면에서 바로 매칭되게 한다
+    label = req.label or (
+        f"PL-{prolific['pid'][:8]}" if prolific.get("pid") else f"P-{pid.split('_')[-1][:6]}"
+    )
     condition = assign_condition(db)
     db.add(models.Participant(
         id=pid,
         label=label,
         survey={"answers": req.answers, "profile": req.profile or {}},
         study_condition=condition,
+        prolific=prolific or None,
     ))
     db.commit()
     return {"participantId": pid, "label": label, "studyCondition": condition}

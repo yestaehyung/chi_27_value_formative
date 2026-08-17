@@ -42,6 +42,9 @@ class Participant(Base):
     spec_version: Mapped[int] = mapped_column(Integer, default=0)
     # FS1 사전 설문 응답 (raw answers + 파생 profile) — 참가자 프로파일링용
     survey: Mapped[dict | None] = mapped_column(JSON, default=None)
+    # Prolific 연동 (2026-08-19): 모집 URL 파라미터 {pid, studyId, sessionId}.
+    # 승인/보상 매칭용 — 연구 분석에는 쓰지 않는다.
+    prolific: Mapped[dict | None] = mapped_column(JSON, default=None)
     # 본실험 between-subjects 조건. 참가자에 붙는 이유: 한 사람의 3개 과제가 반드시
     # 같은 조건이어야 한다(세션마다 지정하면 중간에 갈릴 수 있다).
     # baseline | explanation_only | correctable
