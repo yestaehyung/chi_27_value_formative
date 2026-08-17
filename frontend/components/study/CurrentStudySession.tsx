@@ -377,6 +377,9 @@ export default function CurrentStudySession() {
               <p className="mx-auto mt-3 max-w-sm text-[13px] leading-relaxed text-[#9aa0a6]">
                 {STUDY_UI.chat.browseGuide}
               </p>
+              <p className="mx-auto mt-2 max-w-md text-[11px] leading-relaxed text-[#b0b8c1]">
+                {STUDY_UI.chat.catalogNote}
+              </p>
               {initialNeed && (
                 <div className="mt-2 text-xs text-[#9aa0a6]">
                   예: &quot;{initialNeed}&quot;

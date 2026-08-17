@@ -587,9 +587,14 @@ export default function VariantSession({
               {STUDY_UI.chat.greeting} <span className="text-[#4f46e5]">{STUDY_UI.chat.prompt}</span>
             </div>
             {study && (
-              <p className="mx-auto mt-3 max-w-sm text-[13px] leading-relaxed text-[#9aa0a6]">
-                {STUDY_UI.chat.browseGuide}
-              </p>
+              <>
+                <p className="mx-auto mt-3 max-w-sm text-[13px] leading-relaxed text-[#9aa0a6]">
+                  {STUDY_UI.chat.browseGuide}
+                </p>
+                <p className="mx-auto mt-2 max-w-md text-[11px] leading-relaxed text-[#b0b8c1]">
+                  {STUDY_UI.chat.catalogNote}
+                </p>
+              </>
             )}
             {scenarioTitle && (
               <div className="mt-2 rounded-lg bg-indigo-50/60 px-3 py-2 text-xs leading-relaxed text-[#4b5563]">

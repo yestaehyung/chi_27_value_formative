@@ -190,6 +190,10 @@ export const STUDY_UI = {
       "추천을 충분히 받아보시고, 마음에 드는 상품을 찾으면 '마치기'를 눌러주세요.",
       "Take your time browsing. When you find a product you'd actually buy, press Finish.",
     ),
+    catalogNote: tr(
+      "상품은 연구용 카탈로그(2023년 Amazon 데이터)에서 제공됩니다 — 가격은 현재 시세와 다를 수 있고, 실제 구매는 이루어지지 않습니다. 답변 생성에는 20–30초가 걸릴 수 있어요.",
+      "Products come from a research catalog (2023 Amazon data) — prices may differ from current listings, and no real purchase will be made. Replies may take 20–30 seconds.",
+    ),
     finishLocked: tr(
       "추천을 2회 이상 받은 뒤 마칠 수 있어요.",
       "You can finish after receiving at least 2 rounds of recommendations.",
