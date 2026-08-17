@@ -18,6 +18,9 @@ export function captureProlificParams(): ProlificParams {
   };
   if (fresh.pid) {
     sessionStorage.setItem(KEY, JSON.stringify(fresh));
+    // PID가 주소창·히스토리·스크린샷에 남지 않게 캡처 직후 URL에서 제거한다
+    // (저장은 이미 끝났으므로 새로고침에도 안전).
+    window.history.replaceState(null, "", window.location.pathname);
     return fresh;
   }
   return getProlificParams();
