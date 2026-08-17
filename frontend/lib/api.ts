@@ -52,10 +52,10 @@ export const api = {
 
   getSession: (sessionId: string) => request<any>(`/api/sessions/${sessionId}`),
 
-  postTurn: (sessionId: string, content: string, clientRequestId?: string) =>
+  postTurn: (sessionId: string, content: string, clientRequestId?: string, inputSource?: "suggestion" | "typed") =>
     request<any>(`/api/sessions/${sessionId}/turns`, {
       method: "POST",
-      body: JSON.stringify({ role: "user", content, clientRequestId }),
+      body: JSON.stringify({ role: "user", content, clientRequestId, inputSource }),
     }),
 
   // 응답 없이 남은 사용자 턴(pending/failed)을 같은 턴으로 재처리 — 새 턴 없음 (2026-08-18)

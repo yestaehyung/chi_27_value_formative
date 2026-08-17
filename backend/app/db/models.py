@@ -89,6 +89,8 @@ class Turn(Base):
     # 프론트 전송 멱등 키 — 같은 키의 턴이 이미 있으면 서버는 새 턴을 만들지 않는다
     # (502 후 재전송이 중복 발화를 만드는 것을 구조적으로 차단).
     client_request_id: Mapped[str | None] = mapped_column(String, default=None)
+    # 입력 경로 (2026-08-19): suggestion(답변 칩 클릭) | typed(직접 타이핑) | null(구 데이터)
+    input_source: Mapped[str | None] = mapped_column(String, default=None)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 

@@ -31,6 +31,8 @@ class TurnRequest(BaseModel):
     content: str = Field(min_length=1)
     # 전송 멱등 키 (2026-08-18) — 같은 키의 턴이 이미 있으면 서버는 새 턴을 만들지 않는다
     clientRequestId: str | None = None
+    # 입력 경로 (2026-08-19) — 답변 칩 클릭(suggestion) vs 직접 타이핑(typed) 구분
+    inputSource: Literal["suggestion", "typed"] | None = None
 
 
 class FeedbackRequest(BaseModel):

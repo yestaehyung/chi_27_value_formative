@@ -238,7 +238,8 @@ async def recommend_after_resolution(
 async def handle_user_turn(db: DbSession, session: models.Session, content: str,
                            role: str = "user",
                            client_request_id: str | None = None,
-                           existing_turn: models.Turn | None = None) -> AgentTurnResult:
+                           existing_turn: models.Turn | None = None,
+                           input_source: str | None = None) -> AgentTurnResult:
     provider = get_provider()
     t0 = time.perf_counter()
 
@@ -259,6 +260,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             dialogue_acts=[],  # 화행은 아래 병렬 분류 후 채운다
             status="pending",  # 응답까지 저장되면 completed — 미완 턴 식별용
             client_request_id=client_request_id,
+            input_source=input_source,
         )
         db.add(user_turn)
     _update_surface_intent(session, content)

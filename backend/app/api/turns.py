@@ -63,7 +63,8 @@ async def reply_suggestions(session_id: str, db: DbSession = Depends(get_db)):
 
 async def _process_turn_to_payload(session_id: str, content: str, role: str,
                                    client_request_id: str | None = None,
-                                   retry_turn_id: str | None = None) -> dict:
+                                   retry_turn_id: str | None = None,
+                                   input_source: str | None = None) -> dict:
     """자체 DB 세션으로 턴을 끝까지 처리하고 직렬화까지 마친 응답 dict를 만든다.
 
     요청 범위 세션을 쓰지 않는 이유: 클라이언트 연결이 끊기면 Starlette이 요청
@@ -79,7 +80,8 @@ async def _process_turn_to_payload(session_id: str, content: str, role: str,
         try:
             result = await handle_user_turn(db, session, content, role=role,
                                             client_request_id=client_request_id,
-                                            existing_turn=existing)
+                                            existing_turn=existing,
+                                            input_source=input_source)
         except Exception:
             # 파이프라인 하드 실패 — 사용자 턴을 failed로 남겨 프론트가 재시도를 제안하게.
             db.rollback()
@@ -137,7 +139,8 @@ async def post_turn(session_id: str, req: TurnRequest, background_tasks: Backgro
     # 참가자는 새로고침하면 완성된 답변을 본다. 응답만 버려질 뿐 데이터는 남는다.
     # (그 경우 M5 judge 백그라운드 1회는 건너뛰지만 다음 턴에서 다시 평결된다.)
     task = asyncio.create_task(_process_turn_to_payload(
-        session_id, req.content, req.role, client_request_id=req.clientRequestId))
+        session_id, req.content, req.role, client_request_id=req.clientRequestId,
+        input_source=req.inputSource))
     payload = await asyncio.shield(task)
     # M5: judge는 턴을 막지 않는다 — 응답 후 비동기로 인과 엣지를 평결
     background_tasks.add_task(judge_causal_relations, session_id)

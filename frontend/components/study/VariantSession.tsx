@@ -263,7 +263,7 @@ export default function VariantSession({
     }
   };
 
-  const sendMessage = useCallback(async (text: string) => {
+  const sendMessage = useCallback(async (text: string, inputSource?: "suggestion" | "typed") => {
     const optimisticId = `optimistic_${Date.now()}`;
     // 멱등 키 (2026-08-18): 502/타임아웃 후 재전송이 같은 발화를 두 번 저장하지 않게
     const clientRequestId =
@@ -275,7 +275,7 @@ export default function VariantSession({
     } as Turn]);
     setBusy(true);
     try {
-      const res = await api.postTurn(sessionId, text, clientRequestId);
+      const res = await api.postTurn(sessionId, text, clientRequestId, inputSource);
       if (res.duplicate) {
         // 이미 같은 전송이 저장돼 있음(이전 시도의 재전송) — 서버 상태를 다시 불러온다
         const d = await api.getSession(sessionId);
@@ -756,7 +756,7 @@ export default function VariantSession({
         <ChatComposer
           value={chatInput}
           onChange={setChatInput}
-          onSend={(msg) => { setChatInput(""); sendMessage(msg); }}
+          onSend={(msg, src) => { setChatInput(""); sendMessage(msg, src); }}
           disabled={busy}
           loading={busy}
           placeholder={STUDY_UI.chat.inputPlaceholder}

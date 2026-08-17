@@ -96,7 +96,7 @@ export default function CurrentStudySession() {
       .catch(() => {});
   }, [sessionId]);
 
-  const sendMessage = useCallback(async (text: string) => {
+  const sendMessage = useCallback(async (text: string, inputSource?: "suggestion" | "typed") => {
     // 1) 사용자 메시지를 즉시 화면에 반영 (낙관적 업데이트) — 응답을 기다리지 않음
     const optimisticId = `optimistic_${Date.now()}`;
     setTurns((prev) => [...prev, {
@@ -107,7 +107,7 @@ export default function CurrentStudySession() {
     setBusy(true);
     try {
       // 2) 응답이 오면 임시 메시지를 실제 turn으로 교체하고 에이전트 답변을 이어붙임
-      const res = await api.postTurn(sessionId, text);
+      const res = await api.postTurn(sessionId, text, undefined, inputSource);
       setTurns((prev) => [...prev.filter((t) => t.id !== optimisticId), res.turn, res.agentResponse]);
       if (res.recommendedProducts?.length) {
         setImpressionsByTurn((prev) => ({
@@ -411,7 +411,7 @@ export default function CurrentStudySession() {
           <ChatComposer
             value={chatInput}
             onChange={setChatInput}
-            onSend={(msg) => { setChatInput(""); sendMessage(msg); }}
+            onSend={(msg, src) => { setChatInput(""); sendMessage(msg, src); }}
             disabled={busy}
             loading={busy}
             placeholder="무엇을 찾고 계세요?"

@@ -68,6 +68,7 @@ def _migrate() -> None:
         "turns": [
             ("status", "TEXT DEFAULT 'completed'"),
             ("client_request_id", "TEXT"),
+            ("input_source", "TEXT"),
         ],
     }
     # 컬럼 이름 변경 (renames) — (table, old, new). 이미 new가 있으면 skip(재실행 안전).

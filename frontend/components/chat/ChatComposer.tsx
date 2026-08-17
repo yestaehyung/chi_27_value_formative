@@ -18,7 +18,7 @@ export default function ChatComposer({
   value,
   onChange,
 }: {
-  onSend: (text: string) => void;
+  onSend: (text: string, inputSource?: "suggestion" | "typed") => void;
   disabled?: boolean;
   loading?: boolean;
   onStop?: () => void;
@@ -31,6 +31,7 @@ export default function ChatComposer({
   onChange?: (v: string) => void;
 }) {
   const [inner, setInner] = useState("");
+  const [fromSuggestion, setFromSuggestion] = useState(false);
   const text = value !== undefined ? value : inner;
   const setText = (v: string) => (onChange ? onChange(v) : setInner(v));
   const canSend = !!text.trim() && !disabled && !loading;
@@ -46,8 +47,9 @@ export default function ChatComposer({
 
   const submit = () => {
     if (!canSend) return;
-    onSend(text.trim());
+    onSend(text.trim(), fromSuggestion ? "suggestion" : "typed");
     setText("");
+    setFromSuggestion(false);
   };
 
   // 브랜드색은 CSS 변수 --brand 사용 (미리보기에서 인디고↔네이버파랑 토글). 미설정 시 인디고.
@@ -62,7 +64,7 @@ export default function ChatComposer({
         {suggestions.map((s) => (
           <button
             key={s}
-            onClick={() => setText(s)}
+            onClick={() => { setText(s); setFromSuggestion(true); }}
             disabled={disabled}
             className="rounded-full border border-[#e4e8eb] bg-white px-3 py-1.5 text-[12px] text-[#5f6368] transition-[color,background-color,border-color,transform] duration-150 hover:bg-[#f5f6f8] active:scale-[0.96] disabled:opacity-50"
             style={{ ["--tw-text-opacity" as string]: "1" }}
@@ -83,7 +85,7 @@ export default function ChatComposer({
       <textarea
         ref={taRef}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => { setText(e.target.value); if (fromSuggestion) setFromSuggestion(false); }}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
             e.preventDefault();

@@ -68,6 +68,7 @@ def turn_to_dict(t: models.Turn) -> dict:
         "agentAction": t.agent_action,
         "relatedProductIds": t.related_product_ids or [],
         "status": t.status or "completed",
+        "inputSource": t.input_source,
         "createdAt": iso(t.created_at),
     }
 
