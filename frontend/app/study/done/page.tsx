@@ -6,6 +6,7 @@
 // 복귀시킨다 — 수동 버튼도 함께 둔다(자동 이동이 팝업 차단 등으로 막힐 때의 안전망).
 import { useEffect, useState } from "react";
 import AgentAvatar from "@/components/chat/AgentAvatar";
+import { allowUnload } from "@/components/study/NavigationGuard";
 import { prolificCompletionUrl } from "@/lib/prolific";
 import { STUDY_UI } from "@/lib/studyI18n";
 
@@ -16,7 +17,7 @@ export default function StudyDonePage() {
     const url = prolificCompletionUrl();
     setProlificUrl(url);
     if (url) {
-      const t = setTimeout(() => { window.location.href = url; }, 3000);
+      const t = setTimeout(() => { allowUnload(); window.location.href = url; }, 3000);
       return () => clearTimeout(t);
     }
   }, []);
@@ -32,7 +33,11 @@ export default function StudyDonePage() {
         {prolificUrl ? (
           <>
             <p className="mt-4 text-xs text-slate-400">{STUDY_UI.completion.prolificRedirecting}</p>
-            <a href={prolificUrl} className="btn btn-primary mt-3 inline-block px-5 py-2">
+            <a
+              href={prolificUrl}
+              onClick={() => allowUnload()}
+              className="btn btn-primary mt-3 inline-block px-5 py-2"
+            >
               {STUDY_UI.completion.prolificReturn}
             </a>
           </>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { allowUnload } from "@/components/study/NavigationGuard";
 import { captureProlificParams, getProlificParams, prolificScreenoutUrl } from "@/lib/prolific";
 import { LIKERT_MID, SurveyQuestion } from "@/lib/survey";
 // 본실험 사전 설문 (2026-07-27). FS1의 A–F 설문은 fs1-frozen 브랜치에 그대로 남아 있다 —
@@ -116,6 +117,7 @@ export default function SurveyPage() {
                 {prolificScreenoutUrl() && (
                   <a
                     href={prolificScreenoutUrl()!}
+                    onClick={() => allowUnload()}
                     className="ml-2 font-semibold text-[#4f46e5] underline"
                   >
                     {STUDY_UI.survey.returnToProlific}
