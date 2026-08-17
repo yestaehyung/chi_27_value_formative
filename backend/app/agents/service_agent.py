@@ -169,11 +169,12 @@ async def recommend_after_resolution(
         .count() > 0
     )
     pred = None
-    try:
-        from app import rig
-        pred = rig.top_predicted_concept(db, session.id)
-    except Exception:  # noqa: BLE001
-        pred = None
+    if infers_intention(session):
+        try:
+            from app import rig
+            pred = rig.top_predicted_concept(db, session.id)
+        except Exception:  # noqa: BLE001
+            pred = None
     planner_context = planner.build_planner_context(
         recent_turns[-6:], snapshot, has_recommendations,
         _last_agent_action(db, session.id), pred,
@@ -184,10 +185,8 @@ async def recommend_after_resolution(
     # 액션과 무관하게 recommend를 실행한다(갱신된 기준으로 상품을 바로 보여주는 게 목적).
     last_user = next((t.content for t in reversed(recent_turns) if t.role == "user"), "")
     decision = await planner.fetch_plan(provider, planner_context, fallback_search_text=last_user)
-    search_text = decision.search_text or last_user or ((session.meta or {}).get("shoppingGoal") or "")
     scored, card_texts, rec_diag = await recommender.run_recommendation(
-        db, provider, session, search_text=search_text,
-        constraints_note=decision.constraints_note, recent_turns=recent_turns, snapshot=snapshot,
+        db, provider, session, recent_turns=recent_turns,
         top_k=decision.recommend_count or 5,
     )
     products = [sp.product for sp in scored]
@@ -307,13 +306,15 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     planner_context = None
     if decision is None:
         pred = None
-        try:
-            from app import rig
+        if infers_intention(session):
+            try:
+                from app import rig
 
-            # 이론층의 cross-session 가설 — 별도 tier가 아니라 플래너 컨텍스트 필드.
-            pred = rig.top_predicted_concept(db, session.id)
-        except Exception:  # noqa: BLE001
-            pred = None
+                # baseline1에는 cross-session 가설도 의도 추론이다. baseline2/ours에서만
+                # planner의 hypothesesForClarification 격리 필드로 전달한다.
+                pred = rig.top_predicted_concept(db, session.id)
+            except Exception:  # noqa: BLE001
+                pred = None
         planner_context = planner.build_planner_context(
             recent_turns[-6:], commit.snapshot, has_recommendations,
             _last_agent_action(db, session.id), pred,
@@ -382,10 +383,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     if decision.action == "recommend":
         scored, card_texts, rec_diag = await recommender.run_recommendation(
             db, provider, session,
-            search_text=decision.search_text or content.strip(),
-            constraints_note=decision.constraints_note,
             recent_turns=recent_turns,
-            snapshot=commit.snapshot,
             top_k=decision.recommend_count or 5,
         )
         products = [sp.product for sp in scored]
@@ -482,7 +480,8 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
                 id=new_id("llm"), session_id=session.id, task="rerank",
                 provider=_settings.llm_provider,
                 request={"turnId": agent_turn.id, **{k: rec_diag[k] for k in
-                         ("searchText", "constraintsNote", "poolSize", "pool", "rerankContext")}},
+                         ("searchText", "constraintsNote", "poolSize", "pool", "rerankContext",
+                          "recommendationPolicy") if k in rec_diag}},
                 response={"shownIds": rec_diag["shownIds"],
                           # 판정 행렬 진단 (2026-08-15) — 셀 감사·빈손 빈도 분석용
                           "excludedIds": rec_diag.get("excludedIds") or {},

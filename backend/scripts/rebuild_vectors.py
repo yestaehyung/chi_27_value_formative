@@ -12,11 +12,14 @@ prune해 다시 쓴다. 서버를 띄우지 않고 이 작업만 하기 위한 �
   cd backend && VC_SEED_DIR=seed_amazon PYTHONPATH=. .venv/bin/python scripts/rebuild_vectors.py
 """
 import gzip
+import hashlib
 import json
 import logging
+import math
 import os
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 BACKEND = Path(__file__).resolve().parent.parent
@@ -45,10 +48,53 @@ class P:
         self.price = d.get("price")
 
 
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _read_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+def _validate_reusable_cache(seed: Path, cache: Path, seed_manifest: dict) -> None:
+    """Do not reuse same-ID vectors built from a different text recipe/model."""
+    if not cache.exists() or not seed_manifest.get("embeddingRecipe"):
+        return
+    vector_manifest_path = seed / "product_vectors.manifest.json"
+    if not vector_manifest_path.exists():
+        raise RuntimeError(
+            f"{cache} exists without product_vectors.manifest.json; refusing to reuse unknown vectors"
+        )
+    vector_manifest = _read_json(vector_manifest_path)
+    expected = {
+        "productsSha256": seed_manifest.get("productsSha256"),
+        "embeddingRecipe": seed_manifest.get("embeddingRecipe"),
+        "embeddingModel": settings.embedding_model,
+        "embeddingDimensions": seed_manifest.get("embeddingDimensions"),
+    }
+    mismatches = {
+        key: (value, vector_manifest.get(key))
+        for key, value in expected.items()
+        if value is not None and vector_manifest.get(key) != value
+    }
+    if mismatches or vector_manifest.get("vectorCacheSha256") != sha256(cache):
+        raise RuntimeError(
+            "existing vector cache does not match this seed recipe; move it aside and rerun "
+            f"for a fresh cache (mismatches={mismatches})"
+        )
+
+
 def main() -> None:
     seed = settings.seed_dir
-    products = [P(d) for d in json.loads((seed / "products.json").read_text(encoding="utf-8"))]
+    products_path = seed / "products.json"
+    products = [P(d) for d in json.loads(products_path.read_text(encoding="utf-8"))]
     cache = seed / "product_vectors.json.gz"
+    seed_manifest = _read_json(seed / "manifest.json")
+    _validate_reusable_cache(seed, cache, seed_manifest)
     before = 0
     if cache.exists():
         before = len(json.loads(gzip.decompress(cache.read_bytes()).decode("utf-8")))
@@ -63,11 +109,41 @@ def main() -> None:
     after = json.loads(gzip.decompress(cache.read_bytes()).decode("utf-8"))
     size_mb = cache.stat().st_size / 1024 ** 2
     print(f"\n완료 — 벡터 {len(after):,}개 · {size_mb:.1f} MB")
-    missing = {p.id for p in products} - set(after)
-    if missing:
+    product_ids = {p.id for p in products}
+    missing = product_ids - set(after)
+    extra = set(after) - product_ids
+    if missing or extra:
         # 임베딩 호출이 실패하면 조용히 일부만 남는다 — 반드시 드러나야 한다.
-        print(f"⚠️ 벡터가 없는 상품 {len(missing):,}개 — 임베딩 호출이 실패했을 수 있다. 재실행하라.")
+        print(
+            f"⚠️ 벡터 id 불일치 — missing={len(missing):,}, extra={len(extra):,}; 재실행하라."
+        )
         raise SystemExit(1)
+    bad_vectors = [
+        pid
+        for pid, vector in after.items()
+        if len(vector) != embeddings._DIM or not all(math.isfinite(value) for value in vector)
+    ]
+    if bad_vectors:
+        print(f"⚠️ 차원/유한성 검증 실패 벡터 {len(bad_vectors):,}개")
+        raise SystemExit(1)
+
+    vector_manifest = {
+        "schemaVersion": "valuecommit-product-vectors/v1",
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "productsSha256": seed_manifest.get("productsSha256") or sha256(products_path),
+        "productCount": len(products),
+        "vectorCount": len(after),
+        "locale": seed_manifest.get("locale"),
+        "embeddingRecipe": seed_manifest.get("embeddingRecipe") or "legacy-product-text",
+        "embeddingModel": settings.embedding_model,
+        "embeddingDimensions": embeddings._DIM,
+        "vectorCacheSha256": sha256(cache),
+    }
+    manifest_path = seed / "product_vectors.manifest.json"
+    tmp_manifest = manifest_path.with_suffix(".tmp")
+    tmp_manifest.write_text(json.dumps(vector_manifest, indent=2) + "\n", encoding="utf-8")
+    tmp_manifest.replace(manifest_path)
+    print(f"manifest={manifest_path}")
     if size_mb >= 95:
         print("⚠️ GitHub 100MB 한도에 근접 — 커밋 전에 풀을 줄여야 한다.")
 

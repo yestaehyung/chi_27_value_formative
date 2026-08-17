@@ -935,8 +935,11 @@ def action_decision(ctx: dict) -> dict:
     base = {"searchText": search_text, "constraintsNote": ""}
     has_rec = bool(ctx.get("hasRecommendations"))
     last = ctx.get("lastAgentAction")
-    values = ctx.get("values") or {}
-    motivations = ctx.get("motivations") or {}
+    hypotheses = ctx.get("hypothesesForClarification") or {}
+    # Backward-compatible top-level fallbacks keep direct unit fixtures valid while the live
+    # planner uses the structurally separated field.
+    values = hypotheses.get("values") or ctx.get("values") or {}
+    motivations = hypotheses.get("motivations") or ctx.get("motivations") or {}
 
     if has_rec and _has(latest, *_ACCEPT_PHRASES):
         return {**base, "action": "close", "reason": "user announced a purchase decision"}
@@ -957,6 +960,84 @@ def action_decision(ctx: dict) -> dict:
     return {**base, "action": "recommend", "reason": "enough understanding to recommend"}
 
 
+def recommendation_spec(ctx: dict) -> dict:
+    """Condition-safe deterministic stand-in for the recommendation evidence compiler."""
+    utterances = []
+    for row in ctx.get("userUtterances") or []:
+        text = row.get("content") if isinstance(row, dict) else row
+        if isinstance(text, str) and text.strip():
+            utterances.append(text.strip())
+    feedback_text = []
+    for row in ctx.get("feedbackEvents") or []:
+        if not isinstance(row, dict):
+            continue
+        reason = row.get("reasonText")
+        if isinstance(reason, str) and reason.strip():
+            feedback_text.append(reason.strip())
+
+    criteria = [c for c in (ctx.get("eligibleCriteria") or []) if isinstance(c, dict)]
+    raw = " ".join([*utterances, *feedback_text])
+    from app.products.scoring import parse_price_range
+
+    price_min, price_max = parse_price_range(raw)
+    # English study prices are stored as KRW using the fixed build/display conversion.
+    usd_amounts = [
+        float(a or b)
+        for a, b in re.findall(
+            r"\$\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*(?:USD|dollars?)\b",
+            raw,
+            flags=re.IGNORECASE,
+        )
+        if a or b
+    ]
+    if usd_amounts:
+        from app.core.locale import KRW_PER_USD
+
+        won = [round(amount * KRW_PER_USD) for amount in usd_amounts]
+        low_raw = raw.lower()
+        if len(won) >= 2 and any(k in low_raw for k in ("between", "from", "range")):
+            price_min, price_max = min(won), max(won)
+        elif any(k in low_raw for k in ("at least", "minimum", "more than", "over ")):
+            price_min, price_max = won[0], None
+        else:
+            price_min, price_max = None, won[-1]
+
+    hard_constraints: list[str] = []
+    for criterion in criteria:
+        must_have = str(criterion.get("mustHave") or "").strip()
+        if must_have and must_have not in hard_constraints:
+            hard_constraints.append(must_have)
+        cmin, cmax = criterion.get("priceMin"), criterion.get("priceMax")
+        try:
+            if cmin is not None:
+                price_min = int(float(cmin))
+        except (TypeError, ValueError):
+            pass
+        try:
+            if cmax is not None:
+                price_max = int(float(cmax))
+        except (TypeError, ValueError):
+            pass
+
+    category = str(ctx.get("category") or "").strip()
+    scenario = str(ctx.get("scenarioGoal") or "").strip()
+    # Preserve the established deterministic retrieval fixture: raw participant utterances are
+    # the condition-neutral query rewrite; eligible criteria still act through structured filters
+    # and the rerank matrix. Real providers may compile positive eligible criteria into searchText.
+    search_text = " ".join(utterances).strip() or category or scenario
+    # Utterances and eligible criteria are separate rerank fields. Only explicit feedback reasons
+    # need a compact note in the deterministic mock; copying every utterance into ``note`` would
+    # turn ordinary soft preferences into one hard criterion.
+    constraints_note = " | ".join(feedback_text)
+    return {
+        "searchText": search_text,
+        "constraintsNote": constraints_note,
+        "hardConstraints": hard_constraints,
+        "priceMin": price_min,
+        "priceMax": price_max,
+    }
+
+
 def product_profile(ctx: dict) -> dict:
     """결정론 상품 프로필 (오프라인 배치용 task의 mock 계약) — 주어진 텍스트를 그대로
     구조에 얹는다 (환각 0). 실 provider는 LLM이 정규화·해석한다."""
@@ -966,6 +1047,102 @@ def product_profile(ctx: dict) -> dict:
         "audience": "성인 공용",
         "keyAttributes": [],
         "caveats": [],
+    }
+
+
+def catalog_enrichment(ctx: dict) -> dict:
+    product = ctx.get("baseProduct") or {}
+    title = str(product.get("title") or product.get("fullTitle") or "상품")[:100]
+    description = str(product.get("description") or title)[:1000]
+    category = str(product.get("category") or "")
+    features = [category] if category else []
+    return {
+        "displayTitleKo": title,
+        "displayDescriptionKo": description,
+        "featuresKo": features,
+        "imageDescriptionKo": "검수용 상품 이미지" if ctx.get("imageUrl") else None,
+    }
+
+
+def catalog_visual_description(ctx: dict) -> dict:
+    return {"imageDescriptionKo": "검수용 상품 이미지" if ctx.get("imageUrl") else "이미지 없음"}
+
+
+def amazon_retrieval_profile(ctx: dict) -> dict:
+    product = ctx.get("baseProduct") or {}
+    title = str(product.get("title") or "상품")[:120]
+    description = str(product.get("description") or title)[:1200]
+    category = str(product.get("category") or "").strip()
+    return {
+        "titleToDisplayKo": title,
+        "descriptionToDisplayKo": description,
+        "derivedFeatures": [category] if category else [],
+        "visualFeatures": ["검수용 상품 이미지"] if ctx.get("imageUrl") else [],
+    }
+
+
+def amazon_retrieval_text_profile(ctx: dict) -> dict:
+    profile = amazon_retrieval_profile(ctx)
+    return {
+        "titleToDisplayKo": profile["titleToDisplayKo"],
+        "descriptionToDisplayKo": profile["descriptionToDisplayKo"],
+        "derivedFeatures": profile["derivedFeatures"],
+    }
+
+
+def amazon_retrieval_visual_features(ctx: dict) -> dict:
+    return {"visualFeatures": ["검수용 상품 이미지"] if ctx.get("imageUrl") else []}
+
+
+def english_product_evidence(ctx: dict) -> dict:
+    source = ctx.get("sourceProduct") or {}
+    description = str(source.get("descriptionEn") or "")
+    return {
+        "productType": "Product",
+        "keyAttributes": [description[:80]] if description else [],
+        "compatibility": [],
+        "dimensions": [],
+        "material": [],
+        "batteryOrSpecification": [],
+        "audience": None,
+        "caveats": [],
+    }
+
+
+def study_english_product_profile(ctx: dict) -> dict:
+    category = str(ctx.get("category") or "monitor")
+    product_type = {
+        "노트북": "Laptop",
+        "이어폰": "Earbuds",
+        "헤드폰": "Headphones",
+        "키보드·마우스": "Keyboard",
+        "모니터": "Monitor",
+        "스마트워치": "Smartwatch",
+    }.get(category, "Product")
+    return {
+        "decision": "accept",
+        "reasonCodes": [],
+        "productKind": "primary_product",
+        "sourceConsistency": "consistent",
+        "displayTitleEn": f"Mock Study {product_type}",
+        "displayDescriptionEn": (
+            f"This {product_type.lower()} is represented by consistent catalog and visual evidence."
+        ),
+        "evidenceFeaturesEn": [product_type],
+    }
+
+
+def study_english_product_audit(ctx: dict) -> dict:
+    candidate = ctx.get("candidateEnglishCard") or {}
+    return {
+        "decision": "accept",
+        "reasonCodes": [],
+        "correctionsApplied": [],
+        "finalTitleEn": candidate.get("displayTitleEn") or "Mock Study Monitor",
+        "finalDescriptionEn": candidate.get("displayDescriptionEn") or (
+            "This monitor has catalog and image evidence for its listed physical attributes."
+        ),
+        "finalEvidenceFeaturesEn": candidate.get("evidenceFeaturesEn") or ["monitor"],
     }
 
 
@@ -1004,6 +1181,7 @@ def topic_reinterpretation(ctx: dict) -> dict:
 
 
 TASK_HANDLERS = {
+    "recommendation_spec": recommendation_spec,
     "topic_extraction": topic_extraction,
     "topic_reinterpretation": topic_reinterpretation,
     "anchor_mapping": anchor_mapping,
@@ -1026,4 +1204,12 @@ TASK_HANDLERS = {
     "state_summary": state_summary,
     "action_decision": action_decision,
     "product_profile": product_profile,
+    "catalog_enrichment": catalog_enrichment,
+    "catalog_visual_description": catalog_visual_description,
+    "amazon_retrieval_profile": amazon_retrieval_profile,
+    "amazon_retrieval_text_profile": amazon_retrieval_text_profile,
+    "amazon_retrieval_visual_features": amazon_retrieval_visual_features,
+    "english_product_evidence": english_product_evidence,
+    "study_english_product_profile": study_english_product_profile,
+    "study_english_product_audit": study_english_product_audit,
 }

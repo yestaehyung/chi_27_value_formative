@@ -202,16 +202,31 @@ export default function CurrentStudySession() {
     if (action === "show_evidence") {
       setEvidenceTopic(topicId);
       api.logInspect(sessionId, topicId).catch(() => {}); // DG3: 근거 확인 시점 로깅
-      return;
+      return true;
     }
+    setBusy(true);
     try {
       const res = await api.chipAction(topicId, action, manualLabel);
       setState(res.newPreferenceState);
+      if (res.recommendTurn) {
+        setTurns((prev) => prev.some((t) => t.id === res.recommendTurn.id)
+          ? prev : [...prev, res.recommendTurn]);
+        setImpressionsByTurn((prev) => ({
+          ...prev,
+          [res.recommendTurn.id]: res.recommendedProducts ?? [],
+        }));
+        setChipSuggestions(null);
+        loadChipSuggestions();
+      }
       showToast(res.message);
+      return true;
     } catch (e) {
       console.error(e);
+      return false;
+    } finally {
+      setBusy(false);
     }
-  }, [sessionId]);
+  }, [sessionId, loadChipSuggestions]);
 
   const copyConversation = useCallback(async () => {
     const label = (r: string) => (r === "user" ? tr("나", "Me") : tr("에이전트", "Agent"));

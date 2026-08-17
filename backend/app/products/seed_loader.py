@@ -1,12 +1,85 @@
 """Load seed products / scenarios / personas (spec §23, §12)."""
+import hashlib
 import json
 from functools import lru_cache
+from pathlib import Path
 
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.config import settings
 from app.db import models
 from app.products.cue_extractor import build_cue_summary
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def validate_seed_bundle() -> dict | None:
+    """Fail closed when a versioned seed is paired with the wrong runtime.
+
+    Legacy seeds without ``manifest.json`` keep their existing behavior.  Versioned
+    English seeds declare their locale and vector recipe so an English planner cannot
+    accidentally query a Korean index, and app startup cannot silently issue a large
+    paid embedding job because the intended cache was omitted from deployment.
+    """
+    seed = settings.seed_dir
+    products_path = seed / "products.json"
+    if not products_path.is_file():
+        raise RuntimeError(f"seed products missing: {products_path}")
+
+    manifest_path = seed / "manifest.json"
+    if not manifest_path.is_file():
+        return None
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    locale = (manifest.get("locale") or "").strip().lower()
+    if not locale:
+        return manifest
+    if locale != settings.study_locale:
+        raise RuntimeError(
+            f"seed/runtime locale mismatch: seed={locale!r}, VC_STUDY_LOCALE={settings.study_locale!r}"
+        )
+
+    expected_products_sha = manifest.get("productsSha256")
+    if expected_products_sha and _sha256(products_path) != expected_products_sha:
+        raise RuntimeError(f"seed products checksum mismatch: {products_path}")
+
+    if manifest.get("requiresVectorCache") and settings.llm_provider != "mock":
+        vector_path = seed / "product_vectors.json.gz"
+        vector_manifest_path = seed / "product_vectors.manifest.json"
+        if not vector_path.is_file() or not vector_manifest_path.is_file():
+            raise RuntimeError(
+                "versioned seed requires product_vectors.json.gz and "
+                "product_vectors.manifest.json; run scripts/rebuild_vectors.py before startup"
+            )
+        vector_manifest = json.loads(vector_manifest_path.read_text(encoding="utf-8"))
+        checks = {
+            "productsSha256": expected_products_sha,
+            "productCount": manifest.get("productCount"),
+            "locale": locale,
+            "embeddingRecipe": manifest.get("embeddingRecipe"),
+            "embeddingModel": settings.embedding_model,
+            "embeddingDimensions": manifest.get("embeddingDimensions"),
+        }
+        mismatches = {
+            key: (expected, vector_manifest.get(key))
+            for key, expected in checks.items()
+            if expected is not None and vector_manifest.get(key) != expected
+        }
+        if vector_manifest.get("vectorCount") != manifest.get("productCount"):
+            mismatches["vectorCount"] = (
+                manifest.get("productCount"),
+                vector_manifest.get("vectorCount"),
+            )
+        if vector_manifest.get("vectorCacheSha256") != _sha256(vector_path):
+            mismatches["vectorCacheSha256"] = ("current vector file", "checksum mismatch")
+        if mismatches:
+            raise RuntimeError(f"seed/vector manifest mismatch: {mismatches}")
+    return manifest
 
 
 def reseed_products(db: DbSession) -> int:
@@ -175,13 +248,15 @@ def get_scenario(scenario_id: str) -> dict | None:
     # 시나리오다. 여기서 id로부터 복원해야 세션 생성·조회·연구자 뷰가 전부 같은 모양을
     # 본다 — 조회 경로가 {}를 돌려주면 프론트 설문 치환이 "이 상품군" 폴백으로 떨어진다.
     if (scenario_id or "").startswith("cat:"):
+        from app.core.locale import L
+
         category = scenario_id[len("cat:"):]
         return {
             "id": scenario_id,
             "title": category,
             "initialUserNeed": "",
             "targetCategory": category,
-            "context": "참가자 선택 카테고리",
+            "context": L("참가자 선택 카테고리", "Participant-selected category"),
         }
     return next((s for s in load_scenarios() if s["id"] == scenario_id), None)
 

@@ -30,8 +30,10 @@ construction in `app/preference_commit/`.
 - The LLM action vocabulary is exactly `recommend`, `clarify`, `answer`, `close`.
 - `show_conflict` is a separate DB-fact structural guard and takes precedence
   when a direct unresolved conflict exists.
-- `recommend` provides a positive, standalone `searchText` plus a
-  `constraintsNote` for budgets, requirements, and dislikes.
+- `recommend` may provide an advisory positive `searchText` and `constraintsNote`, but execution
+  rebuilds the authoritative specification through `recommendation_policy.py`. That compiler may
+  read only raw participant evidence and condition-eligible topics; it must never read planner
+  hypotheses.
 - The planner never selects or receives product IDs; product choice belongs to
   `recommender`.
 - `answer` and `close` require prior recommendations. Do not allow consecutive
@@ -43,8 +45,9 @@ construction in `app/preference_commit/`.
   is `confirmed` or `corrected_by_user`.
 - Never rank directly from unconfirmed anchor scores, motivation scores, latent
   hypotheses, rejected topics, or inactive topics.
-- Apply hard constraints during retrieval, then semantic constraints during
-  reranking. Keep the retrieval pool and rerank diagnostics auditable.
+- Build one `RecommendationPolicy` and apply its hard constraints during retrieval and its same
+  eligible criteria during semantic reranking. Keep the policy, retrieval pool, and rerank
+  diagnostics auditable.
 - Do not fill a short compliant result set with excluded products. If no product
   complies, expose only capped near misses and carry each mismatch reason into
   both the reply context and its product card.

@@ -58,6 +58,13 @@ accept 매칭 → 조기 close). close/answer 판단은 문맥 판단이므로 L
 
 ## 매개변수화된 액션 (플래너가 쿼리를 "하는" 게 아니라 인자를 내는 것)
 
+> **2026-08-17 evidence-policy 보완:** 아래 `searchText`/`constraintsNote`는 플래너의
+> 액션 판단·진단용 제안으로 유지하지만 추천 실행의 권위 있는 입력은 아니다. 플래너는
+> 확인 질문을 위해 미확인 가설을 볼 수 있으므로, recommender가 직접 증거와 조건상 허용된
+> 토픽만 받는 `recommendation_spec`으로 사양을 다시 만들고 하나의
+> `RecommendationPolicy`를 검색과 rerank에 함께 적용한다. 상세 설계는
+> `docs/plans/2026-08-17-recommendation-evidence-policy-design.md`를 따른다.
+
 EAR의 Action이 ask(어느 속성)까지 한 정책에서 내듯, 현행 clarify가 probe
 dimension+question을 같은 호출에서 저작하듯 — recommend도 인자를 갖는다:
 

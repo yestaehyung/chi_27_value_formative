@@ -4,8 +4,8 @@
 답변칩·충돌 카드·카드 이유)은 프롬프트 지시 주입으로(prompts.EN_DIRECTIVES),
 결정론 템플릿·폴백은 L(ko, en)으로 전환한다.
 
-연구 로그·내부 계약(kind 어휘, searchText 등)은 언어와 무관하게 유지된다 —
-특히 searchText는 검색 인덱스(한국어 임베딩·FTS)와 정합해야 하므로 항상 한국어다.
+연구 로그와 kind 같은 내부 계약은 언어와 무관하게 유지된다. searchText는 검색
+인덱스와 같은 언어여야 하므로 영어 스터디에서는 영어 전용 시드와 함께 영어로 쓴다.
 """
 from app.core.config import settings
 

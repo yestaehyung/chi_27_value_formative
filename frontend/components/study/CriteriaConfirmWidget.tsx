@@ -7,9 +7,9 @@
 // presentation "inline"  — 안 D: 추천 아래 붙는 확인 카드 (라벨 "이해 확인")
 // presentation "question" — 안 E: 아바타 + 역할 라벨이 붙는 독립 질문 턴
 //
-// 상태는 위젯이 소유한다: 달라요 → onReject 즉시 호출(서버 반영) + 인라인 수정 열림.
-// reject되어 chips에서 사라진 칩은 held로 잡아 수정이 끝날 때까지 행을 유지한다.
-// 취소해도 reject는 이미 반영된 상태로 남는다(의도된 동작 — "달라요"는 사실 신호).
+// 상태는 위젯이 소유한다: 달라요 → 인라인 수정만 열고, 저장하면 edit_label 1회로 확정한다.
+// 저장 전 reject를 보내면 자동 재추천이 두 번 발생하므로 중간 상태는 서버에 쓰지 않는다.
+// 취소는 "달라요" 자체를 최종 거절로 기록하고 reject 기준으로 한 번만 재추천한다.
 
 import { useEffect, useRef, useState } from "react";
 import { PreferenceChip } from "@/lib/types";
@@ -35,9 +35,9 @@ export default function CriteriaConfirmWidget({
   initialEditingId?: string; // 데모 프리셋용 — 처음부터 수정 진행 중 상태로
 }) {
   const [pending, setPending] = useState<Record<string, boolean>>({});
-  const [held, setHeld] = useState<PreferenceChip | null>(null); // 수정 중인 칩 (reject 후에도 행 유지)
+  const [held, setHeld] = useState<PreferenceChip | null>(null); // 수정 중인 칩
   const [editText, setEditText] = useState("");
-  const [editReady, setEditReady] = useState(false); // reject 서버 반영 후에만 저장 허용
+  const [editReady, setEditReady] = useState(false);
   const inFlight = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -69,11 +69,13 @@ export default function CriteriaConfirmWidget({
     if (held) return;
     setHeld(chip);
     setEditText(chip.label);
-    setEditReady(false);
-    run(chip.id, () => onReject(chip.id)).then((ok) => {
-      if (ok) setEditReady(true);
-      else setHeld(null);
-    });
+    setEditReady(true);
+  };
+
+  const cancelCorrection = async () => {
+    if (!held) return;
+    const ok = await run(held.id, () => onReject(held.id));
+    if (ok) setHeld(null);
   };
 
   const save = async () => {
@@ -102,8 +104,7 @@ export default function CriteriaConfirmWidget({
               autoFocus
               className="min-w-0 flex-1 basis-36 rounded-lg border border-[#e4e8eb] px-2 py-1.5 text-xs focus:border-[#4f46e5] focus:outline-none"
             />
-            {/* 주의: 취소해도 '달라요'(reject)는 이미 반영된 상태 */}
-            <button className="btn px-2.5 py-1 text-xs" disabled={busy} onClick={() => setHeld(null)}>
+            <button className="btn px-2.5 py-1 text-xs" disabled={busy} onClick={cancelCorrection}>
               취소
             </button>
             <button

@@ -67,6 +67,17 @@ class LLMProvider:
     ) -> Dict[str, Any]:
         raise NotImplementedError
 
+    async def generate_json_with_image(
+        self,
+        image_url: str,
+        schema: Optional[Dict[str, Any]] = None,
+        temperature: float = 0.1,
+        max_tokens: int = 1500,
+        task: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        raise NotImplementedError
+
     async def embed(self, texts: List[str]) -> List[List[float]]:
         raise NotImplementedError
 
@@ -85,6 +96,13 @@ class MockLLMProvider(LLMProvider):
         if handler is None:
             return {}
         return handler(context or {})
+
+    async def generate_json_with_image(self, image_url, schema=None, temperature=0.1,
+                                       max_tokens=1500, task=None, context=None) -> Dict[str, Any]:
+        handler = mock_rules.TASK_HANDLERS.get(task or "")
+        if handler is None:
+            return {}
+        return handler({**(context or {}), "imageUrl": image_url})
 
     async def embed(self, texts: List[str]) -> List[List[float]]:
         # Cheap deterministic bag-of-character embedding, good enough for MVP dedup.
@@ -173,6 +191,27 @@ class OpenAIProvider(LLMProvider):
         logging.getLogger("llm").info("task=%s raw=%s", task, text[:500].replace("\n", " "))
         return out
 
+    async def generate_json_with_image(self, image_url, schema=None, temperature=0.1,
+                                       max_tokens=1500, task=None, context=None) -> Dict[str, Any]:
+        from app.llm.prompts import FORMAT_BY_TASK, SYSTEM_BY_TASK, render_user_context, system_for
+
+        content = render_user_context(context or {})
+        format_instruction = FORMAT_BY_TASK.get(task or "", "")
+        if format_instruction:
+            content += "\n" + format_instruction + "\n\n반드시 유효한 JSON 객체로만 응답하라."
+        msgs = []
+        if task in SYSTEM_BY_TASK:
+            msgs.append({"role": "system", "content": system_for(task)})
+        msgs.append({
+            "role": "user",
+            "content": [
+                {"type": "text", "text": content},
+                {"type": "image_url", "image_url": {"url": image_url}},
+            ],
+        })
+        text = await self._call(msgs, max_tokens, json_mode=True, temperature=temperature)
+        return extract_json(text)
+
     async def embed(self, texts: List[str]) -> List[List[float]]:
         resp = await shared_async_client().post(
             "https://api.openai.com/v1/embeddings",
@@ -203,6 +242,21 @@ class DeepSeekProvider(OpenAIProvider):
             raise RuntimeError("DEEPSEEK_API_KEY is not set")
 
     def _augment_payload(self, payload: Dict[str, Any]) -> None:
+        """Configure the active OpenAI-compatible model's reasoning protocol.
+
+        Qwen 3.5 is served through the same gateway but uses vLLM's
+        ``chat_template_kwargs`` rather than DeepSeek's ``thinking`` field.
+        Sending the latter made the visual JSON request return an empty body.
+        """
+        active_model = MODEL_OVERRIDE.get() or self.model
+        if active_model.lower().startswith("qwen"):
+            existing_template_kwargs = payload.get("chat_template_kwargs", {})
+            payload["chat_template_kwargs"] = {
+                **existing_template_kwargs,
+                "enable_thinking": False,
+            }
+            return
+
         """DeepSeek V4 thinking 토글 (config). off면 reasoning 토큰 생성을 끈다 (4~8배 빠름).
         on이면 reasoning_effort를 함께 보내고, thinking 모드가 무시하는 sampling 파라미터를 제거한다
         (docs: thinking 시 temperature/top_p/presence_penalty/frequency_penalty 무효). 미지정이면 API 기본값."""

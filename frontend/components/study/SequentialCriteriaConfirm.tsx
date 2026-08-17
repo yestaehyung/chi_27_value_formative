@@ -63,10 +63,10 @@ export default function SequentialCriteriaConfirm({
 
   const startReject = async () => {
     if (!current || busy) return;
-    setBusy(true);
-    const ok = await onReject(current.id);
-    setBusy(false);
-    if (ok) { setEditing(true); setEditText(current.label); }
+    // 저장 전 reject를 보내면 자동 재추천이 reject/edit 두 번 발생한다. 편집을 먼저 받고
+    // saveEdit 한 번으로 corrected_by_user 상태를 만든다.
+    setEditing(true);
+    setEditText(current.label);
   };
 
   const saveEdit = async () => {
@@ -77,11 +77,16 @@ export default function SequentialCriteriaConfirm({
     if (ok) { setAnswered((a) => ({ ...a, [current.id]: { kind: "edited", label: editText.trim() } })); advance(); }
   };
 
-  const escapeToChat = () => {
-    if (!current) return;
-    setAnswered((a) => ({ ...a, [current.id]: { kind: "handoff" } }));
-    onEscapeToChat?.(current);
-    advance();
+  const escapeToChat = async () => {
+    if (!current || busy) return;
+    setBusy(true);
+    const ok = await onReject(current.id);
+    setBusy(false);
+    if (ok) {
+      setAnswered((a) => ({ ...a, [current.id]: { kind: "handoff" } }));
+      onEscapeToChat?.(current);
+      advance();
+    }
   };
 
   return (

@@ -54,4 +54,8 @@ backend/seed_amazon/archive_28cat_*.json.gz
 backend/seed_amazon/*.bak-*
 backend/seed_amazon/*.pre-profile.bak
 seed_amazon_full/
+# 영어 전용 46,928개 임베딩 캐시(약 213MB)는 Railway/local volume artifact.
+# seed/벡터 manifest는 추적 가능하지만 캐시 본체는 GitHub 단일 파일 한도를 넘는다.
+backend/seed_en_v1/product_vectors.json.gz
+backend/exports_en_v1/
 screenshots/

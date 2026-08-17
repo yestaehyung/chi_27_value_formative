@@ -49,6 +49,23 @@ CATEGORY_LABELS: dict[str, dict[str, str]] = {
     "스마트워치": {"emoji": "⌚", "blurb": "운동·알림·일상용 스마트워치"},
     "커피테이블": {"emoji": "🛋️", "blurb": "거실에 둘 커피테이블"},
     "책장": {"emoji": "📚", "blurb": "책과 소품을 정리할 책장"},
+    # 영어 전용 seed_en_v1의 카테고리. DB가 영어 카테고리를 담으므로 표시 메타도
+    # 같은 키를 사용해야 빈 설명/기본 아이콘으로 폴백하지 않는다.
+    "Bluetooth Speakers": {"emoji": "🔊", "blurb": "Wireless speakers for home or outdoor use"},
+    "T-shirts": {"emoji": "👕", "blurb": "T-shirts for everyday wear"},
+    "Desks": {"emoji": "🪑", "blurb": "Desks for work or study"},
+    "Office Chairs": {"emoji": "💺", "blurb": "Chairs for long work sessions"},
+    "Laptops": {"emoji": "💻", "blurb": "Laptops for work or school"},
+    "Sweaters & Cardigans": {"emoji": "🧶", "blurb": "Sweaters and cardigans for cooler weather"},
+    "Shirts & Blouses": {"emoji": "👔", "blurb": "Shirts and blouses for a polished look"},
+    "Hoodies & Sweatshirts": {"emoji": "🧥", "blurb": "Casual hoodies and sweatshirts"},
+    "Jeans": {"emoji": "👖", "blurb": "Denim for everyday wear"},
+    "Pants": {"emoji": "👖", "blurb": "Pants for work or everyday wear"},
+    "Earphones & Earbuds": {"emoji": "🎧", "blurb": "Wired or wireless earbuds for music and calls"},
+    "Headphones": {"emoji": "🎧", "blurb": "Headphones for home or travel"},
+    "Keyboards & Mice": {"emoji": "⌨️", "blurb": "Keyboards and mice for work or gaming"},
+    "Monitors": {"emoji": "🖥️", "blurb": "Monitors for work, gaming, or video"},
+    "Smartwatches": {"emoji": "⌚", "blurb": "Smartwatches for fitness, alerts, and everyday use"},
 }
 
 

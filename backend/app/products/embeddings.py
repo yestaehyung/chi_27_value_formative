@@ -125,9 +125,11 @@ def ensure_product_vectors(products) -> None:
     cache_gz = settings.seed_dir / "product_vectors.json.gz"
     cache = settings.seed_dir / "product_vectors.json"
     cached: dict[str, list[float]] = {}
+    loaded_from_gzip = False
     try:
         if cache_gz.exists():
             cached = json.loads(gzip.decompress(cache_gz.read_bytes()).decode("utf-8"))
+            loaded_from_gzip = True
         elif cache.exists():
             cached = json.loads(cache.read_text(encoding="utf-8"))
     except Exception as e:  # noqa: BLE001
@@ -148,6 +150,12 @@ def ensure_product_vectors(products) -> None:
     _loaded = True
     # 디스크 캐시를 현재 상품 id 집합으로 갱신 (삭제된 id prune, 새 id 포함).
     # 6자리 반올림(유사도 오차 ~1e-6) + gzip — 항상 .json.gz로 쓴다.
+    # 완전히 일치하는 gzip 캐시는 다시 쓰지 않는다. gzip 헤더 시각만 바뀌어도 버전드
+    # 시드의 vectorCacheSha256가 깨지고, 200MB 캐시를 매 기동마다 재압축하게 된다.
+    current_ids = {pid for pid, _ in items}
+    cache_needs_write = bool(missing) or set(cached) != current_ids or not loaded_from_gzip
+    if not cache_needs_write:
+        return
     try:
         payload = {pid: [round(x, 6) for x in _product_vectors[pid]]
                    for pid, _ in items if pid in _product_vectors}

@@ -78,8 +78,8 @@ class Settings:
         # 전체 마운트(로컬 개발·연구). 프론트의 APP_MODE=study와 짝으로 설정한다.
         self.app_mode = os.environ.get("VC_APP_MODE", "").strip().lower()
         # 참가자 화면 언어 (ko | en) — en이면 참가자 대면 LLM 산출물·템플릿이 영어로
-        # 전환된다 (core/locale.py + prompts.EN_DIRECTIVES). searchText 등 검색 내부
-        # 계약은 언어와 무관하게 한국어 유지. 프론트의 NEXT_PUBLIC_STUDY_LOCALE와 짝.
+        # 전환된다 (core/locale.py + prompts.EN_DIRECTIVES). en 모드는 영어 전용 시드와
+        # 영어 searchText를 한 묶음으로 사용한다. 프론트의 NEXT_PUBLIC_STUDY_LOCALE와 짝.
         self.study_locale = os.environ.get("VC_STUDY_LOCALE", "ko").strip().lower()
         # 참가자 카테고리 선택 화면에 노출할 카테고리 (쉼표 구분). 미설정이면 DB의 전체
         # 카테고리 노출(기존 동작). 풀에는 더 많은 카테고리를 두고(검색·향후 확장용)

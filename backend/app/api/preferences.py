@@ -1,4 +1,6 @@
 """User correction of preference chips (spec §31) + evidence drawer (spec §18.6)."""
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DbSession
 
@@ -100,9 +102,14 @@ async def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Dep
         _touch_concepts("rejected")
     elif req.action == "increase_priority":
         topic.priority = PRIORITY_UP.get(topic.priority, topic.priority)
-        topic.status = "confirmed"
+        topic.status = "corrected_by_user"
+        topic.confidence = 1.0
+        _touch_concepts("confirmed")
     elif req.action == "decrease_priority":
         topic.priority = PRIORITY_DOWN.get(topic.priority, topic.priority)
+        topic.status = "corrected_by_user"
+        topic.confidence = 1.0
+        _touch_concepts("confirmed")
     elif req.action == "edit_label":
         if not req.manualLabel:
             raise HTTPException(400, "manualLabel required for edit_label")
@@ -148,7 +155,9 @@ async def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Dep
     # 즉 확인 행동은 있는데 그게 아무것도 바꾸지 않는 상태였다. FS1이 관찰하려는 것이
     # 바로 '수정 행동'이므로, 그 행동에 효과를 준다.
     # direct는 건드리지 않는다 — 그건 전용 충돌 카드로 명시적으로 해소해야 한다.
-    if req.action in ("confirm", "reject", "edit_label"):
+    if req.action in (
+        "confirm", "reject", "increase_priority", "decrease_priority", "edit_label",
+    ):
         from datetime import datetime, timezone
 
         related = (
@@ -169,11 +178,44 @@ async def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Dep
     db.flush()
     snapshot = build_snapshot(db, session)
     db.commit()
-    return {
+    response = {
         "updatedTopic": serializers.topic_to_dict(topic),
         "newPreferenceState": serializers.snapshot_to_dict(snapshot),
         "message": MESSAGES.get(req.action, L("반영했어요.", "Done.")),
     }
+
+    # ours의 조작은 "사용자 수정 → 추천 변화"가 같은 상호작용 안에서 관찰돼야 한다.
+    # 수정 저장은 이미 commit되어 락이 풀린 뒤이므로, 기존 conflict 해소와 동일한
+    # LLM-first/write-last 재추천 경로를 안전하게 재사용한다. direct conflict가 열려 있으면
+    # 상충 상태 위에 추천하지 않고 전용 conflict card 해소를 우선한다.
+    correction_actions = {
+        "confirm", "reject", "increase_priority", "decrease_priority", "edit_label",
+    }
+    direct_open = (
+        db.query(models.PreferenceConflict)
+        .filter(models.PreferenceConflict.session_id == session.id)
+        .filter(models.PreferenceConflict.severity == "direct")
+        .filter(models.PreferenceConflict.status.in_(("open", "shown_to_user")))
+        .count() > 0
+    )
+    if req.action in correction_actions and not direct_open:
+        try:
+            from app.agents import service_agent
+
+            rec_turn, impressions, _ = await service_agent.recommend_after_resolution(
+                db, session, snapshot,
+            )
+            response["recommendTurn"] = serializers.turn_to_dict(rec_turn)
+            response["recommendedProducts"] = [
+                serializers.impression_to_dict(i, db.get(models.Product, i.product_id))
+                for i in impressions
+            ]
+        except Exception:  # noqa: BLE001 - correction is durable even if refresh fails
+            logging.exception("post-correction recommend failed")
+            response["recommendationRefreshFailed"] = True
+    elif req.action in correction_actions and direct_open:
+        response["recommendationDeferred"] = "open_direct_conflict"
+    return response
 
 
 def build_topic_evidence(db: DbSession, topic: models.IntentionTopic) -> list[dict]:

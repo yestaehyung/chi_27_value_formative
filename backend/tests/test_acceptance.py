@@ -226,14 +226,62 @@ def test_chip_correction(client):
     target = chips[0]
     r = client.post(f"/api/preferences/chips/{target['id']}/action", json={"action": "reject"})
     assert r.status_code == 200
-    new_chips = r.json()["newPreferenceState"]["userVisibleSummary"]["chips"]
+    body = r.json()
+    new_chips = body["newPreferenceState"]["userVisibleSummary"]["chips"]
     assert all(c["id"] != target["id"] for c in new_chips)
+    assert body["recommendTurn"]["agentAction"] == "recommend"
+    assert "recommendedProducts" in body
 
     # evidence drawer
     other = next(c for c in chips if c["id"] != target["id"])
     r = client.get(f"/api/preferences/topics/{other['id']}/evidence")
     assert r.status_code == 200
     assert len(r.json()["evidence"]) >= 1
+
+
+def test_priority_correction_is_user_backed_and_refreshes_recommendations(client):
+    sid = new_session(client)
+    out = say(client, sid, "운동 좋아하는 친구에게 줄 스마트워치를 찾고 있어요.")
+    target = out["preferenceState"]["userVisibleSummary"]["chips"][0]
+
+    r = client.post(
+        f"/api/preferences/chips/{target['id']}/action",
+        json={"action": "decrease_priority"},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["updatedTopic"]["status"] == "corrected_by_user"
+    assert body["updatedTopic"]["confidence"] == 1.0
+    assert body["recommendTurn"]["agentAction"] == "recommend"
+    assert "recommendedProducts" in body
+
+
+@pytest.mark.parametrize(
+    ("action", "manual_label", "expected_status"),
+    [
+        ("confirm", None, "confirmed"),
+        ("increase_priority", None, "corrected_by_user"),
+        ("edit_label", "배터리가 오래 가는 제품", "corrected_by_user"),
+    ],
+)
+def test_every_chip_correction_refreshes_recommendations(
+    client, action, manual_label, expected_status,
+):
+    sid = new_session(client)
+    out = say(client, sid, "운동 좋아하는 친구에게 줄 스마트워치를 찾고 있어요.")
+    target = out["preferenceState"]["userVisibleSummary"]["chips"][0]
+    payload = {"action": action}
+    if manual_label is not None:
+        payload["manualLabel"] = manual_label
+
+    r = client.post(f"/api/preferences/chips/{target['id']}/action", json=payload)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["updatedTopic"]["status"] == expected_status
+    if manual_label is not None:
+        assert body["updatedTopic"]["label"] == manual_label
+    assert body["recommendTurn"]["agentAction"] == "recommend"
+    assert "recommendedProducts" in body
 
 
 def test_exports(client):

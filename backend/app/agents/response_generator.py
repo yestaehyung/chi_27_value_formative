@@ -297,7 +297,10 @@ async def rerank_by_intent(
     criteria = [dict(c) for c in (intent_context.get("criteria") or [])]
     for ci, c in enumerate(criteria):
         c["cid"] = f"c{ci + 1}"
-    hard_cids = {c["cid"] for c in criteria if c.get("kind") in ("constraint", "avoidance")}
+    hard_cids = {
+        c["cid"] for c in criteria
+        if c.get("kind") in ("constraint", "avoidance") or c.get("priority") == "must_have"
+    }
     label_by_cid = {c["cid"]: (c.get("label") or c["cid"]) for c in criteria}
     if (intent_context.get("statedConstraintsNote") or "").strip():
         hard_cids.add("note")
@@ -391,6 +394,30 @@ async def rerank_by_intent(
     for i in range(len(scored)):
         if i not in order:
             order.append(i)
+
+    # 사용자 priority를 LLM의 말뿐인 지시가 아니라 결정론적 2차 정렬로 집행한다.
+    # hard는 위에서 이미 제외/확인불가 처리. soft criterion은 행렬의 vio/unk만 벌점으로
+    # 읽고, 누락 셀은 ok로 본다(프롬프트 계약). 같은 벌점이면 LLM order를 그대로 보존한다.
+    # 따라서 priority 변경은 판정 사실을 바꾸지 않고, 그 사실의 순위 영향만 바꾼다.
+    priority_weight = {"must_have": 4.0, "high": 3.0, "medium": 2.0, "low": 1.0}
+    original_position = {idx: pos for pos, idx in enumerate(order)}
+
+    def _soft_penalty(idx: int) -> float:
+        cells = matrix.get("verdicts", {}).get(by_index[idx].product.id, {})
+        total = 0.0
+        for criterion in criteria:
+            cid = criterion["cid"]
+            if cid in hard_cids:
+                continue
+            weight = priority_weight.get(criterion.get("priority"), 2.0)
+            if cells.get(cid) == "vio":
+                total += weight
+            elif cells.get(cid) == "unk":
+                total += weight * 0.25
+        return total
+
+    if any(c.get("priority") in priority_weight for c in criteria):
+        order.sort(key=lambda idx: (_soft_penalty(idx), original_position[idx]))
     reranked = [by_index[i] for i in order]
 
     # 카드텍스트 누락분은 사실기반 폴백 (카드가 비지 않게)

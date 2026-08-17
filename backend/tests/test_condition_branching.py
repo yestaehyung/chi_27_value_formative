@@ -9,6 +9,7 @@
 """
 import os
 import tempfile
+from types import SimpleNamespace
 
 os.environ.setdefault("VC_DB_PATH", os.path.join(tempfile.mkdtemp(prefix="vc_condbr_"), "test.db"))
 os.environ.setdefault("VC_EXPORT_DIR", tempfile.mkdtemp(prefix="vc_condbr_exp_"))
@@ -88,6 +89,54 @@ def test_baseline1_still_answers_and_recommends(client):
     """추론을 껐다고 대화가 죽으면 안 된다 — 순수 LLM 추천은 정상 동작해야 한다."""
     r = run_session(client, "baseline1")
     assert r["out"]["agentResponse"]["content"].strip()
+
+
+def test_baseline1_never_reads_cross_session_rig_or_latent_planner_state(client, monkeypatch):
+    """의도 추론 없음은 현재 세션 토픽뿐 아니라 cross-session RIG 가설까지 포함한다."""
+    import app.rig as rig
+    from app.agents import service_agent
+
+    called = False
+    captured = {}
+    original_fetch = service_agent.planner.fetch_plan
+
+    def forbidden_rig(*_args, **_kwargs):
+        nonlocal called
+        called = True
+        return {"label": "latent cross-session guess"}
+
+    async def capture_plan(provider, context, fallback_search_text):
+        captured.update(context)
+        return await original_fetch(provider, context, fallback_search_text)
+
+    monkeypatch.setattr(rig, "top_predicted_concept", forbidden_rig)
+    monkeypatch.setattr(service_agent.planner, "fetch_plan", capture_plan)
+
+    run_session(client, "baseline1")
+
+    assert called is False
+    assert "values" not in captured and "motivations" not in captured
+    assert "ragPrediction" not in captured
+    assert captured["hypothesesForClarification"] == {
+        "values": {}, "motivations": {}, "ragPrediction": None,
+    }
+
+
+def test_baseline1_planner_sanitizes_even_a_stale_snapshot():
+    """오래된 DB에 snapshot이 남아 있어도 condition gate가 planner 입력을 비운다."""
+    from app.agents.planner import build_planner_context
+
+    stale = SimpleNamespace(
+        anchor_scores={"Social": 0.9}, motivation_scores={"Role": 0.8},
+    )
+    session = models.Session(id="stale_b1", meta={"studyCondition": "baseline1"})
+    context = build_planner_context(
+        [], stale, False, None, {"label": "cross-session guess"}, "goal",
+        session=session,
+    )
+    assert context["hypothesesForClarification"] == {
+        "values": {}, "motivations": {}, "ragPrediction": None,
+    }
 
 
 def test_inferring_conditions_do_produce_topics(client):

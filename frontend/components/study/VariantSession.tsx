@@ -378,17 +378,30 @@ export default function VariantSession({
 
   // 칩 액션 — 기존 API 그대로 (안 B: edit_label / 안 3: confirm·reject)
   const chipAction = useCallback(async (topicId: string, action: string, manualLabel?: string) => {
+    setBusy(true);
     try {
       const res = await api.chipAction(topicId, action, manualLabel);
       setState(res.newPreferenceState);
+      if (res.recommendTurn) {
+        setTurns((prev) => prev.some((t) => t.id === res.recommendTurn.id)
+          ? prev : [...prev, res.recommendTurn]);
+        setImpressionsByTurn((prev) => ({
+          ...prev,
+          [res.recommendTurn.id]: res.recommendedProducts ?? [],
+        }));
+        setChipSuggestions(null);
+        loadChipSuggestions();
+      }
       showToast(res.message);
       return true;
     } catch (e) {
       console.error(e);
       showToast(STUDY_UI.chat.criterionFailed);
       return false;
+    } finally {
+      setBusy(false);
     }
-  }, []);
+  }, [loadChipSuggestions]);
 
   const saveChipEdit = useCallback(async (topicId: string, label: string) => {
     const saved = await chipAction(topicId, "edit_label", label);

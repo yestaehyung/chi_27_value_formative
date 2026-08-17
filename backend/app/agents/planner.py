@@ -14,6 +14,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session as DbSession
 
+from app.core.conditions import INFERS_INTENTION, normalize_condition
 from app.core.locale import product_display_title
 from app.db import models
 
@@ -61,8 +62,9 @@ def build_planner_context(
     피드백 이벤트(feedbackEvents)를 추가로 준다: 스터디 세션은 짧아 전량이 컨텍스트에
     들어가고, 거절·선택은 발화만큼 강한 1급 증거다.
 
-    ragPrediction(이론층의 cross-session 가설)은 별도 tier가 아니라 컨텍스트 필드 —
-    LLM이 확인 가치가 있다고 판단하면 clarify 질문의 소재가 된다(가설 경로).
+    이론층 가설은 ``hypothesesForClarification`` 아래에만 둔다. planner가 확인 가치가
+    있다고 판단하면 clarify 질문의 소재로 쓸 수 있지만, 실제 검색 사양은 이 컨텍스트를
+    재사용하지 않고 recommender의 격리된 recommendation policy 단계에서 다시 만든다.
     """
     msgs = [
         {"role": t.role, "content": t.content}
@@ -109,14 +111,32 @@ def build_planner_context(
             "title": p.title, "price": p.price, "category": p.category,
             "keyAttributes": (prof.get("keyAttributes") or [])[:2],
         })
+    condition = normalize_condition((session.meta or {}).get("studyCondition")) if session else None
+    hypotheses_allowed = (
+        INFERS_INTENTION.get(condition, True) if condition is not None else True
+    )
+    hypothesis_snapshot = snapshot if hypotheses_allowed else None
     return {
         "recentTurns": msgs,
         "userUtterances": user_utterances,
         "feedbackEvents": feedback_events,
         "lastShownProducts": last_shown_summary,
-        "values": (snapshot.anchor_scores or {}) if snapshot else {},
-        "motivations": (snapshot.motivation_scores or {}) if snapshot else {},
-        "ragPrediction": rag_prediction,
+        "recommendationEvidence": {
+            "userUtterances": user_utterances,
+            "feedbackEvents": feedback_events,
+            "lastShownProducts": last_shown_summary,
+        },
+        "hypothesesForClarification": {
+            "values": (
+                hypothesis_snapshot.anchor_scores or {}
+                if hypothesis_snapshot else {}
+            ),
+            "motivations": (
+                hypothesis_snapshot.motivation_scores or {}
+                if hypothesis_snapshot else {}
+            ),
+            "ragPrediction": rag_prediction if hypotheses_allowed else None,
+        },
         "hasRecommendations": has_recommendations,
         "lastAgentAction": last_agent_action,
         "scenarioGoal": scenario_goal,

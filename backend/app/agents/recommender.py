@@ -17,16 +17,19 @@ baseline1과 구분이 사라진다. baseline2의 정의가 "추론한 기준을
 """
 from sqlalchemy.orm import Session as DbSession
 
-from app.core.conditions import USES_UNCONFIRMED_INFERENCE, normalize_condition
 from app.db import models
 from app.agents import response_generator as rg
+from app.agents.recommendation_policy import (
+    RecommendationPolicy,
+    build_recommendation_policy,
+    uses_unconfirmed,
+)
 from app.products.search import ScoredProduct, search_products
 
 
 def _uses_unconfirmed(session: models.Session | None) -> bool:
     """이 세션의 조건이 미확인 추론 기준까지 리랭크에 넣는가 (baseline2만 True)."""
-    slug = normalize_condition((session.meta or {}).get("studyCondition")) if session else None
-    return USES_UNCONFIRMED_INFERENCE.get(slug, False) if slug else False
+    return uses_unconfirmed(session)
 
 
 def _stated_and_confirmed_criteria(
@@ -54,9 +57,14 @@ def _stated_and_confirmed_criteria(
                 or t.status in ("confirmed", "corrected_by_user")):
             hints = t.hints or {}
             crit = {
+                "topicId": t.id,
                 "label": t.label,
                 "description": t.description,
                 "kind": hints.get("kind") or "preference",
+                "priority": t.priority,
+                "status": t.status,
+                "explicitness": t.explicitness,
+                "source": t.source,
             }
             if hints.get("impliedAvoidance"):
                 crit["avoid"] = hints["impliedAvoidance"]
@@ -131,19 +139,29 @@ def build_rerank_context(
     db: DbSession,
     session: models.Session,
     recent_turns,
-    constraints_note: str,
+    constraints_note: str = "",
+    policy: RecommendationPolicy | None = None,
 ) -> dict:
-    """rerank의 'Goal' — 발화 원문 + 명시·확인 기준 + 플래너의 제약 요약.
-    점수→자연어 하드코딩 변환 없이 LLM이 판단한다."""
+    """rerank의 Goal. 실행 경로에서는 retrieval과 같은 policy만 읽는다.
+
+    ``constraints_note`` 폴백은 오래된 단위 테스트/직접 호출 호환용이다. 라이브 추천은
+    condition-safe ``RecommendationPolicy``를 반드시 전달한다.
+    """
     meta = session.meta or {}
     return {
         "scenario": meta.get("shoppingGoal") or meta.get("category") or "",
         "recentUtterances": [
-            t.content for t in recent_turns[-4:] if t.role in ("user", "user_agent")
+            t.content for t in recent_turns if t.role in ("user", "user_agent")
         ],
-        "statedConstraintsNote": constraints_note or "",
-        "criteria": _stated_and_confirmed_criteria(
-            db, session.id, include_unconfirmed=_uses_unconfirmed(session)
+        "statedConstraintsNote": (
+            policy.constraints_note if policy is not None else constraints_note or ""
+        ),
+        "criteria": (
+            [dict(c) for c in policy.criteria]
+            if policy is not None
+            else _stated_and_confirmed_criteria(
+                db, session.id, include_unconfirmed=_uses_unconfirmed(session)
+            )
         ),
     }
 
@@ -176,24 +194,27 @@ async def run_recommendation(
     db: DbSession,
     provider,
     session: models.Session,
-    search_text: str,
-    constraints_note: str,
     recent_turns,
-    snapshot,
     pool_size: int = 30,   # 15→30 (2026-07-06): 카탈로그 600→10,780 확대에 맞춘 recall 확장
     top_k: int = 5,
 ) -> tuple[list[ScoredProduct], dict[str, dict], dict]:
-    """검색 사양(searchText/constraintsNote)을 실행해 노출 셋을 확정한다.
+    """격리된 evidence policy를 만들어 검색과 rerank에 함께 적용한다.
+
+    planner는 확인 질문을 위해 미확인 가설을 볼 수 있으므로 planner의 searchText,
+    constraintsNote, 전체 snapshot은 이 함수가 아예 받지 않는다. raw participant evidence +
+    condition-eligible topics만으로 사양을 만든다.
+
     반환: (trade-off top_k개, {productId: 카드텍스트}, 진단 dict). 상품 선별은 전부
     여기서 — 플래너에는 상품 ID가 흐르지 않는다. 진단 dict는 llm_calls 기록용:
     검색 풀 전체를 남겨 "정답이 풀에 없었나 vs rerank가 버렸나"를 사후 구분한다."""
+    policy = await build_recommendation_policy(db, provider, session)
     pool = search_products(
         db,
-        query=search_text,
+        query=policy.search_text,
         category=(session.meta or {}).get("category"),
-        hard_constraints=snapshot.hard_constraints if snapshot else [],
-        price_min=snapshot.price_min if snapshot else None,
-        price_max=snapshot.price_max if snapshot else None,
+        hard_constraints=list(policy.hard_constraints),
+        price_min=policy.price_min,
+        price_max=policy.price_max,
         return_pool=True,
         pool_size=pool_size,
     )
@@ -207,7 +228,7 @@ async def run_recommendation(
         if p.id not in pool_ids:
             pool.append(ScoredProduct(product=p, score=0.0, bucket="prev_shown"))
             pool_ids.add(p.id)
-    intent_context = build_rerank_context(db, session, recent_turns, constraints_note)
+    intent_context = build_rerank_context(db, session, recent_turns, policy=policy)
     reranked, card_texts, excluded, matrix = await rg.rerank_by_intent(provider, pool, intent_context)
     # 판정 실패(행렬 부재 — 출력 잘림·형식 붕괴) + 필수 기준 존재 = 무필터 노출 금지.
     # 검증 안 된 상품을 정상 카드처럼 내보내면 "정확히 27인치" 세션에 24인치가 나간다
@@ -218,7 +239,9 @@ async def run_recommendation(
             for c in (intent_context.get("criteria") or []))
         if hard_present:
             diag = {
-                "searchText": search_text, "constraintsNote": constraints_note,
+                "searchText": policy.search_text,
+                "constraintsNote": policy.constraints_note,
+                "recommendationPolicy": policy.as_dict(),
                 "poolIds": [sp.product.id for sp in pool],
                 "rerankFailed": True, "matrix": matrix,
             }
@@ -243,8 +266,9 @@ async def run_recommendation(
                for k, _ in sorted((matrix.get("hardUnkCounts") or {}).items(), key=lambda kv: -kv[1])
                if k not in (matrix.get("vioCounts") or {})]
     diag = {
-        "searchText": search_text,
-        "constraintsNote": constraints_note,
+        "searchText": policy.search_text,
+        "constraintsNote": policy.constraints_note,
+        "recommendationPolicy": policy.as_dict(),
         "poolSize": len(pool),
         "pool": [{"id": sp.product.id, "category": sp.product.category,
                   "title": (sp.product.title or "")[:60], "score": round(sp.score, 4)}

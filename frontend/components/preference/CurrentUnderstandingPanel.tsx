@@ -28,7 +28,9 @@ export default function CurrentUnderstandingPanel({
   editable = true,
 }: {
   state: PreferenceState | null;
-  onChipAction: (topicId: string, action: string, manualLabel?: string) => void;
+  onChipAction: (
+    topicId: string, action: string, manualLabel?: string
+  ) => boolean | void | Promise<boolean | void>;
   onShowEvidence: (topicId: string) => void;
   showRadar?: boolean;
   editable?: boolean;
@@ -36,6 +38,7 @@ export default function CurrentUnderstandingPanel({
   const [editing, setEditing] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
+  const [pending, setPending] = useState<Record<string, boolean>>({});
 
   if (!state) {
     return <div className="card p-4 text-sm text-slate-400">{tr("아직 파악된 기준이 없어요.", "No criteria have been identified yet.")}</div>;
@@ -44,7 +47,20 @@ export default function CurrentUnderstandingPanel({
 
   const renderChip = (chip: PreferenceChip) => {
     const isEditing = editing === chip.id;
-    const isConfirmed = confirmed[chip.id];
+    const isConfirmed = confirmed[chip.id]
+      || chip.status === "confirmed"
+      || chip.status === "corrected_by_user";
+    const isPending = pending[chip.id] === true;
+    const runAction = async (action: string, manualLabel?: string) => {
+      if (isPending) return false;
+      setPending((p) => ({ ...p, [chip.id]: true }));
+      try {
+        const result = await onChipAction(chip.id, action, manualLabel);
+        return result !== false;
+      } finally {
+        setPending((p) => ({ ...p, [chip.id]: false }));
+      }
+    };
     return (
       // msg-in: 새로 파악된 기준만 떠오르며 등장한다 — 기존 칩은 key(chip.id)로 유지되어 재생 안 됨
       <div key={chip.id} className="msg-in rounded-xl border border-[#e8eaed] bg-white px-3 py-2.5">
@@ -71,10 +87,13 @@ export default function CurrentUnderstandingPanel({
               placeholder={tr("기준을 직접 수정하세요", "Edit this criterion")}
             />
             <div className="mt-1.5 flex justify-end gap-1.5">
-              <button className="btn px-2.5 py-1 text-[11px]" onClick={() => setEditing(null)}>{tr("취소", "Cancel")}</button>
+              <button className="btn px-2.5 py-1 text-[11px]" disabled={isPending} onClick={() => setEditing(null)}>{tr("취소", "Cancel")}</button>
               <button
                 className="btn btn-primary px-2.5 py-1 text-[11px]"
-                onClick={() => { onChipAction(chip.id, "edit_label", editText); setEditing(null); }}
+                disabled={isPending || !editText.trim()}
+                onClick={async () => {
+                  if (await runAction("edit_label", editText.trim())) setEditing(null);
+                }}
               >
                 {tr("저장", "Save")}
               </button>
@@ -91,14 +110,20 @@ export default function CurrentUnderstandingPanel({
               ) : (
                 <button
                   className="btn border-emerald-300 px-2.5 py-1.5 text-xs text-emerald-700 hover:bg-emerald-50"
-                  onClick={() => { onChipAction(chip.id, "confirm"); setConfirmed((c) => ({ ...c, [chip.id]: true })); }}
+                  disabled={isPending}
+                  onClick={async () => {
+                    if (await runAction("confirm")) {
+                      setConfirmed((c) => ({ ...c, [chip.id]: true }));
+                    }
+                  }}
                 >
                   ✓ {tr("맞아요", "Yes")}
                 </button>
               )}
               <button
                 className="btn border-rose-200 px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50"
-                onClick={() => onChipAction(chip.id, "reject")}
+                disabled={isPending}
+                onClick={() => runAction("reject")}
               >
                 ✗ {tr("아니에요", "No")}
               </button>
@@ -111,10 +136,10 @@ export default function CurrentUnderstandingPanel({
             <div className="-mb-1 mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-1 text-[11px] text-[#9aa0a6]">
               <span className="flex items-center gap-0.5">
                 {tr("중요도", "Priority")}
-                <button className="rounded-md px-2 py-1.5 transition-[color,background-color,scale] duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.96]" title={tr("중요도 낮춤", "Decrease priority")} onClick={() => onChipAction(chip.id, "decrease_priority")}>⬇</button>
-                <button className="rounded-md px-2 py-1.5 transition-[color,background-color,scale] duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.96]" title={tr("중요도 높임", "Increase priority")} onClick={() => onChipAction(chip.id, "increase_priority")}>⬆</button>
+                <button disabled={isPending} className="rounded-md px-2 py-1.5 transition-[color,background-color,scale] duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.96]" title={tr("중요도 낮춤", "Decrease priority")} onClick={() => runAction("decrease_priority")}>⬇</button>
+                <button disabled={isPending} className="rounded-md px-2 py-1.5 transition-[color,background-color,scale] duration-150 hover:bg-[#f0f2f4] hover:text-[#4f46e5] active:scale-[0.96]" title={tr("중요도 높임", "Increase priority")} onClick={() => runAction("increase_priority")}>⬆</button>
               </span>
-              <button className="rounded-md px-2 py-1.5 transition-[color,scale] duration-150 hover:text-[#4f46e5] active:scale-[0.96]" onClick={() => { setEditing(chip.id); setEditText(chip.label); }}>{tr("수정", "Edit")}</button>
+              <button disabled={isPending} className="rounded-md px-2 py-1.5 transition-[color,scale] duration-150 hover:text-[#4f46e5] active:scale-[0.96]" onClick={() => { setEditing(chip.id); setEditText(chip.label); }}>{tr("수정", "Edit")}</button>
               <button className="rounded-md px-2 py-1.5 transition-[color,scale] duration-150 hover:text-[#4f46e5] active:scale-[0.96]" data-tutorial="evidence" onClick={() => onShowEvidence(chip.id)}>{tr("근거", "Evidence")}</button>
             </div>
           </>

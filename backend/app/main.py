@@ -7,11 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core import logging as _app_logging  # noqa: F401 — configures root logger
 from app.core.config import settings
 from app.db.database import SessionLocal, init_db
-from app.products.seed_loader import load_seed_concepts, load_seed_products
+from app.products.seed_loader import load_seed_concepts, load_seed_products, validate_seed_bundle
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    validate_seed_bundle()
     init_db()
     db = SessionLocal()
     try:
