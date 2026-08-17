@@ -343,8 +343,19 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         related_ids = [p.id for p in products]
         session.current_stage = "comparison"
     elif decision.action == "close":
-        text = rg.close_text(prev_shown[0] if prev_shown else None)
-        products = prev_shown[:1]
+        # 사용자가 실제로 고른 상품(구매 피드백)이 있을 때만 "결정"으로 언급한다 —
+        # 노출 1위를 선택으로 단정하던 날조 제거 (2026-08-18 실측: 빈손 3연속 뒤
+        # "You've decided on …" 이 사용자가 고르지 않은 상품을 확정 발화함).
+        purchased = (
+            db.query(models.FeedbackEvent)
+            .filter(models.FeedbackEvent.session_id == session.id,
+                    models.FeedbackEvent.type == "purchase")
+            .order_by(models.FeedbackEvent.created_at.desc())
+            .first()
+        )
+        chosen = db.get(models.Product, purchased.product_id) if purchased else None
+        text = rg.close_text(chosen)
+        products = [chosen] if chosen else []
         session.current_stage = "decision"
     else:  # recommend — 실행(검색→rerank→3개)은 추천 에이전트(③)가 아래에서 수행.
         session.current_stage = "recommendation"

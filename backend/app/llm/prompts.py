@@ -593,6 +593,9 @@ i5·16GB·95만원, 1번이 셀러론·16GB·46만원, 2번이 i7·16GB·RGB 게
 - recommendCount: 이번에 보여줄 상품 개수를 대화에서 판단해 1~5로 쓴다.
   "하나만 골라줘"·최종 결정 요청 = 1, "두세 개 비교하고 싶어" = 그 수,
   특별한 요청이 없으면 null(기본 폭).
+- close는 사용자가 대화를 끝내겠다고 했거나 특정 상품을 골랐다고 직접 밝혔을 때만.
+  "맞는 게 없으면 없다고 말해줘"·"하나만 추천해줘" 같은 요청은 recommend다 —
+  조건을 전부 만족하는 상품이 없으면 추천 실행이 그 사실을 정직하게 알린다.
 - probe는 action=="clarify"일 때만. question은 hedged 한국어. dimension은 알면 12축(가치5+동기7) 중 하나로 표기(선택).
 - subtype(선택, 연구 로그용): clarify는 "elicit"|"repair", answer는 "factual"|"justify".
 
@@ -803,7 +806,8 @@ EN_DIRECTIVES = {
 # 예산 해석이 데이터와 어긋난다. core/locale.KRW_PER_USD와 동일해야 한다.
 _EN_MONEY_RULE = (
     " Money: participants see US dollars. In any participant-facing text convert stored"
-    " KRW amounts at exactly 1 USD = 1,350 KRW (67,500 KRW → $50; $100 → 135,000 KRW)."
+    " KRW amounts at exactly 1 USD = 1,350 KRW and state the USD figure only —"
+    " '$70', not '94,500 KRW ($70)'."
     " Structured KRW fields (priceMin/priceMax, searchText) stay in KRW."
 )
 EN_DIRECTIVES = {task: directive + _EN_MONEY_RULE for task, directive in EN_DIRECTIVES.items()}

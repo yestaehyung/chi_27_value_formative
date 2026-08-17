@@ -468,9 +468,12 @@ def _strip_markdown(text: str) -> str:
 
 
 def close_text(product: models.Product | None) -> str:
+    # product는 사용자가 실제로 고른(구매 피드백) 상품일 때만 — 없으면 결정을 전제하지
+    # 않는 중립 마무리 (노출 1위를 "선택하셨네요"로 단정하던 날조 제거, 2026-08-18).
+    # 본실험 참가자는 영어 전용이라 이 문구는 영어만 둔다.
     if product is None:
-        return L("결정을 도와드려서 기뻤어요. 필요하시면 언제든 다시 찾아주세요.",
-                 "Glad I could help you decide. Come back anytime!")
+        return ("Happy to help you look around! If you'd like to keep searching"
+                " or adjust any criteria, just let me know.")
     return (
         L(f"'{product.title}'(으)로 결정하셨네요. 좋은 선택이에요! "
           "이번 대화에서 제가 이해한 기준이 다르게 느껴진 부분이 있었다면 알려주세요.",
