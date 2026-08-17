@@ -237,21 +237,31 @@ async def recommend_after_resolution(
 
 
 async def handle_user_turn(db: DbSession, session: models.Session, content: str,
-                           role: str = "user") -> AgentTurnResult:
+                           role: str = "user",
+                           client_request_id: str | None = None,
+                           existing_turn: models.Turn | None = None) -> AgentTurnResult:
     provider = get_provider()
     t0 = time.perf_counter()
 
     # 1-2. save user turn + dialogue-act classification.
     # 동기 층(M8) 감지는 commit engine으로 이동 — 라이브·시뮬·PSCon이 같은 경로로 12축.
-    user_turn = models.Turn(
-        id=new_id("turn"),
-        session_id=session.id,
-        turn_index=_next_turn_index(db, session.id),
-        role=role,
-        content=content,
-        dialogue_acts=[],  # 화행은 아래 병렬 분류 후 채운다
-    )
-    db.add(user_turn)
+    # existing_turn(재시도, 2026-08-18): 응답 없이 남은 사용자 턴을 새 턴 없이 재처리한다
+    # — 커밋 파이프라인은 같은 턴에 대해 병합이 중복을 걸러 멱등에 가깝다.
+    if existing_turn is not None:
+        user_turn = existing_turn
+        user_turn.status = "pending"
+    else:
+        user_turn = models.Turn(
+            id=new_id("turn"),
+            session_id=session.id,
+            turn_index=_next_turn_index(db, session.id),
+            role=role,
+            content=content,
+            dialogue_acts=[],  # 화행은 아래 병렬 분류 후 채운다
+            status="pending",  # 응답까지 저장되면 completed — 미완 턴 식별용
+            client_request_id=client_request_id,
+        )
+        db.add(user_turn)
     _update_surface_intent(session, content)
     # commit immediately so the write lock is NOT held during the LLM pipeline
     db.commit()
@@ -482,6 +492,8 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     except Exception:  # noqa: BLE001
         logging.warning("llm_calls logging failed", exc_info=True)
 
+    # 응답(agent_turn)이 같은 트랜잭션에 저장되므로 이 시점이 "턴 완결"이다
+    user_turn.status = "completed"
     db.commit()
 
     # 참가자 자연어 명세(AI memory) 보완 — 이번 턴의 KG 변화를 반영 (semantic commit)

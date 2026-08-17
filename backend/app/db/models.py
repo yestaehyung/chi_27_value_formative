@@ -82,6 +82,13 @@ class Turn(Base):
     agent_action: Mapped[str | None] = mapped_column(String)
     related_product_ids: Mapped[list] = mapped_column(JSON, default=list)
     raw_llm: Mapped[dict | None] = mapped_column(JSON, default=None)
+    # 사용자 턴의 처리 상태 (2026-08-18): pending(응답 생성 중/미완) → completed(응답
+    # 저장됨) | failed(파이프라인 오류). 배포 재시작 등으로 프로세스가 죽으면 pending이
+    # 남는다 — 프론트가 이를 식별해 같은 턴 재시도를 제안한다. 에이전트 턴은 completed.
+    status: Mapped[str] = mapped_column(String, default="completed")
+    # 프론트 전송 멱등 키 — 같은 키의 턴이 이미 있으면 서버는 새 턴을 만들지 않는다
+    # (502 후 재전송이 중복 발화를 만드는 것을 구조적으로 차단).
+    client_request_id: Mapped[str | None] = mapped_column(String, default=None)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 

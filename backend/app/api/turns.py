@@ -56,17 +56,35 @@ async def reply_suggestions(session_id: str, db: DbSession = Depends(get_db)):
     return {"suggestions": suggestions, "forTurnId": last_agent.id}
 
 
-async def _process_turn_to_payload(session_id: str, content: str, role: str) -> dict:
+async def _process_turn_to_payload(session_id: str, content: str, role: str,
+                                   client_request_id: str | None = None,
+                                   retry_turn_id: str | None = None) -> dict:
     """자체 DB 세션으로 턴을 끝까지 처리하고 직렬화까지 마친 응답 dict를 만든다.
 
     요청 범위 세션을 쓰지 않는 이유: 클라이언트 연결이 끊기면 Starlette이 요청
     태스크를 취소하고 의존성 세션을 닫는다 — 그 세션을 물고 있으면 생성 중이던
     에이전트 응답이 유실된다(2026-08-16 실측: 사용자 발화만 남고 답변 없음).
-    직렬화까지 이 안에서 끝내야 세션 종료 후 detached ORM 접근이 없다."""
+    직렬화까지 이 안에서 끝내야 세션 종료 후 detached ORM 접근이 없다.
+    retry_turn_id(2026-08-18): 응답 없는 기존 사용자 턴을 새 턴 없이 재처리."""
     db = SessionLocal()
     try:
         session = db.get(models.Session, session_id)
-        result = await handle_user_turn(db, session, content, role=role)
+        existing = db.get(models.Turn, retry_turn_id) if retry_turn_id else None
+        try:
+            result = await handle_user_turn(db, session, content, role=role,
+                                            client_request_id=client_request_id,
+                                            existing_turn=existing)
+        except Exception:
+            # 파이프라인 하드 실패 — 사용자 턴을 failed로 남겨 프론트가 재시도를 제안하게.
+            db.rollback()
+            pend = (db.query(models.Turn)
+                    .filter(models.Turn.session_id == session_id,
+                            models.Turn.status == "pending")
+                    .order_by(models.Turn.turn_index.desc()).first())
+            if pend is not None:
+                pend.status = "failed"
+                db.commit()
+            raise
         impressions = [
             serializers.impression_to_dict(i, db.get(models.Product, i.product_id))
             for i in result.impressions
@@ -93,11 +111,51 @@ async def post_turn(session_id: str, req: TurnRequest, background_tasks: Backgro
     if session.status != "active":
         raise HTTPException(400, "session is not active")
 
+    # 멱등 (2026-08-18): 같은 clientRequestId의 턴이 이미 있으면 새로 만들지 않는다 —
+    # 502/타임아웃 후 재전송이 같은 발화를 두 번 저장하는 것을 구조적으로 차단.
+    # 프론트는 duplicate 응답을 받으면 세션을 다시 불러온다.
+    if req.clientRequestId:
+        dup = (db.query(models.Turn)
+               .filter(models.Turn.session_id == session_id,
+                       models.Turn.client_request_id == req.clientRequestId)
+               .first())
+        if dup is not None:
+            return {"duplicate": True, "turnId": dup.id, "turnStatus": dup.status}
+
     # shield: 연결이 끊겨도(요청 취소) 처리 태스크는 계속 완주해 응답을 저장한다 —
     # 참가자는 새로고침하면 완성된 답변을 본다. 응답만 버려질 뿐 데이터는 남는다.
     # (그 경우 M5 judge 백그라운드 1회는 건너뛰지만 다음 턴에서 다시 평결된다.)
-    task = asyncio.create_task(_process_turn_to_payload(session_id, req.content, req.role))
+    task = asyncio.create_task(_process_turn_to_payload(
+        session_id, req.content, req.role, client_request_id=req.clientRequestId))
     payload = await asyncio.shield(task)
     # M5: judge는 턴을 막지 않는다 — 응답 후 비동기로 인과 엣지를 평결
+    background_tasks.add_task(judge_causal_relations, session_id)
+    return payload
+
+
+@router.post("/{session_id}/turns/{turn_id}/retry")
+async def retry_turn(session_id: str, turn_id: str, background_tasks: BackgroundTasks,
+                     db: DbSession = Depends(get_db)):
+    """응답 없이 남은 사용자 턴(pending/failed — 배포 재시작·파이프라인 실패의 흔적)을
+    **같은 턴으로** 재처리한다. 새 턴을 만들지 않으므로 중복 발화가 생기지 않는다."""
+    session = db.get(models.Session, session_id)
+    if session is None:
+        raise HTTPException(404, "session not found")
+    turn = db.get(models.Turn, turn_id)
+    if turn is None or turn.session_id != session_id:
+        raise HTTPException(404, "turn not found")
+    if turn.role not in ("user", "user_agent"):
+        raise HTTPException(400, "not a user turn")
+    answered = (db.query(models.Turn)
+                .filter(models.Turn.session_id == session_id,
+                        models.Turn.turn_index > turn.turn_index,
+                        models.Turn.role == "service_agent")
+                .first())
+    if answered is not None:
+        raise HTTPException(409, "turn already answered")
+
+    task = asyncio.create_task(_process_turn_to_payload(
+        session_id, turn.content, turn.role, retry_turn_id=turn_id))
+    payload = await asyncio.shield(task)
     background_tasks.add_task(judge_causal_relations, session_id)
     return payload

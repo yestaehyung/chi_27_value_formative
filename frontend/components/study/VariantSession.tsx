@@ -222,8 +222,38 @@ export default function VariantSession({
       .catch(() => {});
   }, [sessionId]);
 
+  // 응답 없이 남은 마지막 사용자 턴 (배포 재시작·파이프라인 실패의 흔적) — 재시도 대상
+  const lastTurn = turns[turns.length - 1];
+  const unansweredTurn =
+    !busy && lastTurn && lastTurn.role === "user" && !String(lastTurn.id).startsWith("optimistic")
+      ? lastTurn : null;
+
+  const retryUnanswered = async () => {
+    if (!unansweredTurn || busy) return;
+    setBusy(true);
+    try {
+      const res = await api.retryTurn(sessionId, unansweredTurn.id);
+      setTurns((prev) => [...prev.filter((t) => t.id !== unansweredTurn.id), res.turn, res.agentResponse]);
+      if (res.recommendedProducts?.length) {
+        setImpressionsByTurn((prev) => ({ ...prev, [res.agentResponse.id]: res.recommendedProducts }));
+      }
+      if (res.preferenceState) setState(res.preferenceState);
+      if (res.conflicts?.length) setConflicts((prev) => [...prev, ...res.conflicts]);
+      setChipSuggestions(null);
+      loadChipSuggestions();
+    } catch (e) {
+      console.error(e);
+      showToast(tr("다시 시도해 주세요.", "Please try again."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const sendMessage = useCallback(async (text: string) => {
     const optimisticId = `optimistic_${Date.now()}`;
+    // 멱등 키 (2026-08-18): 502/타임아웃 후 재전송이 같은 발화를 두 번 저장하지 않게
+    const clientRequestId =
+      typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : optimisticId;
     setTurns((prev) => [...prev, {
       id: optimisticId, sessionId, turnIndex: prev.length, role: "user",
       content: text, dialogueActs: [], relatedProductIds: [],
@@ -231,7 +261,16 @@ export default function VariantSession({
     } as Turn]);
     setBusy(true);
     try {
-      const res = await api.postTurn(sessionId, text);
+      const res = await api.postTurn(sessionId, text, clientRequestId);
+      if (res.duplicate) {
+        // 이미 같은 전송이 저장돼 있음(이전 시도의 재전송) — 서버 상태를 다시 불러온다
+        const d = await api.getSession(sessionId);
+        setTurns(d.turns);
+        if (d.preferenceState) setState(d.preferenceState);
+        setConflicts(d.conflicts);
+        setBusy(false);
+        return;
+      }
       setTurns((prev) => [...prev.filter((t) => t.id !== optimisticId), res.turn, res.agentResponse]);
       if (res.recommendedProducts?.length) {
         setImpressionsByTurn((prev) => ({ ...prev, [res.agentResponse.id]: res.recommendedProducts }));
@@ -641,6 +680,17 @@ export default function VariantSession({
         ))}
 
         {busy && <ThinkingSkeleton steps={thinkingSteps} />}
+        {unansweredTurn && (
+          <div className="msg-in mx-auto my-2 flex w-full max-w-md items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-900">
+            <span>{tr("응답이 완성되지 않았어요.", "The agent's reply didn't finish.")}</span>
+            <button
+              onClick={retryUnanswered}
+              className="shrink-0 rounded-lg bg-[#4f46e5] px-3 py-1.5 font-semibold text-white transition-colors duration-150 hover:bg-[#4338ca]"
+            >
+              {tr("응답 다시 생성", "Retry the reply")}
+            </button>
+          </div>
+        )}
         <div ref={chatEndRef} />
       </div>
 

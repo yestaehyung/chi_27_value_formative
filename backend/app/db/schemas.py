@@ -29,6 +29,8 @@ class CreateSessionRequest(BaseModel):
 class TurnRequest(BaseModel):
     role: Literal["user", "user_agent"] = "user"
     content: str = Field(min_length=1)
+    # 전송 멱등 키 (2026-08-18) — 같은 키의 턴이 이미 있으면 서버는 새 턴을 만들지 않는다
+    clientRequestId: str | None = None
 
 
 class FeedbackRequest(BaseModel):

@@ -52,11 +52,15 @@ export const api = {
 
   getSession: (sessionId: string) => request<any>(`/api/sessions/${sessionId}`),
 
-  postTurn: (sessionId: string, content: string) =>
+  postTurn: (sessionId: string, content: string, clientRequestId?: string) =>
     request<any>(`/api/sessions/${sessionId}/turns`, {
       method: "POST",
-      body: JSON.stringify({ role: "user", content }),
+      body: JSON.stringify({ role: "user", content, clientRequestId }),
     }),
+
+  // 응답 없이 남은 사용자 턴(pending/failed)을 같은 턴으로 재처리 — 새 턴 없음 (2026-08-18)
+  retryTurn: (sessionId: string, turnId: string) =>
+    request<any>(`/api/sessions/${sessionId}/turns/${turnId}/retry`, { method: "POST" }),
 
   // 입력창 위 답변 칩 — 턴 응답과 분리 (백엔드가 크리티컬 패스에서 뺌, 2026-08-14).
   // 턴/피드백 응답 표시 직후 호출한다. forTurnId로 낡은 응답을 걸러낸다.

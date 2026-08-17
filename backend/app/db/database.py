@@ -65,6 +65,10 @@ def _migrate() -> None:
         "products": [
             ("tags", "TEXT DEFAULT '[]'"),
         ],
+        "turns": [
+            ("status", "TEXT DEFAULT 'completed'"),
+            ("client_request_id", "TEXT"),
+        ],
     }
     # 컬럼 이름 변경 (renames) — (table, old, new). 이미 new가 있으면 skip(재실행 안전).
     # 2026-06-22: intent_labels → dialogue_acts (화행; IntentionTopic 가치와 혼동 해소).
