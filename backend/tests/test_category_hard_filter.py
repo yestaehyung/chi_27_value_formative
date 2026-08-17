@@ -1,10 +1,14 @@
-"""카테고리 하드필터 제거 회귀 테스트.
+"""세션 카테고리 하드필터 (2026-08-18 복원) — 계약 변경의 기록.
 
-버그: 발화는 모니터를 원하는데 detect_category가 문장 속 '노트북'을 집어
-search가 category=='노트북'으로 하드필터 → 임베딩/BM25가 올린 모니터를 제거한다.
-하드필터를 빼면, 검색 적합도(여기선 BM25)가 올린 모니터가 풀에 남아야 한다.
+2026-06-23에는 category 인자가 detect_category(발화 추측)에서 와서 오탐이 정답을
+지웠고, 필터를 제거하는 게 맞았다. 지금 category는 **세션의 과제 카테고리**
+(참가자가 고른 DB 사실)만 들어온다(호출자는 recommender 한 곳) — 검색은 절대
+이 카테고리를 넘지 않는다. 라이브 실측(2026-08-18): '사무실·주말용 편한 바지'
+1턴에 전역 임베딩이 사무용 의자 5개를 올림 → 바지 세션에 의자 노출.
 
-임베딩은 mock/미로드 시 자동 비활성 → BM25 경로를 탄다(외부 호출 없음).
+새 계약: ① 카테고리 지정 시 풀은 그 카테고리만 ② 검색 결과에 그 카테고리가
+없어도 타 카테고리로 채우지 않고 카테고리 전체에서 재선별 ③ category=None
+(자유 대화·데모)은 종전대로 무필터.
 """
 import pytest
 from sqlalchemy import create_engine
@@ -29,12 +33,12 @@ def db(monkeypatch):
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine)()
     session.add_all([
-        models.Product(id="m1", title="LG 27인치 모니터 FHD 사무용", category="모니터",
-                       tags=["모니터"], description="노트북과 함께 쓰기 좋은 사무용 모니터"),
-        models.Product(id="l1", title="삼성 갤럭시북 노트북", category="노트북",
-                       tags=["노트북"], description="사무용 노트북"),
-        models.Product(id="l2", title="LG 그램 노트북", category="노트북",
-                       tags=["노트북"], description="가벼운 노트북"),
+        models.Product(id="p1", title="편한 스트레이트 치노 팬츠", category="팬츠·바지",
+                       tags=[], description="사무실과 주말에 입는 바지"),
+        models.Product(id="c1", title="사무용 메쉬 의자 편한 착석감", category="데스크체어",
+                       tags=[], description="사무실에서 쓰는 편한 의자"),
+        models.Product(id="c2", title="사무용 인체공학 의자", category="데스크체어",
+                       tags=[], description="편한 사무용 의자"),
     ])
     session.commit()
     search_index.build_index(session)
@@ -42,46 +46,40 @@ def db(monkeypatch):
     session.close()
 
 
-def test_monitor_query_keeps_monitors_despite_wrong_detected_category(db):
-    # query는 실제 파이프라인처럼 발화 + 시나리오 카테고리("모니터")를 포함한다.
-    # category 인자는 detect_category가 잘못 집은 "노트북"(버그 상황).
-    pool = search_products(
-        db,
-        query="나 모니터 사고 싶어 노트북이랑 같이 쓰게 모니터",
-        category="노트북",
-        hard_constraints=[],
-        return_pool=True, pool_size=15,
-    )
-    cats = {sp.product.category for sp in pool}
-    assert "모니터" in cats, f"모니터가 추천 풀에서 빠짐(카테고리 하드필터 탓). got={cats}"
-
-
-def test_embedding_path_keeps_monitor_despite_wrong_category(db, monkeypatch):
-    # 임베딩 경로 시뮬레이션: 코사인 검색이 모니터를 1위로 올렸다고 가정한다.
-    # 하드필터가 살아있으면 category=="노트북"이 이 모니터를 제거한다(버그).
+def test_session_category_is_hard(db, monkeypatch):
+    """검색이 타 카테고리(의자)를 위로 올려도 세션 카테고리(바지)만 풀에 남는다."""
     monkeypatch.setattr(
-        embeddings, "retrieve_scored",  # include_ids: 하이브리드 union 시그니처 (2026-07-06)
-        lambda q, n=200, include_ids=None: [("m1", 0.92), ("l1", 0.51), ("l2", 0.40)],
+        embeddings, "retrieve_scored",
+        lambda q, n=200, include_ids=None: [("c1", 0.93), ("c2", 0.90), ("p1", 0.41)],
     )
     pool = search_products(
-        db,
-        query="노트북이랑 같이 쓸 모니터",
-        category="노트북",
-        hard_constraints=[],
-        return_pool=True, pool_size=15,
+        db, query="사무실과 주말에 입을 편한 바지", category="팬츠·바지",
+        hard_constraints=[], return_pool=True, pool_size=15,
     )
     cats = {sp.product.category for sp in pool}
-    assert "모니터" in cats, f"임베딩이 1위로 올린 모니터를 하드필터가 제거함. got={cats}"
+    assert cats == {"팬츠·바지"}, f"세션 카테고리 밖 상품이 풀에 들어옴: {cats}"
 
 
-def test_search_falls_back_when_retrieved_ids_missing_from_db(db, monkeypatch):
-    """인덱스/임베딩이 DB에 없는 id를 돌려줘도(재시드 등 불일치) 추천 풀이 비면 안 된다 → 전체 폴백.
-    버그 증상: recommend인데 카드 0개 = search_products가 빈 풀을 반환."""
-    monkeypatch.setattr(embeddings, "retrieve_scored",
-                        lambda q, n=200, include_ids=None: [("ghost1", 0.9), ("ghost2", 0.8)])  # DB에 없는 id
-    pool = search_products(
-        db, query="모니터", category="노트북",
-        hard_constraints=[],
-        return_pool=True, pool_size=15,
+def test_no_cross_category_fill(db, monkeypatch):
+    """검색 결과에 세션 카테고리가 0개여도 타 카테고리로 채우지 않는다 —
+    그 카테고리 전체에서 재선별한다."""
+    monkeypatch.setattr(
+        embeddings, "retrieve_scored",
+        lambda q, n=200, include_ids=None: [("c1", 0.95), ("c2", 0.92)],  # 의자만 검색됨
     )
-    assert pool, "retrieve가 DB에 없는 id만 줘도 추천 풀이 비면 안 됨(폴백 필요)"
+    pool = search_products(
+        db, query="편한 사무용", category="팬츠·바지",
+        hard_constraints=[], return_pool=True, pool_size=15,
+    )
+    ids = [sp.product.id for sp in pool]
+    assert ids == ["p1"], f"카테고리 전체 재선별이 아니라 타 카테고리 채움: {ids}"
+
+
+def test_none_category_unfiltered(db):
+    """category=None(자유 대화·데모)은 종전대로 무필터 — 검색 적합도가 결정한다."""
+    pool = search_products(
+        db, query="사무용 의자", category=None,
+        hard_constraints=[], return_pool=True, pool_size=15,
+    )
+    cats = {sp.product.category for sp in pool}
+    assert "데스크체어" in cats

@@ -171,7 +171,10 @@ async def generate_reply(
     # 제목+정체 필드만 — 과거 주장의 근거로 충분하고 토큰을 아낀다.
     prev_products = []
     for p in previously_shown or []:
-        entry: dict = {"title": product_display_title(p)}
+        # 가격 포함 (2026-08-18): 없으면 과거 후보의 가격을 지어내 말한다
+        # (실측: $34.99를 보여줘 놓고 "가장 가까운 것도 전부 $60 이상").
+        entry: dict = {"title": product_display_title(p),
+                       "price": product_display_price(p) if is_en() else p.price}
         prof = profiles.get(p.id)
         if prof:
             entry["productType"] = prof.get("productType")

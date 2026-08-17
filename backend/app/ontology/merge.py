@@ -207,6 +207,20 @@ def merge_topics(
                 )
             if PRIORITY_RANK.get(ext.get("priority", "medium"), 1) > PRIORITY_RANK.get(match.priority, 1):
                 match.priority = ext["priority"]
+            elif (ext.get("confidenceLevel") == "directly_stated"
+                  and PRIORITY_RANK.get(ext.get("priority", "medium"), 1) < PRIORITY_RANK.get(match.priority, 1)):
+                # 완화 발화("직접 확인할게요", "필수는 아니에요")의 하향은 사용자가 그 기준을
+                # 직접 언급한 경우(directly_stated)에만 반영 — 약한 재추론이 must_have를
+                # 조용히 깎지 못하게 한다. (2026-08-18 실측: 사이즈 완화 2회에도 must_have
+                # 유지 → 있지도 않은 빈손 반복)
+                match.priority = ext["priority"]
+                new_kind = ext.get("kind")
+                hints = dict(match.hints or {})
+                if new_kind and new_kind != hints.get("kind"):
+                    hints["kind"] = new_kind
+                    if new_kind != "constraint":
+                        hints["impliedHardConstraint"] = None
+                    match.hints = hints
             # 정제 병합: 같은 의도가 새 가격 값으로 재추출되면 최신 값이 현재 제약이다.
             # 증거만 쌓고 값을 안 바꾸면 "$150로 좁혔는데 $300 유지" 스테일이 생긴다
             # (2026-08-16 라이브 실측). 라벨은 값을 표시하므로 함께 갱신하되,

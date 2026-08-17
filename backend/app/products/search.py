@@ -88,12 +88,19 @@ def search_products(
     if ids:
         pm = {p.id: p for p in db.query(models.Product).filter(models.Product.id.in_(ids)).all()}
         candidates = [pm[i] for i in ids if i in pm]
-        if not candidates:  # retrieve id가 DB와 불일치(재시드/스테일 캐시) → 빈 추천 방지, 전체 폴백
-            candidates = db.query(models.Product).all()
-        # 카테고리 하드필터 제거(2026-06-23): detect_category가 발화 속 동반 언급
-        # (예: "노트북이랑 같이 쓸 모니터")을 잘못 집어, 의미검색이 올린 정답을 지웠다.
-        # 카테고리는 임베딩/BM25 의미 적합도 + LLM rerank가 자연히 처리한다.
     else:
+        candidates = []
+    # 카테고리 하드필터 (2026-08-18 복원): category 인자는 이제 발화 추측(detect_category,
+    # 2026-06-23 제거 사유)이 아니라 **세션의 과제 카테고리(참가자가 고른 DB 사실)**다.
+    # 검색은 절대 이 카테고리를 넘지 않는다 — 전역 임베딩 top-200이 타 카테고리로 쏠리면
+    # ('사무실용 편한 바지' → 사무용 의자 5개, 라이브 실측) 그대로 풀에 들어가기 때문.
+    # 부족해도 타 카테고리로 채우지 않고, 해당 카테고리 전체에서 다시 고른다.
+    if category:
+        in_cat = [p for p in candidates if p.category == category]
+        if not in_cat:
+            in_cat = db.query(models.Product).filter(models.Product.category == category).all()
+        candidates = in_cat
+    elif not candidates:  # category 미지정(자유 대화·데모) — 기존 전체 폴백 유지
         candidates = db.query(models.Product).all()
 
     # 2) 이미지 있는 상품 우선 (없으면 전체 유지 — 데모/테스트 동작 보존)
