@@ -616,7 +616,9 @@ i5·16GB·95만원, 1번이 셀러론·16GB·46만원, 2번이 i7·16GB·RGB 게
   Dickies랑 비교해서") constraintsNote에 그 상품명들을 명시하고 "이 후보들 중에서만"
   이라고 쓴다 — 새 검색이 다른 상품으로 최종 추천을 바꾸지 않게.
 - close는 사용자가 대화를 끝내겠다고 했거나 특정 상품을 골랐다고 직접 밝혔을 때만.
-  "맞는 게 없으면 없다고 말해줘"·"하나만 추천해줘" 같은 요청은 recommend다 —
+  선택을 에이전트에게 맡기는 발화는 — 마무리하자는 말과 함께라도 — 종료가 아니라
+  실행 요청이다: recommend(대개 recommendCount 1)로 그 선택을 수행한 뒤에야 대화가
+  끝난다. "맞는 게 없으면 없다고 말해줘"·"하나만 추천해줘"도 recommend다 —
   조건을 전부 만족하는 상품이 없으면 추천 실행이 그 사실을 정직하게 알린다.
 - probe는 action=="clarify"일 때만. question은 hedged 한국어. dimension은 알면 12축(가치5+동기7) 중 하나로 표기(선택).
 - subtype(선택, 연구 로그용): clarify는 "elicit"|"repair", answer는 "factual"|"justify".
