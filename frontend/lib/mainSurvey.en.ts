@@ -77,7 +77,9 @@ export const KNOWLEDGE_SECTIONS_EN: MSection[] = [
     id: "subjective_knowledge",
     title: "Your Knowledge of “{category}”",
     questions: [
-      lk("SPK_1", 'I know pretty much about "{category}".'),
+      // Flynn & Goldsmith(1999) 1번 문항의 관례적 adapted 형태 — 원문 표기("pretty much")는
+      // 현대 영어에서 "얼추"로 읽히는 중의성이 있어 후속 문헌의 통용 표현을 따른다(2026-08-18).
+      lk("SPK_1", 'I know a lot about "{category}".'),
       lk("SPK_2", 'I do not feel very knowledgeable about "{category}".', true),
       lk("SPK_3", 'Among my circle of friends, I am one of the "experts" on "{category}".'),
       lk("SPK_4", 'Compared to most other people, I know less about "{category}".', true),
