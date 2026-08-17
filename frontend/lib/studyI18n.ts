@@ -185,6 +185,14 @@ export const STUDY_UI = {
     title: tr("쇼핑 대화", "Shopping Conversation"),
     finishShort: tr("마치기", "Finish"),
     finish: tr("이 쇼핑 마치기", "Finish This Shopping Task"),
+    browseGuide: tr(
+      "추천을 충분히 받아보시고, 마음에 드는 상품을 찾으면 '마치기'를 눌러주세요.",
+      "Take your time browsing. When you find a product you'd actually buy, press Finish.",
+    ),
+    finishLocked: tr(
+      "추천을 2회 이상 받은 뒤 마칠 수 있어요.",
+      "You can finish after receiving at least 2 rounds of recommendations.",
+    ),
     greeting: tr("안녕하세요!", "Hello!"),
     prompt: tr("무엇을 찾아드릴까요?", "What can I help you find?"),
     example: tr("예", "Example"),

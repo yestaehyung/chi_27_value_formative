@@ -498,6 +498,9 @@ export default function VariantSession({
     .sort((a, b) => (b.type === "uncertain" ? 1 : 0) - (a.type === "uncertain" ? 1 : 0))
     .slice(0, 2);
   const eKnown = core.filter((c) => !eAskable.some((x) => x.id === c.id));
+  const recommendRounds = Object.keys(impressionsByTurn).length;
+  const MIN_RECOMMEND_ROUNDS = 2;
+  const canFinish = recommendRounds >= MIN_RECOMMEND_ROUNDS;
   const latestRecommendTurnId = Object.keys(impressionsByTurn).at(-1);
   const latestAgentTurnId = [...turns].reverse().find((t) => t.role !== "user" && !t.id.startsWith("optimistic_"))?.id;
 
@@ -560,7 +563,12 @@ export default function VariantSession({
           {scenarioTitle && <span className="ml-1.5 rounded-md bg-indigo-50 px-2 py-0.5 text-sm font-semibold text-[#4F46E5]">{categoryLabel(scenarioTitle)}</span>}
         </div>
         {study ? (
-          <button onClick={openFinalChoice} className="btn btn-primary shrink-0 whitespace-nowrap px-2.5 py-1 text-xs">
+          <button
+            onClick={openFinalChoice}
+            disabled={!canFinish}
+            title={canFinish ? undefined : STUDY_UI.chat.finishLocked}
+            className="btn btn-primary shrink-0 whitespace-nowrap px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+          >
             <span className="sm:hidden">{STUDY_UI.chat.finishShort}</span>
             <span className="hidden sm:inline">{STUDY_UI.chat.finish}</span>
           </button>
@@ -578,6 +586,11 @@ export default function VariantSession({
             <div className="mt-3 text-xl font-extrabold text-[#191919]">
               {STUDY_UI.chat.greeting} <span className="text-[#4f46e5]">{STUDY_UI.chat.prompt}</span>
             </div>
+            {study && (
+              <p className="mx-auto mt-3 max-w-sm text-[13px] leading-relaxed text-[#9aa0a6]">
+                {STUDY_UI.chat.browseGuide}
+              </p>
+            )}
             {scenarioTitle && (
               <div className="mt-2 rounded-lg bg-indigo-50/60 px-3 py-2 text-xs leading-relaxed text-[#4b5563]">
                 {tr(

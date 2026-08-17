@@ -15,7 +15,7 @@ import CurrentUnderstandingPanel from "@/components/preference/CurrentUnderstand
 import ConflictCard from "@/components/preference/ConflictCard";
 import EvidenceDrawer from "@/components/preference/EvidenceDrawer";
 import PostSurveyModal from "@/components/study/PostSurveyModal";
-import { formatStudyPrice, productTitle, productUsd, tr } from "@/lib/studyI18n";
+import { STUDY_UI, formatStudyPrice, productTitle, productUsd, tr } from "@/lib/studyI18n";
 
 export default function CurrentStudySession() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -267,7 +267,10 @@ export default function CurrentStudySession() {
 
   // 로딩 단계 문구 — 실제 파이프라인 단계(발화 이해 → 가치/기준 파악 → 충돌 검사 → 추천 준비)를
   // 맥락에 따라 순서대로 보여준다. 마지막 단계는 응답 올 때까지 유지 (ThinkingSkeleton).
-  const hasRecommended = Object.keys(impressionsByTurn).length > 0;
+  const recommendRounds = Object.keys(impressionsByTurn).length;
+  const MIN_RECOMMEND_ROUNDS = 2;
+  const canFinish = recommendRounds >= MIN_RECOMMEND_ROUNDS;
+  const hasRecommended = recommendRounds > 0;
   const thinkingSteps = conflicts.length > 0
     ? ["방금 말씀을 살펴보고 있어요…", "기존 기준과 다른 점을 확인하고 있어요…", "어떻게 반영할지 정리하고 있어요…"]
     : hasRecommended
@@ -356,9 +359,11 @@ export default function CurrentStudySession() {
             </button>
             <button
               onClick={() => setConfirmEnd(true)}
-              className="btn btn-primary px-3 py-1 text-xs"
+              disabled={!canFinish}
+              title={canFinish ? undefined : STUDY_UI.chat.finishLocked}
+              className="btn btn-primary px-3 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
             >
-              이 쇼핑 마치기
+              {STUDY_UI.chat.finish}
             </button>
           </div>
         </div>
@@ -367,8 +372,11 @@ export default function CurrentStudySession() {
             <div className="mt-16 text-center">
               <AgentAvatar className="mx-auto block h-12 w-12" />
               <div className="mt-3 text-xl font-extrabold text-[#191919]">
-                안녕하세요! <span className="text-[#4f46e5]">무엇을 찾아드릴까요?</span>
+                {STUDY_UI.chat.greeting} <span className="text-[#4f46e5]">{STUDY_UI.chat.prompt}</span>
               </div>
+              <p className="mx-auto mt-3 max-w-sm text-[13px] leading-relaxed text-[#9aa0a6]">
+                {STUDY_UI.chat.browseGuide}
+              </p>
               {initialNeed && (
                 <div className="mt-2 text-xs text-[#9aa0a6]">
                   예: &quot;{initialNeed}&quot;
