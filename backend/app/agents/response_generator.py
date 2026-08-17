@@ -92,14 +92,24 @@ def explain_text(products: list[models.Product]) -> str:
     lines = [L("최근 보여드린 후보를 기준으로 비교해드릴게요.",
                "Here's a comparison of the recently shown candidates."), ""]
     for p in products:
-        ltr = f"{round((p.long_term_review_ratio or 0) * 100)}%"
+        # 장기리뷰 비율·셀러 등급은 값이 있을 때만 — 아마존 풀은 둘 다 없어서
+        # "0% long-term reviews" 같은 출처 불명 지표처럼 읽혔다 (2026-08-18 실측).
+        extras_ko, extras_en = "", ""
+        if (p.long_term_review_ratio or 0) > 0:
+            ltr = f"{round(p.long_term_review_ratio * 100)}%"
+            extras_ko += f", 한달사용 리뷰 비율 {ltr}"
+            extras_en += f", {ltr} long-term-use reviews"
+        if p.seller_grade:
+            extras_ko += f", 셀러 등급 {p.seller_grade}"
+            extras_en += f", seller grade {p.seller_grade}"
         lines.append(L(
-            f"- {p.title}: 평점 {p.rating}, 리뷰 {p.review_count:,}개, "
-            f"한달사용 리뷰 비율 {ltr}, 셀러 등급 {p.seller_grade}.",
-            f"- {p.title}: rating {p.rating}, {p.review_count:,} reviews, "
-            f"{ltr} long-term-use reviews, seller grade {p.seller_grade}.",
+            f"- {p.title}: 평점 {p.rating}, 리뷰 {p.review_count:,}개{extras_ko}.",
+            f"- {product_display_title(p)}: rating {p.rating}, {p.review_count:,} reviews{extras_en}.",
         ))
-    best = max(products, key=lambda p: p.long_term_review_ratio or 0)
+    if any((p.long_term_review_ratio or 0) > 0 for p in products):
+        best = max(products, key=lambda p: p.long_term_review_ratio or 0)
+    else:
+        best = max(products, key=lambda p: p.review_count or 0)
     lines.append("")
     lines.append(L(
         f"오래 쓰는 관점에서는 한달사용 리뷰 비율이 가장 높은 '{best.title}' 쪽이 "
@@ -260,9 +270,12 @@ async def rerank_by_intent(
     for i, sp in enumerate(scored):
         p = sp.product
         cand = {
-            # EN 모드는 영어 원제목 — 카드 필드가 영어 어휘에 그라운딩되게 한다
+            # EN 모드는 영어 원제목 — 카드 필드가 영어 어휘에 그라운딩되게 한다.
+            # 가격도 $ 문자열 선계산 — KRW 숫자(30,800)를 "$30 예산"과 비교하다
+            # 통화를 헷갈려 예산 내 상품을 오배제했다 (2026-08-18 프로브 실측).
             "index": i, "title": product_display_title(p), "category": p.category,
-            "price": p.price, "rating": p.rating, "reviewCount": p.review_count,
+            "price": product_display_price(p) if is_en() else p.price,
+            "rating": p.rating, "reviewCount": p.review_count,
             "longTermReviewRatio": p.long_term_review_ratio,
             "priceCue": (p.cue_summary or {}).get("priceCue"),
         }

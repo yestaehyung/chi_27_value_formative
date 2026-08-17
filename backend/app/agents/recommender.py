@@ -148,6 +148,30 @@ def build_rerank_context(
     }
 
 
+def _previously_shown(db: DbSession, session: models.Session, cap: int = 10) -> list[models.Product]:
+    """이번 세션에서 노출된 상품(최신 우선, 중복 제거, 세션 카테고리 한정)."""
+    rows = (
+        db.query(models.ProductImpression)
+        .filter(models.ProductImpression.session_id == session.id)
+        .order_by(models.ProductImpression.created_at.desc())
+        .all()
+    )
+    category = (session.meta or {}).get("category")
+    out: list[models.Product] = []
+    seen: set[str] = set()
+    for r in rows:
+        if r.product_id in seen:
+            continue
+        seen.add(r.product_id)
+        p = db.get(models.Product, r.product_id)
+        if p is None or (category and p.category != category):
+            continue
+        out.append(p)
+        if len(out) >= cap:
+            break
+    return out
+
+
 async def run_recommendation(
     db: DbSession,
     provider,
@@ -173,6 +197,16 @@ async def run_recommendation(
         return_pool=True,
         pool_size=pool_size,
     )
+    # 후보 영속성 (2026-08-18): 이번 세션에서 이미 보여준 상품은 검색어가 바뀌어도
+    # 풀에 남아 매 턴 행렬로 재평가된다 — 새 조건(색상 등)이 추가되면 검색 풀이 갈려
+    # "이미 보여준 $19.98 후보"가 사라지고 "조건에 맞는 게 없다"로 이어지던 문제
+    # (라이브 실측 2회: 바지·티셔츠). 판정은 여전히 행렬이 한다(부활 보장이 아니라
+    # 재평가 보장).
+    pool_ids = {sp.product.id for sp in pool}
+    for p in _previously_shown(db, session, cap=10):
+        if p.id not in pool_ids:
+            pool.append(ScoredProduct(product=p, score=0.0, bucket="prev_shown"))
+            pool_ids.add(p.id)
     intent_context = build_rerank_context(db, session, recent_turns, constraints_note)
     reranked, card_texts, excluded, matrix = await rg.rerank_by_intent(provider, pool, intent_context)
     # 판정 실패(행렬 부재 — 출력 잘림·형식 붕괴) + 필수 기준 존재 = 무필터 노출 금지.
