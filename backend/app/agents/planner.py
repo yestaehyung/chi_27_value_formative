@@ -29,6 +29,9 @@ class PlannerDecision:
     probe_dimension: str | None = None
     probe_question: str | None = None
     subtype: str | None = None  # 연구 로그용 MG-ShopDial 입도 (clarify: elicit|repair, answer: factual|justify)
+    # 이번에 보여줄 상품 개수 — 대화 맥락에서 LLM이 판단("하나만 골라줘"=1), 코드는
+    # 1~5 클램프만. None = 기본 폭(5). 준수 후보가 그보다 적으면 그만큼만 나간다.
+    recommend_count: int | None = None
 
 
 def structural_guard(direct_conflicts_open: bool) -> PlannerDecision | None:
@@ -178,6 +181,12 @@ async def fetch_plan(provider, context: dict, fallback_search_text: str) -> Plan
     q = probe.get("question")
 
     subtype = out.get("subtype")
+    # 노출 개수 — LLM 판단값을 1~5로 클램프 (어휘 검사만; 판단은 프롬프트).
+    try:
+        count = int(out.get("recommendCount"))
+        count = max(1, min(5, count))
+    except (TypeError, ValueError):
+        count = None
     return PlannerDecision(
         action=action,
         reason=out.get("reason") or "",
@@ -186,4 +195,5 @@ async def fetch_plan(provider, context: dict, fallback_search_text: str) -> Plan
         probe_dimension=dim,
         probe_question=q.strip() if isinstance(q, str) and q.strip() else None,
         subtype=subtype if isinstance(subtype, str) else None,
+        recommend_count=count,
     )

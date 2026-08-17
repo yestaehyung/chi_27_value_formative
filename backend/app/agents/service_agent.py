@@ -188,6 +188,7 @@ async def recommend_after_resolution(
     scored, card_texts, rec_diag = await recommender.run_recommendation(
         db, provider, session, search_text=search_text,
         constraints_note=decision.constraints_note, recent_turns=recent_turns, snapshot=snapshot,
+        top_k=decision.recommend_count or 5,
     )
     products = [sp.product for sp in scored]
     state_for_llm = snapshot.user_visible_summary if snapshot else None
@@ -364,6 +365,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             constraints_note=decision.constraints_note,
             recent_turns=recent_turns,
             snapshot=commit.snapshot,
+            top_k=decision.recommend_count or 5,
         )
         products = [sp.product for sp in scored]
         related_ids = [p.id for p in products]

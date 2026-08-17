@@ -67,7 +67,9 @@ export default function ProductCard({
               </div>
             )}
             <div className="text-[10px] text-[#9aa0a6]">
-              {tr("배송비", "Shipping")} {p.deliveryFee ? formatStudyPrice(p.deliveryFee) : tr("무료", "Free")}
+              {p.deliveryFee
+                ? `${tr("배송비", "Shipping")} ${formatStudyPrice(p.deliveryFee)}`
+                : tr("배송비 무료", "Free shipping")}
             </div>
           </div>
         </div>

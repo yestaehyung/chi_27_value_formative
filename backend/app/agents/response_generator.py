@@ -245,7 +245,8 @@ async def rerank_by_intent(
     구 스키마("ranking" + 명시 exclude)는 폴백으로 계속 파싱한다(스텁·구모델 안전망).
     mock/실패 시 입력 순서 그대로 + 빈 제외 셋 + 사실기반 폴백 카드 (재현성).
     """
-    matrix: dict = {"nearMissRequested": False, "vioCounts": {}, "verdicts": {}}
+    matrix: dict = {"nearMissRequested": False, "vioCounts": {}, "verdicts": {},
+                    "hardUnk": {}, "hardUnkCounts": {}}
     if not scored:
         return scored, {}, {}, matrix
 
@@ -325,6 +326,20 @@ async def rerank_by_intent(
                     for cid in vio_cids:
                         klabel = label_by_cid.get(cid, cid)
                         matrix["vioCounts"][klabel] = matrix["vioCounts"].get(klabel, 0) + 1
+                else:
+                    # 필수(constraint/avoidance) 기준이 unk = 상품 정보로 확인 불가.
+                    # 확인 불가는 충족이 아니다 — 준수 셋에 못 들어가고, 근접 대안으로만
+                    # 사유와 함께 노출된다 (2026-08-17: IP67 필수인데 등급 미확인 상품이
+                    # 정상 추천으로 나가던 문제).
+                    unk_hard = [cid for cid, val in cells.items()
+                                if val == "unk" and cid in hard_cids]
+                    if unk_hard:
+                        labels = ", ".join(label_by_cid.get(cid, cid) for cid in unk_hard)
+                        matrix["hardUnk"][pid] = L(f"'{labels}' 확인 불가",
+                                                   f"'{labels}' not confirmed in the listing")
+                        for cid in unk_hard:
+                            klabel = label_by_cid.get(cid, cid)
+                            matrix["hardUnkCounts"][klabel] = matrix["hardUnkCounts"].get(klabel, 0) + 1
             for idx in raw.get("order") or []:
                 if idx in by_index and idx not in order:
                     order.append(idx)

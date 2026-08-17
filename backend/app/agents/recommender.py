@@ -72,6 +72,7 @@ def select_shown(
     top_k: int,
     near_miss_cap: int = 3,
     near_miss_requested: bool = False,
+    hard_unk: dict[str, str] | None = None,
 ) -> tuple[list[ScoredProduct], dict[str, str]]:
     """노출 셋 확정 (2026-08-15 빈손 우선 — ② 부분 정직의 개정).
 
@@ -84,13 +85,16 @@ def select_shown(
     정상 추천처럼 읽히기 때문.
     반환: (노출 셋, {productId: 요청과 다른 점}) — 두 번째가 비어 있지 않으면
     노출 전체가 근접 대안이라는 뜻이다."""
-    compliant = [sp for sp in reranked if sp.product.id not in excluded]
+    # 준수 = 필수 기준 위반 없음 **그리고** 필수 기준 확인 불가(unk)도 없음 (2026-08-17
+    # strict — 확인 불가를 충족으로 간주하지 않는다). vio 사유가 unk 사유보다 우선.
+    blocked = {**(hard_unk or {}), **excluded}
+    compliant = [sp for sp in reranked if sp.product.id not in blocked]
     if compliant:
         return compliant[:top_k], {}
     if not reranked or not near_miss_requested:
         return [], {}
     shown = reranked[:near_miss_cap]
-    return shown, {sp.product.id: excluded.get(sp.product.id, "") for sp in shown}
+    return shown, {sp.product.id: blocked.get(sp.product.id, "") for sp in shown}
 
 
 def unverified_criteria(matrix: dict, shown_ids: list[str]) -> dict[str, int]:
@@ -179,11 +183,17 @@ async def run_recommendation(
     scored, near_miss = select_shown(
         reranked, excluded, top_k,
         near_miss_requested=matrix.get("nearMissRequested", False),
+        hard_unk=matrix.get("hardUnk"),
     )
     merge_near_miss_into_cards(card_texts, near_miss)
-    # 빈손 = 후보는 있었는데 행렬상 전부 위반 & 근접 표시 미요청 (풀 자체가 빈 것과 구분)
+    # 빈손 = 후보는 있었는데 행렬상 전부 위반/확인불가 & 근접 표시 미요청 (풀이 빈 것과 구분)
     killer = [k for k, _ in sorted(
         (matrix.get("vioCounts") or {}).items(), key=lambda kv: -kv[1])]
+    # 위반이 아니라 "전 후보 확인 불가"로 전멸한 필수 기준도 빈손 사유에 올린다
+    from app.core.locale import L
+    killer += [L(f"{k} (확인 불가)", f"{k} (not confirmed in listings)")
+               for k, _ in sorted((matrix.get("hardUnkCounts") or {}).items(), key=lambda kv: -kv[1])
+               if k not in (matrix.get("vioCounts") or {})]
     diag = {
         "searchText": search_text,
         "constraintsNote": constraints_note,
