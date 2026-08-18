@@ -257,6 +257,8 @@ def merge_topics(
                     "impliedAvoidance": ext.get("impliedAvoidance"),
                     "priceMin": ext.get("priceMin"),
                     "priceMax": ext.get("priceMax"),
+                    # 구매 옵션 속성 (사이즈·색상 선택 등) — unk 배제 면제의 근거
+                    "purchaseOption": bool(ext.get("purchaseOption")),
                     "evidence": evidence,
                 },
             )

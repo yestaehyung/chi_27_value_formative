@@ -102,6 +102,9 @@ def eligible_criteria(
             "status": topic.status,
             "explicitness": topic.explicitness,
             "source": topic.source,
+            # 구매 옵션 속성 (2026-08-18): 의류 사이즈처럼 리스팅이 아니라 구매 단계에서
+            # 고르는 속성 — 확인 불가(unk)를 배제 사유로 삼지 않는다 (위반 명시 시에만 배제).
+            "purchaseOption": bool(hints.get("purchaseOption")),
         }
         if hints.get("impliedAvoidance"):
             criterion["avoid"] = hints["impliedAvoidance"]

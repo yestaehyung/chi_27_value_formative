@@ -157,19 +157,13 @@ def test_select_shown_partial_pool_shows_fewer_not_filled():
     assert near_miss == {}
 
 
-def test_select_shown_all_excluded_defaults_to_empty_handed():
-    """전부 위반이면 기본은 빈손 — 카드 없이 렌더러가 부재를 설명한다."""
+def test_select_shown_all_excluded_shows_near_miss_by_default():
+    """전부 위반이면 근접 대안 3개를 **기본으로** 사유와 함께 노출한다 (2026-08-18 개정 —
+    파일럿에서 opt-in은 빈손 11회 중 2회만 사용됐고 나머지는 과제 포기로 이어졌다).
+    부재 고지("다 맞는 상품은 없다")는 렌더러(near_miss_text)가 유지한다."""
     reranked = [_sp(f"p{i}") for i in range(6)]
     excluded = {f"p{i}": f"이유{i}" for i in range(6)}
     shown, near_miss = select_shown(reranked, excluded, top_k=5)
-    assert shown == [] and near_miss == {}
-
-
-def test_select_shown_near_miss_only_on_request():
-    """사용자가 근접 후보를 요청했을 때만 상위 3개 + 이유가 nearMiss로 나온다."""
-    reranked = [_sp(f"p{i}") for i in range(6)]
-    excluded = {f"p{i}": f"이유{i}" for i in range(6)}
-    shown, near_miss = select_shown(reranked, excluded, top_k=5, near_miss_requested=True)
     assert [sp.product.id for sp in shown] == ["p0", "p1", "p2"]
     assert near_miss == {"p0": "이유0", "p1": "이유1", "p2": "이유2"}
 

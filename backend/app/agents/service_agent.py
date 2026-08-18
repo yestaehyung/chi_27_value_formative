@@ -150,6 +150,7 @@ async def _classify_dialogue_acts(provider, content: str) -> list[str]:
 
 async def recommend_after_resolution(
     db: DbSession, session: models.Session, snapshot: models.PreferenceStateSnapshot,
+    correction_context: dict | None = None,
 ) -> tuple[models.Turn, list[models.ProductImpression], list[models.Product]]:
     """충돌 해소로 기준이 바뀐 직후 갱신된 기준으로 바로 재추천한다(해소가 dead-end가
     되지 않게). resolve_conflict가 이미 commit한 뒤(락 해제) 호출되므로 LLM-first-write-last
@@ -218,6 +219,7 @@ async def recommend_after_resolution(
         provider, action="recommend", template_text=template, recent_turns=recent_turns,
         products=products, state_summary=state_for_llm, conflict_explanation=None,
         must_ask_question=None, previously_shown=prev_shown, recommendation_note=rec_note,
+        just_corrected=correction_context,
     )
     agent_turn = models.Turn(
         id=new_id("turn"), session_id=session.id,

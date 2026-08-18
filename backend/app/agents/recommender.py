@@ -86,10 +86,11 @@ def select_shown(
 
     rerank 행렬의 위반 판정(excluded)은 LLM의 **출력 사실**이고, 여기서는 그 사실에만
     반응한다: 준수 후보 [:top_k] — top_k 미만이면 그만큼만(위반품으로 채우는 fill-5 금지).
-    준수 후보가 0이면 **기본은 빈손**이다 — 카드를 보여주지 않고 렌더러가 부재와 걸린
-    기준을 설명하며 다음 방향을 묻는다(empty_handed_text). 근접 대안 near_miss_cap개는
-    사용자가 요청했을 때만(near_miss_requested — rerank가 대화에서 판정) 이유와 함께
-    노출한다. cap=3은 표시 상수: 전부 위반인 세트를 5칸 가득 보여주면 고지가 있어도
+    준수 후보가 0이면 근접 대안 near_miss_cap개를 **기본으로** 사유와 함께 노출한다
+    (2026-08-18 파일럿: 빈손 11회 중 사용자가 근접 보기를 요청한 것은 2회 — opt-in은
+    막다른 골목이었고, 나머지 9회는 그대로 과제 포기·신뢰 하락으로 이어졌다).
+    "다 맞는 상품은 없다"는 부재 고지는 렌더러가 유지한다(near_miss_text).
+    cap=3은 표시 상수: 전부 위반인 세트를 5칸 가득 보여주면 고지가 있어도
     정상 추천처럼 읽히기 때문.
     반환: (노출 셋, {productId: 요청과 다른 점}) — 두 번째가 비어 있지 않으면
     노출 전체가 근접 대안이라는 뜻이다."""
@@ -99,7 +100,7 @@ def select_shown(
     compliant = [sp for sp in reranked if sp.product.id not in blocked]
     if compliant:
         return compliant[:top_k], {}
-    if not reranked or not near_miss_requested:
+    if not reranked:
         return [], {}
     shown = reranked[:near_miss_cap]
     return shown, {sp.product.id: blocked.get(sp.product.id, "") for sp in shown}

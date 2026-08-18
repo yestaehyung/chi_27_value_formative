@@ -369,6 +369,9 @@ AGENT_REPLY_SYSTEM = """너는 네이버 쇼핑형 대화 쇼핑 도우미(servi
    (productsToShow/previouslyShownProducts)에 실제로 있는 값뿐이다. 비교표의 모든
    칸도 마찬가지 — 컨텍스트에 없는 사양·소재·기술명(예: Dri-FIT)·지표는 "확인 안 됨
    (not listed)"으로 적는다.
+16. justCorrected가 주어지면 이 추천은 사용자가 방금 기준을 수정해서 다시 만든 것이다 —
+   응답 서두에서 그 수정(어떤 기준을 어떻게 바꿨는지)이 반영되었음을 한 문장으로
+   자연스럽게 언급한 뒤 추천을 잇는다.
 
 최종 응답 텍스트만 출력하라 (JSON 아님)."""
 
@@ -400,11 +403,15 @@ FORMAT_BY_TASK = {
 "priority":"low"|"medium"|"high"|"must_have",
 "kind":"preference"|"constraint"|"avoidance"|"context",
 "impliedHardConstraint":string|null,"impliedAvoidance":string|null,
+"purchaseOption":boolean,
 "priceMin":number|null,"priceMax":number|null,
 "sourceEvidence":[{"type":"turn"|"feedback"|"product_cue","id":string,"quoteOrSummary":string}]}]}
 
 confidenceLevel 기준: directly_stated(기준이 발화에 그대로 등장) /
 strong_inference(인용 스팬에서 맥락상 명확히 추론) / weak_inference(약한 힌트뿐).
+
+purchaseOption 기준: 기준이 가리키는 속성이 의류 사이즈처럼 **상품 페이지에서 구매할 때
+선택하는 옵션**이면 true, 방수 등급·소재·화면 크기처럼 상품 자체의 고유 속성이면 false.
 
 예시 — 입력 turn(id=turn_x1)이 "운동 좋아하는 친구에게 줄 스마트워치를 찾고 있어요. 브랜드는 잘 몰라요."일 때:
 {"topics":[
@@ -577,8 +584,12 @@ coverageScore = 해당 pair 수 / 전체 pair 수.""",
   vioNote는 "vio" 셀이 하나라도 있을 때, 무엇이 걸렸는지 한 구.
 - 판정과 matched/weak 문구는 후보 데이터(title·keyAttributes·caveats·description)에
   실제로 있는 내용에만 근거한다. 후보의 title이 기준과 모순되면(예: 큰 그래픽 회피
-  기준인데 title이 "Graphic T-Shirt") 그 셀은 "vio"나 "unk"다 — 충족 주장을 쓰지
-  않는다. 데이터에 없는 사양은 "unk"다.
+  기준인데 title이 "Graphic T-Shirt") — 모순이 명확하면 "vio", 불명확하면 "unk"다.
+  충족 주장을 쓰지 않는다. 데이터에 없는 사양은 "unk"다.
+- 판정은 문자열 일치가 아니라 **의미 범주**로 한다: 후보에 명시된 사실이 기준의 범주에
+  속하면 충족이다 (기준 "black or blue"에 navy 후보 → blue 계열이므로 ok).
+- 의류 사이즈처럼 **구매 시 선택하는 옵션 속성**은 리스팅에 없어도 "unk"로 적지 않는다
+  ("note" 판정 포함) — 명시적 모순이 있을 때만 "vio"다.
 - order: **모든 후보 index를 한 번씩** 좋은 순서로.
 - cards: order 상위 8개에만.
 - nearMissRequested: 사용자가 근접 후보 표시를 요청한 대화 상황이면 true.
@@ -769,6 +780,11 @@ RERANK_SYSTEM = """너는 쇼핑 추천 후보를 재정렬하는 reranker다.
    statedConstraintsNote가 비어있지 않으면 그 전체를 cid "note"인 기준 하나로 판정한다.
    - 판정 근거는 후보의 price·keyAttributes·productType·audience·제목(없으면 설명)이다.
      후보 텍스트에서 근거를 찾을 수 없는 사양은 "vio"도 "ok"도 아닌 "unk"다 — 지어내지 마라.
+   - 판정은 표면 문자열이 아니라 **의미**로 한다: 후보에 명시된 사실이 기준이 가리키는
+     범주에 속하면 "ok"다 (기준 "black or blue"에 후보가 navy면 blue 계열이므로 ok).
+     이는 근거 없는 추정과 다르다 — 후보에 적힌 사실의 범주 판단일 뿐이다.
+   - 의류 사이즈처럼 **구매 시 선택하는 옵션 속성**은 리스팅에 명시가 없어도 "unk" 사유로
+     삼지 마라 — 명시적 모순이 있을 때만 "vio"다 (statedConstraintsNote의 "note" 판정 포함).
    - criteria의 **kind가 판정 방향이다**: avoidance면 label·avoid가 가리키는 특성이 **있는**
      후보가 "vio"다. constraint면 mustHave·label의 경계를 벗어나면 "vio". preference·context는
      같은 방식으로 판정하되 이 셀은 순위에만 쓰인다(위반이어도 배제되지 않는다).
@@ -796,8 +812,8 @@ RERANK_SYSTEM = """너는 쇼핑 추천 후보를 재정렬하는 reranker다.
    말하지 마라 (기준이 "여러 날 배터리"면 그 표현으로 판정하지, "3일 기준"을 만들지 않는다).
 
 nearMissRequested — 직전 대화에서 시스템이 "조건에 맞는 상품을 찾지 못했다"고 알렸고
-사용자가 가까운 후보라도 보여달라고 답한 상황이면 true, 아니면 false. true일 때만
-시스템이 위반 후보를 (위반 사실을 카드에 명시한 채) 노출한다."""
+사용자가 가까운 후보라도 보여달라고 답한 상황이면 true, 아니면 false. (기록·분석용 신호 —
+준수 후보가 0이면 시스템은 요청과 무관하게 가장 가까운 후보를 차이 명시와 함께 노출한다.)"""
 
 
 REPLY_SUGGESTION_SYSTEM = """너는 쇼핑 대화에서 '사용자가 다음에 할 만한 답변'을 제안하는 칩을 만든다.

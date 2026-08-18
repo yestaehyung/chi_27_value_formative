@@ -204,6 +204,13 @@ async def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Dep
 
             rec_turn, impressions, _ = await service_agent.recommend_after_resolution(
                 db, session, snapshot,
+                # 방금 수정 내역 — 응답이 "그 수정이 반영됐다"를 명시하게 한다 (통제감 가시화)
+                correction_context={
+                    "action": req.action,
+                    "criterionLabel": topic.label,
+                    "before": before_state,
+                    "after": _topic_state(topic),
+                },
             )
             response["recommendTurn"] = serializers.turn_to_dict(rec_turn)
             response["recommendedProducts"] = [

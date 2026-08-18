@@ -170,6 +170,7 @@ async def generate_reply(
     must_ask_question: str | None = None,
     previously_shown: list[models.Product] | None = None,
     recommendation_note: dict | None = None,
+    just_corrected: dict | None = None,
 ) -> str:
     """LLM-grounded reply; falls back to the deterministic template on mock/error."""
     if provider.name == "mock":
@@ -216,6 +217,9 @@ async def generate_reply(
         "currentUnderstanding": state_summary or {},
         "conflictExplanation": conflict_explanation,
         "recommendationNote": recommendation_note,
+        # 사용자가 방금 칩(기준)을 수정해서 이 재추천이 일어났음 — 응답 서두에서
+        # 그 수정이 반영되었음을 언급하게 한다 (통제감 가시화, 2026-08-18 파일럿).
+        "justCorrected": just_corrected,
         "draftTemplate": template_text,
     }
     try:
@@ -301,6 +305,8 @@ async def rerank_by_intent(
         c["cid"] for c in criteria
         if c.get("kind") in ("constraint", "avoidance") or c.get("priority") == "must_have"
     }
+    # 구매 옵션 속성(사이즈 등) — vio는 배제하되 unk는 배제 사유에서 면제 (2026-08-18)
+    option_cids = {c["cid"] for c in criteria if c.get("purchaseOption")}
     label_by_cid = {c["cid"]: (c.get("label") or c["cid"]) for c in criteria}
     if (intent_context.get("statedConstraintsNote") or "").strip():
         hard_cids.add("note")
@@ -354,8 +360,13 @@ async def rerank_by_intent(
                     # 확인 불가는 충족이 아니다 — 준수 셋에 못 들어가고, 근접 대안으로만
                     # 사유와 함께 노출된다 (2026-08-17: IP67 필수인데 등급 미확인 상품이
                     # 정상 추천으로 나가던 문제).
+                    # 단 구매 옵션 속성(purchaseOption — 의류 사이즈 등)은 제외:
+                    # 리스팅에 사이즈가 안 적히는 건 정상(구매 시 선택)이라, unk로
+                    # 배제하면 카테고리 전멸이 구조적으로 보장된다 (2026-08-18 파일럿:
+                    # 바지 4턴 연속 빈손 — 30개 중 26개가 '사이즈 L 확인 불가'로 몰살).
                     unk_hard = [cid for cid, val in cells.items()
-                                if val == "unk" and cid in hard_cids]
+                                if val == "unk" and cid in hard_cids
+                                and cid not in option_cids]
                     if unk_hard:
                         labels = ", ".join(label_by_cid.get(cid, cid) for cid in unk_hard)
                         matrix["hardUnk"][pid] = L(f"'{labels}' 확인 불가",
