@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session as DbSession
 from app.core.conditions import USES_UNCONFIRMED_INFERENCE, normalize_condition
 from app.core.locale import KRW_PER_USD, is_en, product_display_price, product_display_title
 from app.db import models
-from app.llm.provider import LLMMessage
 from app.products.scoring import parse_price_range
 
 
@@ -276,8 +275,12 @@ async def build_recommendation_policy(
     }
     fallback = _fallback_spec(context, criteria)
     try:
+        # 메시지를 비워 보낸다 — provider가 context를 렌더해 유저 메시지로 넣는 계약.
+        # 유저 메시지를 직접 넣으면 context 렌더가 건너뛰어져 LLM이 증거(발화·기준·
+        # 피드백)를 전혀 못 받는다 (2026-08-19 실측: 라이브 164턴 중 160턴이 폴백 —
+        # searchText가 발화 원문 이어붙임, constraintsNote 공백으로 rerank 유도 상실).
         result = await provider.generate_json(
-            [LLMMessage(role="user", content="Build the recommendation specification.")],
+            [],
             task="recommendation_spec",
             context=context,
         )
