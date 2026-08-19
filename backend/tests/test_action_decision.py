@@ -142,3 +142,35 @@ def test_first_clarify_still_allowed():
     d = _plan({"action": "clarify", "probe": {"question": "어떤 용도세요?"}},
               lastAgentAction=None)
     assert d.action == "clarify", d
+
+
+def test_past_purchase_does_not_close_a_later_product_question():
+    d = _plan(
+        {"action": "close", "reason": "past purchase feedback"},
+        hasRecommendations=True,
+        latestUserUtterance="How sturdy is the frame?",
+        latestDialogueActs=["inquire"],
+        feedbackEvents=[{"type": "purchase", "productTitle": "Tangkula desk"}],
+    )
+    assert d.action == "answer", d
+
+
+def test_past_purchase_does_not_close_photo_check_turn():
+    d = _plan(
+        {"action": "close", "reason": "past purchase feedback"},
+        hasRecommendations=True,
+        latestUserUtterance="I'll check the photos.",
+        latestDialogueActs=[],
+        feedbackEvents=[{"type": "purchase", "productTitle": "Tangkula desk"}],
+    )
+    assert d.action == "answer", d
+
+
+def test_explicit_latest_checkout_still_closes():
+    d = _plan(
+        {"action": "close", "reason": "explicit latest decision"},
+        hasRecommendations=True,
+        latestUserUtterance="I'm ready to checkout.",
+        latestDialogueActs=["accept"],
+    )
+    assert d.action == "close", d

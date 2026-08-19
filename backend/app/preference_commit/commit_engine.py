@@ -1,8 +1,7 @@
 """Preference Commit Engine (spec §16, §28.3).
 
 New evidence (turns / feedback) is treated as a commit against the current
-preference state: extract topics → merge → anchors → concepts → relations →
-conflicts → snapshot.
+preference state: extract topics → merge → anchors → conflicts → snapshot.
 
 Concurrency design: all LLM calls run first against read-only context
 (SQLite write locks are NOT held while waiting on the network), then every
@@ -21,12 +20,9 @@ from sqlalchemy.orm import Session as DbSession
 
 from app.db import models
 from app.llm.provider import LLMProvider
-from app.ontology.anchor_mapper import apply_anchor_mappings, fetch_anchor_mappings
-from app.ontology.conceptualizer import apply_concepts, fetch_concepts, recompute_concept_anchors
 from app.ontology.merge import merge_topics, plan_new_topics
-from app.ontology.relation_classifier import apply_relations, fetch_relations
 from app.ontology.state_builder import build_snapshot, get_active_topics
-from app.ontology.topic_extractor import extract_topics
+from app.ontology.topic_extractor import extract_topic_update
 from app.preference_commit.conflict_detector import apply_conflicts, fetch_conflicts
 
 logger = logging.getLogger(__name__)
@@ -40,13 +36,15 @@ class PreferenceCommitResult:
     snapshot: models.PreferenceStateSnapshot | None = None
 
 
-async def _safe(coro, default, stage: str):
+async def _safe(coro, default, stage: str, failures: list[str] | None = None):
     """Degrade gracefully: a single failing pipeline stage (malformed LLM output,
     API error after retries) must not 500 the whole turn."""
     try:
         return await coro
     except Exception:  # noqa: BLE001
         logger.exception("preference commit stage '%s' failed — skipping", stage)
+        if failures is not None and stage not in failures:
+            failures.append(stage)
         return default
 
 
@@ -65,7 +63,16 @@ async def run_preference_commit(
         # 사용자가 직접 쓴 문구는 재추출 시 표현이 달라도 그대로 재사용해야 한다
         # (수정된 라벨은 대화의 자연스러운 표현과 멀어져 중복 칩이 생기기 쉬움)
         "userAuthoredLabels": [t.label for t in pre_existing if t.status == "corrected_by_user"],
+        "criterionQuestionCandidates": list(
+            (session.meta or {}).get("criterionQuestionCandidates") or []
+        ),
     }
+    has_prior_impression = (
+        db.query(models.ProductImpression)
+        .filter(models.ProductImpression.session_id == session.id)
+        .first()
+        is not None
+    )
 
     # 동기 층(M8) 입력 — 새 user 발화가 있는 commit에서만 감지한다.
     # 여기(공통 파이프라인)에 두어 라이브·시뮬레이션·PSCon 배치가 모두 12축을 얻는다.
@@ -79,34 +86,56 @@ async def run_preference_commit(
     from app.agents.motivation import fetch_motivation_signals
 
     t1 = time.perf_counter()
+    analysis_failures: list[str] = []
     motivation_signals: list[dict] | None = None
     if user_contents:
-        extracted, motivation_signals = await asyncio.gather(
-            _safe(extract_topics(db, provider, session, turn_ids, feedback_ids, current_state),
-                  [], "topic_extraction"),
-            _safe(fetch_motivation_signals(provider, user_contents), None, "motivation_detection"),
+        extraction_update, motivation_signals = await asyncio.gather(
+            _safe(extract_topic_update(db, provider, session, turn_ids, feedback_ids, current_state),
+                  {"topics": [], "questionSignals": [], "interpretationCandidate": None},
+                  "topic_extraction", analysis_failures),
+            _safe(fetch_motivation_signals(provider, user_contents), None,
+                  "motivation_detection", analysis_failures),
         )
     else:
-        extracted = await _safe(
-            extract_topics(db, provider, session, turn_ids, feedback_ids, current_state),
-            [], "topic_extraction",
+        extraction_update = await _safe(
+            extract_topic_update(db, provider, session, turn_ids, feedback_ids, current_state),
+            {"topics": [], "questionSignals": [], "interpretationCandidate": None},
+            "topic_extraction", analysis_failures,
+        )
+    extracted = extraction_update.get("topics") or []
+    question_signals = extraction_update.get("questionSignals") or []
+    interpretation_candidate = extraction_update.get("interpretationCandidate")
+    if user_contents and motivation_signals is None and "motivation_detection" not in analysis_failures:
+        analysis_failures.append("motivation_detection")
+        logger.warning(
+            "preference commit stage 'motivation_detection' returned no usable analysis"
+            " — applying deterministic measurement fallback"
         )
     t2 = time.perf_counter()
     logger.info("commit_engine.stage1_latency_sec=%.3f (topic_extraction+motivation)", t2 - t1)
 
     pending_new = plan_new_topics(pre_existing, extracted)
 
-    anchors_by_label: dict = {}
-    concepts_by_label: dict = {}
-    raw_relations: list = []
+    from app.agents.decision_interpreter import candidate_is_activated
+
+    decision_candidate_active = candidate_is_activated(
+        interpretation_candidate,
+        has_prior_impression=has_prior_impression,
+    )
+
     raw_conflicts: list = []
+    value_interpretation: dict | None = None
+    clarification_motivation: dict | None = None
     # 한 줄 요약은 칩이 바뀐 commit(pending_new 있음)에서만 새로 생성한다. 안 바뀌면
     # None → build_snapshot이 직전 문장을 이어받는다(깜빡임 방지).
     state_summary_text: str | None = None
     if pending_new:
+        from app.agents.decision_interpreter import (
+            fetch_clarification_motivation,
+            fetch_value_interpretation,
+        )
         from app.preference_commit.summary_builder import fetch_state_summary
 
-        all_labels = [t.label for t in pre_existing] + [p["label"] for p in pending_new]
         existing_ctx = [
             {"id": t.id, "label": t.label, "priority": t.priority, "status": t.status}
             for t in pre_existing
@@ -121,25 +150,97 @@ async def run_preference_commit(
                for p in pending_new if p.get("kind") != "context"]
         )[:8]
         scenario = (session.meta or {}).get("shoppingGoal") or (session.meta or {}).get("category") or ""
-        # Stages 2-4 + 6 + 요약 fetched concurrently — one network round-trip
+        # 충돌 + 요약(+ 해석 후보 시 가치·동기)을 한 왕복에 병렬 실행한다.
+        # Concept/Relation 그래프와 AnchorMapping(TCV 매핑)은 참가자 턴에서 만들지
+        # 않는다 — 추천·발화에 쓰이지 않는 측정층이라, 분석 시점에 저장된 원자료
+        # (토픽·근거·theoryBasis)로 오프라인 일괄 계산한다 (2026-08-19 결정,
+        # scripts/backfill_offline_ontology.py). 기존 테이블/API는 호환용 유지.
         t3 = time.perf_counter()
-        (anchors_by_label, concepts_by_label, raw_relations, raw_conflicts,
-         state_summary_text) = await asyncio.gather(
-            _safe(fetch_anchor_mappings(provider, pending_new), {}, "anchor_mapping"),
-            _safe(fetch_concepts(provider, pending_new), {}, "conceptualization"),
-            _safe(fetch_relations(provider, all_labels), [], "relation_classification"),
+        value_coro = (
+            _safe(fetch_value_interpretation(provider, interpretation_candidate), None,
+                  "criterion_value_interpretation", analysis_failures)
+            if decision_candidate_active else asyncio.sleep(0, result=None)
+        )
+        motivation_coro = (
+            _safe(fetch_clarification_motivation(provider, interpretation_candidate), None,
+                  "clarification_motivation", analysis_failures)
+            if decision_candidate_active else asyncio.sleep(0, result=None)
+        )
+        (raw_conflicts, state_summary_text,
+         value_interpretation, clarification_motivation) = await asyncio.gather(
             _safe(fetch_conflicts(provider, existing_ctx, [p["label"] for p in pending_new]),
-                  [], "conflict_detection"),
+                  [], "conflict_detection", analysis_failures),
             _safe(fetch_state_summary(provider, prov_criteria, scenario, user_contents),
-                  None, "state_summary"),
+                  None, "state_summary", analysis_failures),
+            value_coro,
+            motivation_coro,
         )
         t4 = time.perf_counter()
-        logger.info("commit_engine.stage2_4_6_latency_sec=%.3f (anchors+concepts+relations+conflicts+summary)", t4 - t3)
+        logger.info("commit_engine.stage2_6_latency_sec=%.3f (conflicts+summary)", t4 - t3)
+    elif decision_candidate_active:
+        from app.agents.decision_interpreter import (
+            fetch_clarification_motivation,
+            fetch_value_interpretation,
+        )
+
+        value_interpretation, clarification_motivation = await asyncio.gather(
+            _safe(fetch_value_interpretation(provider, interpretation_candidate), None,
+                  "criterion_value_interpretation", analysis_failures),
+            _safe(fetch_clarification_motivation(provider, interpretation_candidate), None,
+                  "clarification_motivation", analysis_failures),
+        )
+        logger.info("commit_engine.stage2_decision_only=completed")
     else:
-        logger.info("commit_engine.stage2_4_6_skipped=no_pending_new")
+        logger.info("commit_engine.stage2_6_skipped=no_pending_new")
 
     # ────────────────── Write phase (one short transaction) ──────────────────
     t_write = time.perf_counter()
+    # 질문은 기준이 아니다. 다음 발화의 동일 라벨 승격을 위해 세션 메타에만 짧게 보관한다.
+    meta = dict(session.meta or {})
+    meta["preferenceAnalysis"] = {
+        "analysisStatus": "degraded" if analysis_failures else "ok",
+        "failedTasks": list(analysis_failures),
+        "fallback": (
+            "direct_criteria_only" if "topic_extraction" in analysis_failures
+            else ("stage_specific_safe_fallback" if analysis_failures else None)
+        ),
+    }
+    candidates = [
+        c for c in (meta.get("criterionQuestionCandidates") or []) if isinstance(c, dict)
+    ]
+    candidates.extend(question_signals)
+    promoted = {
+        str(t.get("label") or "").strip().casefold()
+        for t in extracted if isinstance(t, dict)
+    }
+    candidates = [
+        c for c in candidates
+        if str(c.get("candidateLabel") or "").strip().casefold() not in promoted
+    ][-8:]
+    meta["criterionQuestionCandidates"] = candidates
+    if decision_candidate_active:
+        failed = []
+        if value_interpretation is None:
+            failed.append("criterion_value_interpretation")
+        if clarification_motivation is None:
+            failed.append("clarification_motivation")
+        usable = any(
+            isinstance(result, dict) and result.get("analysisStatus") == "ok"
+            for result in (value_interpretation, clarification_motivation)
+        )
+        meta["decisionAnalysis"] = {
+            "analysisStatus": (
+                "failed" if len(failed) == 2
+                else "partial" if failed
+                else "ok" if usable
+                else "insufficient_evidence"
+            ),
+            "fallback": "direct_criteria_only" if failed or not usable else None,
+            "failedTasks": failed,
+            "criterionLabel": (interpretation_candidate or {}).get("criterionLabel"),
+        }
+    session.meta = meta
+
     # 동기 층 누적 (M8/M4) — snapshot이 meta를 읽으므로 build_snapshot 전에 갱신
     if user_contents:
         from app.agents.motivation import apply_motivation_signals, detect_motivation, merge_motivation
@@ -154,10 +255,59 @@ async def run_preference_commit(
         session.meta = meta
 
     touched, created = merge_topics(db, session, extracted, source=source)  # Stage 5
-    apply_anchor_mappings(db, created, anchors_by_label)                    # Stage 2 (의도→이론, 강도)
-    concept_links = apply_concepts(db, created, concepts_by_label)          # Stage 3 (의도→개념)
-    recompute_concept_anchors(db, concept_links)                           # 개념→이론 canonical (ideation 2)
-    apply_relations(db, session, raw_relations)                             # Stage 4
+    if decision_candidate_active:
+        from app.agents.decision_interpreter import apply_theory_basis
+
+        applied = apply_theory_basis(
+            touched, interpretation_candidate, value_interpretation, clarification_motivation,
+        )
+        if applied is None:
+            # 해석 후보는 본질적으로 **새로운 숨은 기준**이라 기존 토픽과 라벨이 안 겹치는
+            # 게 정상이다 (E2E 실측: "well-known brand" 토픽 옆의 "avoiding purchase
+            # regret" 후보가 매번 미스). 매칭 실패 = 새 추론 토픽으로 생성해 theoryBasis를
+            # 싣는다 — agent_inference 출처라 구조적으로 latent, 미확인이므로 ours에선
+            # 확인 전 추천 미반영·askable 질문 대상이 된다.
+            candidate_ext = {
+                "label": (interpretation_candidate or {}).get("criterionLabel") or "",
+                "description": (value_interpretation or {}).get("actionableCriterion"),
+                "kind": "preference",
+                "priority": "medium",
+                "confidenceLevel": "strong_inference"
+                if (interpretation_candidate or {}).get("strength") == "strong"
+                else "weak_inference",
+                "sourceEvidence": [
+                    {"type": "turn", "id": ev, "quoteOrSummary": q}
+                    for ev, q in zip(
+                        (interpretation_candidate or {}).get("evidenceIds") or [],
+                        ((interpretation_candidate or {}).get("quotes") or []) + [""] * 8,
+                    )
+                ],
+            }
+            if candidate_ext["label"]:
+                _, cand_created = merge_topics(
+                    db, session, [candidate_ext], source="agent_inference")
+                applied = apply_theory_basis(
+                    cand_created or touched, interpretation_candidate,
+                    value_interpretation, clarification_motivation,
+                )
+                created.extend(cand_created)
+                touched.extend(cand_created)
+        if applied is None:
+            meta = dict(session.meta or {})
+            diag = dict(meta.get("decisionAnalysis") or {})
+            diag.update({
+                "analysisStatus": "failed",
+                "fallback": "direct_criteria_only",
+                "failedTasks": list(dict.fromkeys([
+                    *(diag.get("failedTasks") or []), "topic_match",
+                ])),
+            })
+            meta["decisionAnalysis"] = diag
+            session.meta = meta
+            logger.warning(
+                "decision-layer candidate did not match a topic — label=%s",
+                (interpretation_candidate or {}).get("criterionLabel"),
+            )
     created_ids = {t.id for t in created}
     conflicts = apply_conflicts(                                            # Stage 6
         db, session, raw_conflicts,

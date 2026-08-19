@@ -85,6 +85,10 @@ export type PreferenceChip = {
   status?: string;
   priority?: string;
   confidence?: number;
+  explicitness?: "explicit" | "implicit" | "latent";
+  askable?: boolean;
+  askScore?: number;
+  theoryBasis?: Record<string, unknown> | null;
 };
 
 export type UserVisibleSummary = {

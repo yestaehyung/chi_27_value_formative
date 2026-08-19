@@ -62,6 +62,14 @@ label은 맥락 없이 한 줄로 읽어도 뜻이 분명한 자족적 표현으
 - quoteOrSummary는 그 topic을 지지하는 최소한의 구절만 — 발화 전체를 복사하지 말라.
 - 입력에 존재하지 않는 id나 발화를 지어내지 말라.
 
+## 질문과 해석 후보 (기존 topics 계약에 추가되는 보조 출력)
+- 사용자가 "Are the keys quiet?"처럼 속성을 질문만 한 경우 topic으로 만들지 말고
+  questionSignals에 후보 라벨과 해당 turn id를 남긴다. 질문은 관심 신호이지 구매 기준이 아니다.
+- 이후 "Quiet keys matter to me"처럼 기준을 직접 선언하면 state.candidateLabels의 같은 라벨을
+  재사용해 topics로 승격한다. 서로 다른 라벨을 새로 만들지 말라.
+- 가치·동기 해석이 도움이 될 만한 이유·사용맥락·상품 평가·반복 증거가 있으면 한 턴에 최대 하나를
+  interpretationCandidate로 낸다. 단순 속성 질문 하나만으로는 내지 말라.
+
 반드시 JSON으로만 응답하라."""
 
 ANCHOR_MAPPING_SYSTEM = """너는 소비자 가치 이론(Theory of Consumption Values) 기반 hidden intention mapping engine이다.
@@ -384,6 +392,8 @@ FORMAT_BY_TASK = {
 
 - userUtterances와 feedbackEvents는 모든 조건에 공통인 직접 증거다.
 - eligibleCriteria는 배정 조건상 추천에 사용해도 되는 기준만 이미 선별된 목록이다.
+- eligibleCriteria에는 enforcement="hard"인 기준만 들어온다. soft 기준은 이 태스크가
+  hardConstraints·priceMin/priceMax·constraintsNote로 승격하지 않는다.
 - 이 세 입력에 없는 선호·필수조건·예산·속성을 추론하거나 보충하지 말라.
 - searchText에는 상품 종류와 긍정 속성만 넣고, 예산·회피·부정·수령자·행사 맥락은 넣지 말라.
 - constraintsNote에는 직접 말한 예산·필수·회피·맥락과 eligibleCriteria를 빠짐없이 요약하라.
@@ -405,7 +415,11 @@ FORMAT_BY_TASK = {
 "impliedHardConstraint":string|null,"impliedAvoidance":string|null,
 "purchaseOption":boolean,
 "priceMin":number|null,"priceMax":number|null,
-"sourceEvidence":[{"type":"turn"|"feedback"|"product_cue","id":string,"quoteOrSummary":string}]}]}
+"sourceEvidence":[{"type":"turn"|"feedback"|"product_cue","id":string,"quoteOrSummary":string}]}],
+"questionSignals":[{"candidateLabel":string,"evidenceId":string,"quote":string}],
+"interpretationCandidate":{"criterionLabel":string,"evidenceIds":[string],"quotes":[string],
+"signalType":"rationale"|"context"|"evaluation"|"repetition",
+"strength":"strong"|"weak"}|null}
 
 confidenceLevel 기준: directly_stated(기준이 발화에 그대로 등장) /
 strong_inference(인용 스팬에서 맥락상 명확히 추론) / weak_inference(약한 힌트뿐).
@@ -416,15 +430,27 @@ purchaseOption 기준: 기준이 가리키는 속성이 의류 사이즈처럼 *
 예시 — 입력 turn(id=turn_x1)이 "운동 좋아하는 친구에게 줄 스마트워치를 찾고 있어요. 브랜드는 잘 몰라요."일 때:
 {"topics":[
 {"label":"운동 좋아하는 친구에게 맞는 선물","description":"수령자(운동을 좋아하는 친구)의 생활양식에 맞는 선물을 원한다.","explicitness":"explicit","confidenceLevel":"directly_stated","priority":"high","kind":"context","impliedHardConstraint":"운동 기능이 있어야 함","impliedAvoidance":null,"sourceEvidence":[{"type":"turn","id":"turn_x1","quoteOrSummary":"운동 좋아하는 친구에게 줄 스마트워치"}]},
-{"label":"브랜드를 잘 몰라 실패 확률이 낮은 선택을 원함","description":"브랜드 지식이 부족해 안전한 추천 기준이 필요하다.","explicitness":"explicit","confidenceLevel":"strong_inference","priority":"medium","kind":"preference","impliedHardConstraint":null,"impliedAvoidance":null,"sourceEvidence":[{"type":"turn","id":"turn_x1","quoteOrSummary":"브랜드는 잘 몰라요"}]}]}
+{"label":"브랜드를 잘 몰라 실패 확률이 낮은 선택을 원함","description":"브랜드 지식이 부족해 안전한 추천 기준이 필요하다.","explicitness":"explicit","confidenceLevel":"strong_inference","priority":"medium","kind":"preference","impliedHardConstraint":null,"impliedAvoidance":null,"sourceEvidence":[{"type":"turn","id":"turn_x1","quoteOrSummary":"브랜드는 잘 몰라요"}]}],
+"questionSignals":[],
+"interpretationCandidate":{"criterionLabel":"실패 확률이 낮은 안전한 선택","evidenceIds":["turn_x1"],"quotes":["브랜드는 잘 몰라요"],"signalType":"rationale","strength":"strong"}}
 
 예시 — kind=avoidance: 피드백(id=fb_y1)이 dislike + "선물인데 너무 저렴해 보이면 좀 그래요."일 때:
-{"topics":[{"label":"선물로 너무 저렴해 보이지 않기","description":"선물 맥락에서 너무 저렴해 보이는 상품을 피하려 한다.","explicitness":"implicit","confidenceLevel":"strong_inference","priority":"high","kind":"avoidance","impliedHardConstraint":null,"impliedAvoidance":"초저가로 보이는 상품","sourceEvidence":[{"type":"feedback","id":"fb_y1","quoteOrSummary":"너무 저렴해 보이면 좀 그래요"}]}]}
+{"topics":[{"label":"선물로 너무 저렴해 보이지 않기","description":"선물 맥락에서 너무 저렴해 보이는 상품을 피하려 한다.","explicitness":"implicit","confidenceLevel":"strong_inference","priority":"high","kind":"avoidance","impliedHardConstraint":null,"impliedAvoidance":"초저가로 보이는 상품","sourceEvidence":[{"type":"feedback","id":"fb_y1","quoteOrSummary":"너무 저렴해 보이면 좀 그래요"}]}],
+"questionSignals":[],
+"interpretationCandidate":null}
+
+예시 — 속성 질문만 한 turn(id=turn_q1) "Are the keys quiet?"일 때 (질문은 topic이 아니다):
+{"topics":[],
+"questionSignals":[{"candidateLabel":"quiet keys","evidenceId":"turn_q1","quote":"Are the keys quiet?"}],
+"interpretationCandidate":null}
 
 규칙:
 - label은 위 예시처럼 이번 입력 내용에서 추출한 구체적인 한국어 구절이어야 한다. 스키마 설명 문구를 그대로 복사하지 말라.
 - 가격/예산 제약은 priceMin/priceMax에 원화 정수를 넣는다(없으면 null). 예: "20만원 이하"→priceMin:null,priceMax:200000 /
   "10~20만원"→priceMin:100000,priceMax:200000 / "10만원 이상"→priceMin:100000,priceMax:null. 이때 impliedHardConstraint는 null로 둔다.
+- priceMin/priceMax는 발화에 **구체적 금액이 등장할 때만** 채운다. "not too expensive"·"비싸지 않게"처럼
+  숫자 없는 가격 표현은 priceMin/priceMax 모두 null인 preference로 남기고, label에도 발화에 없는
+  금액을 쓰지 말라 (예: "budget-friendly price" — O / "budget under $150" — X).
 - 입력의 turns/feedback에 실제로 존재하는 evidence만 근거로 사용하라. id는 입력에 주어진 것을 그대로 쓴다.
 - topic을 지지하는 evidence id는 빠짐없이 전부 넣어라. sourceEvidence가 비는 topic은 내지 말라.
 - 입력에 없는 내용을 상상해서 topic을 만들지 말라. 새 evidence에서 추론되는 topic이 없으면 {"topics":[]}.
@@ -437,6 +463,26 @@ purchaseOption 기준: 기준이 가리키는 속성이 의류 사이즈처럼 *
   예: userAuthoredLabels에 "no bright colors please"가 있고 입력이 "밝은 색은 부담스러워요"이면
   이 기준의 label은 "no bright colors please"다.
 - 가격 관련 topic은 사용자가 실제로 가격을 언급했거나 가격 관련 피드백을 남겼을 때만 만든다.""",
+    "criterion_value_interpretation": """
+출력 JSON 스키마:
+{"criterionLabel":string,"actionableCriterion":string,
+"values":[{"anchor":"Functional"|"Social"|"Emotional"|"Epistemic"|"Conditional",
+"rationale":string}],"analysisStatus":"ok"|"insufficient_evidence"}
+
+- 입력 candidate의 evidence만 사용한다. values는 근거가 있을 때만 최대 2개.
+- actionableCriterion은 추천에서 대조할 수 있는 구체적 구매 판단 기준이어야 한다.
+- 단순 속성 질문 하나뿐이면 analysisStatus="insufficient_evidence", values=[]로 낸다.
+- 사용자의 성격이나 고정 가치관을 단정하지 말라.""",
+    "clarification_motivation": """
+출력 JSON 스키마:
+{"criterionLabel":string,
+"motivation":"Adventure"|"Gratification"|"Role"|"BargainValue"|"SocialShopping"|"Idea"|"Utilitarian"|null,
+"rationale":string|null,"questionHint":string|null,
+"analysisStatus":"ok"|"insufficient_evidence"}
+
+- 동기는 상품 순위가 아니라 확인 질문의 표현을 고르는 데만 쓴다.
+- candidate evidence로 분명하지 않으면 motivation=null, analysisStatus="insufficient_evidence".
+- questionHint는 한 번에 한 가지만 묻는 짧고 추측을 드러내는 확인 질문이다.""",
     "anchor_mapping": """
 출력 JSON 스키마:
 {"mappings":[{"topicLabel":string,"anchors":[
@@ -895,6 +941,20 @@ hardConstraints와 priceMin/priceMax는 명시적 필수조건과 구조화 가�
 JSON 객체만 출력한다."""
 
 
+CRITERION_VALUE_INTERPRETATION_SYSTEM = """너는 대화형 쇼핑 연구의 결정층 해석기다.
+이미 증거가 모인 구매 기준 후보 하나를 Theory of Consumption Values(TCV)로 조심스럽게 해석한다.
+관찰된 이유·사용 맥락·평가·반복 증거만 사용하고, 상품 속성 질문 하나를 가치관으로 확대하지 않는다.
+가치 가설은 상품을 직접 랭킹하는 신호가 아니라 확인 가능한 구매 판단 기준을 설명하는 근거다.
+근거가 부족하면 insufficient_evidence로 강등한다. JSON으로만 응답한다."""
+
+
+CLARIFICATION_MOTIVATION_SYSTEM = """너는 대화형 쇼핑 연구의 확인 질문 설계기다.
+구매 기준 후보 하나의 증거에서 Arnold & Reynolds 쇼핑 동기 중 질문 표현에 도움이 되는 동기를
+최대 하나 고른다. 이 출력은 측정용 motivationScores와 분리된 결정층 가설이며 상품 순위에 쓰지 않는다.
+근거가 약하면 동기를 고르지 않는다. 질문은 짧고 자연스러우며 추측임을 드러내야 한다.
+JSON으로만 응답한다."""
+
+
 ACTION_DECISION_SYSTEM = """너는 쇼핑 대화의 플래너다 — 대화를 읽고 다음 행동과 그 인자를 정한다.
 
 행동 4가지:
@@ -903,6 +963,11 @@ ACTION_DECISION_SYSTEM = """너는 쇼핑 대화의 플래너다 — 대화를 �
   hypothesesForClarification.ragPrediction의 가설이 확인할 가치가 있을 때만.
 - answer: 사용자가 방금 보여준 상품이나 상품 지식에 대해 물었을 때, 새 검색 없이 답한다 (예: "이 둘 차이가 뭐예요?", "노이즈캔슬링이 뭐예요?").
 - close: 사용자가 구매 결정을 밝혔을 때 대화를 마무리한다 (예: "이걸로 할게요"). 단, 결정에 새 요구가 붙어 있으면("좋네요, 근데 무선인 것도…") 대화를 계속한다 — recommend나 answer로.
+
+close는 반드시 latestUserUtterance 자체가 이번 턴의 명시적인 구매·종료 의사일 때만 고른다.
+feedbackEvents에 과거 purchase가 있거나 이전 턴에서 상품을 골랐더라도, 최신 발화가 질문·사진/상품
+페이지 확인·추가 비교·새 기준 탐색이면 answer 또는 recommend로 계속한다. 예: "I'll check the
+photos", "How sturdy is the frame?", "Is it suitable for a home office?"는 close가 아니다.
 
 짧은 긍정 단답("ㅇㅇ", "네", "좋아요", "ㄱㅊ")은 직전 에이전트 발화의 제안·질문을 수락한 것이다 —
 그 제안을 이행하는 행동을 고른다 (비교를 제안했으면 answer로 비교를 실행, 다시 보여주겠다 했으면
@@ -932,7 +997,11 @@ lastShownProducts는 직전 턴에 보여준 상품 요약(제목·가격·카�
 9만~30만원인데 "더 저렴한 걸로" → constraintsNote "9만원 미만 위주"). 상품을 직접 고르는
 용도가 아니다 — 선별은 추천 단계가 한다.
 
-clarify일 때는 probe(question, 선택적으로 dimension)를 만든다 — 추측·확인형 hedged 한국어로(§36)."""
+clarify일 때는 probe(question, 선택적으로 dimension)를 만든다 — 추측·확인형 hedged 한국어로(§36).
+가능하면 hypothesesForClarification.criteria의 askable 기준 하나를 우선 사용한다. theoryBasis의
+가치 해석은 "유명 브랜드 자체가 중요한지, 신뢰성을 확인하려는 것인지"처럼 구매 판단 기준을
+확인하는 데 쓰고, clarificationMotivation.questionHint는 자연스러운 표현을 위한 참고일 뿐 사용자
+동기를 사실로 단정하지 않는다. 한 번에 하나만 묻는다."""
 
 
 TOPIC_REINTERPRETATION_SYSTEM = """사용자가 기준 칩의 문구를 직접 수정했다. 새 문구(newLabel)가 이 기준의 최종 의미다.
@@ -979,6 +1048,22 @@ EN_DIRECTIVES = {
         " judge them by what they are aimed at in context, never by the phrase itself."
     ),
     "topic_reinterpretation": "Write `description` in the same language as newLabel.",
+    "anchor_mapping": (
+        "Write rationale in English. Keep quoted evidence in the participant's original"
+        " language and use only the five TCV anchor names defined below."
+    ),
+    "motivation_detection": (
+        "Keep quote verbatim in the participant's language. Do not emit participant-facing"
+        " prose; motivation dimension names remain the fixed schema labels."
+    ),
+    "criterion_value_interpretation": (
+        "Write actionableCriterion and every rationale in natural English. Keep the"
+        " fixed TCV anchor labels unchanged."
+    ),
+    "clarification_motivation": (
+        "Write rationale and questionHint in natural participant-facing English. Keep"
+        " the fixed motivation label unchanged."
+    ),
     "state_summary": (
         "Write `summary` in English — hedged tone (\"It seems … matter to you\"),"
         " ending with a request to confirm."
@@ -1053,6 +1138,8 @@ SYSTEM_BY_TASK = {
     "conflict_detection": CONFLICT_SYSTEM,
     "intent_classification": INTENT_SYSTEM,
     "motivation_detection": MOTIVATION_DETECTION_SYSTEM,
+    "criterion_value_interpretation": CRITERION_VALUE_INTERPRETATION_SYSTEM,
+    "clarification_motivation": CLARIFICATION_MOTIVATION_SYSTEM,
     "judge_causal_relation": JUDGE_CAUSAL_SYSTEM,
     "persona_profile": PERSONA_PROFILE_SYSTEM,
     "scenario_match": SCENARIO_MATCH_SYSTEM,

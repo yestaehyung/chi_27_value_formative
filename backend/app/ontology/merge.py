@@ -69,18 +69,22 @@ def attach_evidence_edges(
     }
     for entry in ev_entries:
         ev_id = entry.get("id")
-        if not ev_id or (ev_id, source) in seen:
+        edge_channel = entry.get("channel") or source
+        if not ev_id or (ev_id, edge_channel) in seen:
             continue
+        explicitness = entry.get("explicitness")
+        if explicitness not in ("explicit", "implicit", "latent"):
+            explicitness = edge_explicitness
         db.add(models.IntentionEvidence(
             id=new_id("ev"),
             topic_id=topic.id,
             evidence_type=_evidence_type(ev_id, entry),
             evidence_id=ev_id,
-            channel=source,
-            explicitness=edge_explicitness,
+            channel=edge_channel,
+            explicitness=explicitness,
             kind=ext.get("kind", "preference"),
         ))
-        seen.add((ev_id, source))
+        seen.add((ev_id, edge_channel))
     db.flush()
     refresh_explicitness_cache(db, topic)
 

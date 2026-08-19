@@ -77,6 +77,16 @@ def eligible_criteria(
     condition = condition_for(session)
     if condition == "baseline1":
         return []
+    # 첫 추천은 세 조건 모두 동일한 직접 발화 경로만 쓴다. 추론 기준은 사용자가
+    # 실제 상품을 한 번 본 뒤의 반응/추가 발화부터 추천 차이를 만들 수 있다.
+    has_prior_impression = (
+        db.query(models.ProductImpression)
+        .filter(models.ProductImpression.session_id == session.id)
+        .first()
+        is not None
+    )
+    if not has_prior_impression:
+        return []
     if include_unconfirmed is None:
         include_unconfirmed = uses_unconfirmed(session)
 
@@ -96,11 +106,23 @@ def eligible_criteria(
         ):
             continue
         hints = topic.hints or {}
+        kind = hints.get("kind") or "preference"
+        directly_stated = (
+            topic.source == "user_utterance"
+            and hints.get("confidenceLevel") == "directly_stated"
+        )
+        # 구조 규칙: 미확인 추론과 단순 확인(yes)은 절대 hard가 아니다. 사용자가 직접
+        # 말한 필수/회피 조건 또는 직접 고쳐 쓴 constraint/avoidance만 hard가 된다.
+        enforcement = "hard" if (
+            topic.status == "corrected_by_user" and kind in ("constraint", "avoidance")
+            or topic.status == "confirmed" and directly_stated
+            and kind in ("constraint", "avoidance")
+        ) else "soft"
         criterion = {
             "topicId": topic.id,
             "label": topic.label,
             "description": topic.description,
-            "kind": hints.get("kind") or "preference",
+            "kind": kind,
             "priority": topic.priority,
             "status": topic.status,
             "explicitness": topic.explicitness,
@@ -108,14 +130,15 @@ def eligible_criteria(
             # 구매 옵션 속성 (2026-08-18): 의류 사이즈처럼 리스팅이 아니라 구매 단계에서
             # 고르는 속성 — 확인 불가(unk)를 배제 사유로 삼지 않는다 (위반 명시 시에만 배제).
             "purchaseOption": bool(hints.get("purchaseOption")),
+            "enforcement": enforcement,
         }
-        if hints.get("impliedAvoidance"):
+        if enforcement == "hard" and hints.get("impliedAvoidance"):
             criterion["avoid"] = hints["impliedAvoidance"]
-        if hints.get("impliedHardConstraint"):
+        if enforcement == "hard" and hints.get("impliedHardConstraint"):
             criterion["mustHave"] = hints["impliedHardConstraint"]
-        if hints.get("priceMin") is not None:
+        if enforcement == "hard" and hints.get("priceMin") is not None:
             criterion["priceMin"] = hints["priceMin"]
-        if hints.get("priceMax") is not None:
+        if enforcement == "hard" and hints.get("priceMax") is not None:
             criterion["priceMax"] = hints["priceMax"]
         out.append(criterion)
     return out
@@ -271,13 +294,16 @@ async def build_recommendation_policy(
     criteria = eligible_criteria(db, session)
     direct = _direct_evidence_context(db, session)
     meta = session.meta or {}
+    # recommendation_spec은 검색/하드 필터를 컴파일하므로 hard 기준만 받는다.
+    # soft 기준은 아래 policy.criteria를 통해 rerank 순위에만 영향을 준다.
+    compiler_criteria = [c for c in criteria if c.get("enforcement") == "hard"]
     context = {
         **direct,
         "scenarioGoal": meta.get("shoppingGoal") or meta.get("category") or "",
         "category": meta.get("category"),
-        "eligibleCriteria": criteria,
+        "eligibleCriteria": compiler_criteria,
     }
-    fallback = _fallback_spec(context, criteria)
+    fallback = _fallback_spec(context, compiler_criteria)
     try:
         # 메시지를 비워 보낸다 — provider가 context를 렌더해 유저 메시지로 넣는 계약.
         # 유저 메시지를 직접 넣으면 context 렌더가 건너뛰어져 LLM이 증거(발화·기준·

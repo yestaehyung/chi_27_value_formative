@@ -237,9 +237,51 @@ def _topics_from_feedback(fb: dict) -> list[dict]:
 
 def topic_extraction(ctx: dict) -> dict:
     topics: list[dict] = []
+    question_signals: list[dict] = []
+    interpretation_candidate = None
+    candidate_labels = [
+        str(x) for x in ((ctx.get("state") or {}).get("candidateLabels") or []) if x
+    ]
     for turn in ctx.get("turns", []):
         if turn.get("role") in ("user", "user_agent"):
             topics.extend(_topics_from_turn(turn))
+            text = str(turn.get("content") or "")
+            low = text.lower()
+            if "quiet" in low and ("?" in text or low.startswith(("are ", "is ", "do "))):
+                label = next((x for x in candidate_labels if "quiet" in x.lower()), "quiet keys")
+                question_signals.append({
+                    "candidateLabel": label,
+                    "evidenceId": turn["id"],
+                    "quote": text,
+                })
+            if "quiet" in low and _has(low, "matter", "important", "i want", "i need"):
+                label = next((x for x in candidate_labels if "quiet" in x.lower()), "quiet keys")
+                topics.append(_topic(
+                    label, "Low key noise is an explicit purchase criterion.",
+                    "explicit", 0.9, "high",
+                    [{"type": "turn", "id": turn["id"], "quoteOrSummary": text}],
+                ))
+                interpretation_candidate = {
+                    "criterionLabel": label,
+                    "evidenceIds": [turn["id"]],
+                    "quotes": [text],
+                    "signalType": "repetition",
+                    "strength": "strong",
+                }
+            if _has(low, "reputable brand", "well-known brand", "famous brand"):
+                label = "a reputable brand for a lower-risk choice"
+                topics.append(_topic(
+                    label, "A recognizable brand may be serving as a reliability proxy.",
+                    "implicit", 0.72, "high",
+                    [{"type": "turn", "id": turn["id"], "quoteOrSummary": text}],
+                ))
+                interpretation_candidate = {
+                    "criterionLabel": label,
+                    "evidenceIds": [turn["id"]],
+                    "quotes": [text],
+                    "signalType": "rationale",
+                    "strength": "strong",
+                }
     for fb in ctx.get("feedback", []):
         topics.extend(_topics_from_feedback(fb))
     # dedupe by label within one extraction batch (merge evidence)
@@ -249,7 +291,54 @@ def topic_extraction(ctx: dict) -> dict:
             by_label[t["label"]]["sourceEvidence"].extend(t["sourceEvidence"])
         else:
             by_label[t["label"]] = t
-    return {"topics": list(by_label.values())}
+    return {
+        "topics": list(by_label.values()),
+        "questionSignals": question_signals,
+        "interpretationCandidate": interpretation_candidate,
+    }
+
+
+def criterion_value_interpretation(ctx: dict) -> dict:
+    candidate = ctx.get("candidate") or {}
+    label = str(candidate.get("criterionLabel") or "")
+    low = " ".join([label, *(candidate.get("quotes") or [])]).lower()
+    if not label or candidate.get("strength") != "strong":
+        return {"criterionLabel": label, "actionableCriterion": label,
+                "values": [], "analysisStatus": "insufficient_evidence"}
+    if _has(low, "brand", "reputation", "reputable", "reliable", "risk"):
+        values = [
+            {"anchor": "Emotional", "rationale": "The brand request may be a way to reduce uncertainty and purchase regret."},
+            {"anchor": "Functional", "rationale": "Brand reputation is being used as a proxy for dependable performance."},
+        ]
+        actionable = "verified reliability and a reputable manufacturer"
+    elif _has(low, "all day", "battery", "portable", "quiet"):
+        values = [{"anchor": "Functional", "rationale": "The criterion concerns practical performance in the intended use context."}]
+        actionable = label
+    else:
+        values = []
+        actionable = label
+    return {"criterionLabel": label, "actionableCriterion": actionable,
+            "values": values, "analysisStatus": "ok"}
+
+
+def clarification_motivation(ctx: dict) -> dict:
+    candidate = ctx.get("candidate") or {}
+    label = str(candidate.get("criterionLabel") or "")
+    low = " ".join([label, *(candidate.get("quotes") or [])]).lower()
+    motivation = None
+    rationale = None
+    question = None
+    if _has(low, "gift", "recipient", "for my friend", "for my partner"):
+        motivation = "Role"
+        rationale = "The purchase is being made for another person."
+        question = "Is choosing something that feels right for the recipient the main reason this matters?"
+    elif _has(low, "deal", "bargain", "save money", "best price"):
+        motivation = "BargainValue"
+        rationale = "The evidence emphasizes getting a satisfying deal."
+        question = "Is the sense of getting a good deal what matters most here?"
+    status = "ok" if motivation else "insufficient_evidence"
+    return {"criterionLabel": label, "motivation": motivation, "rationale": rationale,
+            "questionHint": question, "analysisStatus": status}
 
 
 # ---------------------------------------------------------------------------
@@ -912,9 +1001,19 @@ def _probe_target(values: dict, motivations: dict) -> tuple[str, str]:
 
 # close/answer 판정 구문 — mock 화행 분류(intent_classification)와 동일 구문을 써서
 # 옛 구조 가드(accept→close, inquire→explain) 시절의 데모·시뮬 흐름을 재현한다.
-_ACCEPT_PHRASES = ("로 할게", "으로 할게", "결정했", "구매할게", "이걸로", "주문할게")
-_INQUIRE_PHRASES = ("뭐가", "어떤 게", "어떤게", "차이", "어때", "괜찮을까", "궁금", "알려줘", "어떨까")
-_REVEAL_PHRASES = ("찾고 있", "추천해", "필요해", "사려고", "사고 싶", "보여줘", "보여주")
+_ACCEPT_PHRASES = (
+    "로 할게", "으로 할게", "결정했", "구매할게", "이걸로", "주문할게",
+    "i'll take", "i will take", "i'll buy", "i will buy", "go with this",
+    "ready to checkout", "ready to check out",
+)
+_INQUIRE_PHRASES = (
+    "뭐가", "어떤 게", "어떤게", "차이", "어때", "괜찮을까", "궁금", "알려줘", "어떨까",
+    "how ", "what ", "which ", "is ", "are ", "can ", "could ", "tell me",
+)
+_REVEAL_PHRASES = (
+    "찾고 있", "추천해", "필요해", "사려고", "사고 싶", "보여줘", "보여주",
+    "i'm looking", "i am looking", "i need", "show me", "recommend",
+)
 
 
 def action_decision(ctx: dict) -> dict:
@@ -931,6 +1030,7 @@ def action_decision(ctx: dict) -> dict:
         user_utts = [m.get("content", "") for m in turns
                      if m.get("role") in ("user", "user_agent") and m.get("content")]
     latest = user_utts[-1] if user_utts else (ctx.get("recentUtterance") or "")
+    latest = str(ctx.get("latestUserUtterance") or latest)
     search_text = " ".join(user_utts).strip() or latest
     base = {"searchText": search_text, "constraintsNote": ""}
     has_rec = bool(ctx.get("hasRecommendations"))
@@ -940,6 +1040,7 @@ def action_decision(ctx: dict) -> dict:
     # planner uses the structurally separated field.
     values = hypotheses.get("values") or ctx.get("values") or {}
     motivations = hypotheses.get("motivations") or ctx.get("motivations") or {}
+    askable = [c for c in (hypotheses.get("criteria") or []) if isinstance(c, dict)]
 
     if has_rec and _has(latest, *_ACCEPT_PHRASES):
         return {**base, "action": "close", "reason": "user announced a purchase decision"}
@@ -950,8 +1051,24 @@ def action_decision(ctx: dict) -> dict:
         return {**base, "action": "answer", "reason": "question about shown products"}
     if last == "clarify":
         return {**base, "action": "recommend", "reason": "already clarified once — recommend (PSCon pattern)"}
+    if has_rec and askable:
+        chip = askable[0]
+        theory = chip.get("theoryBasis") or {}
+        motivation = theory.get("clarificationMotivation") or {}
+        value = theory.get("valueInterpretation") or {}
+        question = motivation.get("questionHint")
+        if not question:
+            criterion = value.get("actionableCriterion") or chip.get("label")
+            if "reliab" in str(criterion).lower():
+                question = "Are you asking for a well-known brand mainly because reliability matters to you?"
+            else:
+                question = f"Is {criterion} the main reason this criterion matters to you?"
+        return {**base, "action": "clarify", "reason": "one evidence-backed criterion is worth confirming",
+                "probe": {"dimension": None, "question": question}}
     if has_rec:
         return {**base, "action": "recommend", "reason": "recommendations exist — re-recommend with updated state"}
+    if _has(latest.lower(), *_REVEAL_PHRASES) or len(latest.split()) >= 8:
+        return {**base, "action": "recommend", "reason": "initial request has enough direct criteria"}
     value_count = sum(1 for v in values.values() if isinstance(v, (int, float)) and v >= 0.1)
     if value_count < 2:
         dim, q = _probe_target(values, motivations)
@@ -1190,6 +1307,8 @@ TASK_HANDLERS = {
     "conflict_detection": conflict_detection,
     "intent_classification": intent_classification,
     "motivation_detection": motivation_detection,
+    "criterion_value_interpretation": criterion_value_interpretation,
+    "clarification_motivation": clarification_motivation,
     "judge_causal_relation": judge_causal_relation,
     "persona_profile": persona_profile,
     "scenario_match": scenario_match,

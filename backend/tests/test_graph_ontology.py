@@ -116,59 +116,35 @@ def test_latent_yield_v2(client, demo_session):
 # ---------------------------------------------------------------------------
 # D4 + M1/M5 — causal evidence levels, judge verdicts, derived plausibility cache
 # ---------------------------------------------------------------------------
-def test_causal_relations_verified(client, demo_session):
+def test_live_turns_do_not_materialize_relations(client, demo_session):
     r = client.get(f"/api/research/sessions/{demo_session}/replay").json()
-    relations = r["relations"]
-    causal = [x for x in relations if x["nature"] == "causal"]
-    assert causal, "demo must produce causal (MOTIVATES) relations"
-    # turns/feedback ran through the API, so the background judge already adjudicated
-    assert any(x["verification"].startswith("judge_") for x in causal)
-    # stated_cause (사용자가 인과를 직접 발화: "선물인데") → causal accepted
-    accepted = [x for x in causal if x["causalEvidence"] == "stated_cause"]
-    assert accepted
-    for x in accepted:
-        assert x["verification"] in ("llm_thresholded", "judge_supported")
-        assert x["effectiveNature"] == "causal"
-        assert x["plausibility"] == 0.95  # derived cache (levels.py), not LLM-emitted
-    # strong_inference / weak → downgraded to co_occurrence (행 보존)
-    weaker = [x for x in causal if x["causalEvidence"] in ("strong_inference", "weak")]
-    assert weaker
-    for x in weaker:
-        assert x["verification"] in ("llm_downgraded", "judge_downgraded")
-        assert x["effectiveNature"] == "co_occurrence"
-        assert x["plausibility"] < 0.9
-    # non-causal types stay unverified with no level / no plausibility
-    for x in relations:
-        if x["nature"] != "causal":
-            assert x["verification"] == "unverified"
-            assert x["causalEvidence"] is None
-            assert x["plausibility"] is None
+    assert r["relations"] == []
 
 
 def test_judge_manual_trigger(client, demo_session):
     out = client.post(f"/api/research/judge/run?sessionId={demo_session}").json()
     assert out["sessionId"] == demo_session
-    # 이미 judge_*로 평결된 엣지는 재평결하지 않는다 (멱등) — human_* 권위 보호와 같은 게이트
+    # New participant sessions have no live relation rows, so the compatibility endpoint is a no-op.
     assert out["judged"] == 0
-    assert out["skipped"] >= 1
+    assert out["skipped"] == 0
 
 
 # ---------------------------------------------------------------------------
 # Graph scopes (§5) + fixed theory tier (D2)
 # ---------------------------------------------------------------------------
 def test_graph_scope_session(client, demo_session):
+    """2026-08-19: AnchorMapping(TCV 매핑)은 실시간 커밋에서 제거 — 측정층은 분석 전
+    scripts/backfill_offline_ontology.py 로 일괄 계산한다. 실시간 세션 그래프의 계약은
+    대화·의도·상품 노드까지이고, 의도→이론 엣지는 백필 후에만 나타난다."""
     g = client.get(f"/api/research/graph?scope=session&id={demo_session}").json()
     types = {n["type"] for n in g["nodes"]}
-    assert {"dialogue", "intention", "concept", "theory", "product"} <= types
-    theory = [n for n in g["nodes"] if n["type"] == "theory"]
-    assert len(theory) == 12  # trait 5 + motivation 7, materialized only here
-    assert {n["tier"] for n in theory} == {"trait", "motivation"}
-    # D2 — no theory–theory edges, ever
-    theory_ids = {n["id"] for n in theory}
+    assert {"dialogue", "intention", "product"} <= types
+    assert "concept" not in types
+    # D2 — no theory–theory edges, ever (백필 전이므로 theory 엣지 자체가 없어야 한다)
+    theory_ids = {n["id"] for n in g["nodes"] if n["type"] == "theory"}
     assert not [e for e in g["edges"]
                 if e["source"] in theory_ids and e["target"] in theory_ids]
-    # intention→theory edges exist (trait tier)
-    assert [e for e in g["edges"] if e["type"] == "intention_theory"]
+    assert not [e for e in g["edges"] if e["type"] == "intention_theory"]
 
 
 def test_graph_scope_validation(client):
@@ -204,9 +180,8 @@ def test_motivation_polarity_guard(client):
 # M1/M2 — anchor score is a derived cache from the categorical triple
 # ---------------------------------------------------------------------------
 def test_anchor_score_derived_from_categories(client, demo_session):
+    """2026-08-19: 실시간 세션에는 anchorMappings가 비어 있다 — TCV 매핑은 분석 전
+    오프라인 백필로만 생성된다 (범주→점수 변환 자체는 levels.py 단위 테스트가 커버)."""
     r = client.get(f"/api/research/sessions/{demo_session}/replay").json()
     topic = next(t for t in r["topics"] if t["label"] == "선물로 너무 저렴해 보이지 않기")
-    social = next(a for a in topic["anchorMappings"] if a["anchor"] == "Social")
-    # confirmed × high × high → 0.95 (levels.derive_anchor_score) — LLM 스칼라가 아님
-    assert social["confidence"] == "confirmed"
-    assert social["score"] == 0.95
+    assert topic["anchorMappings"] == []

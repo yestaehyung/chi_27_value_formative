@@ -118,7 +118,7 @@ def test_baseline1_never_reads_cross_session_rig_or_latent_planner_state(client,
     assert "values" not in captured and "motivations" not in captured
     assert "ragPrediction" not in captured
     assert captured["hypothesesForClarification"] == {
-        "values": {}, "motivations": {}, "ragPrediction": None,
+        "values": {}, "motivations": {}, "ragPrediction": None, "criteria": [],
     }
 
 
@@ -135,7 +135,7 @@ def test_baseline1_planner_sanitizes_even_a_stale_snapshot():
         session=session,
     )
     assert context["hypothesesForClarification"] == {
-        "values": {}, "motivations": {}, "ragPrediction": None,
+        "values": {}, "motivations": {}, "ragPrediction": None, "criteria": [],
     }
 
 

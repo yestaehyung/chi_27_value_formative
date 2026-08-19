@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from app.core.ids import new_id
 from app.db import models
-from app.llm.prompts import SYSTEM_BY_TASK, render_user_context
+from app.llm.prompts import render_user_context, system_for
 from app.llm.provider import LLMMessage, LLMProvider
 # ── 2층 가치 모델 — 라벨 정의는 app/ontology/schema.py 가 단일 출처. 여기선 재노출. ──
 #   TRAIT_ANCHORS  = TCV5 가치축 (Sheth/Newman/Gross 1991) — 의도→이론 매핑 대상
@@ -29,7 +29,7 @@ async def fetch_anchor_mappings(
         ]
     }
     messages = [
-        LLMMessage(role="system", content=SYSTEM_BY_TASK["anchor_mapping"]),
+        LLMMessage(role="system", content=system_for("anchor_mapping")),
         LLMMessage(role="user", content=render_user_context(context)),
     ]
     out = await provider.generate_json(messages, task="anchor_mapping", context=context)

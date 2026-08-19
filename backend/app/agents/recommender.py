@@ -149,6 +149,39 @@ def build_rerank_context(
     condition-safe ``RecommendationPolicy``를 반드시 전달한다.
     """
     meta = session.meta or {}
+    criteria = (
+        [dict(c) for c in policy.criteria]
+        if policy is not None
+        else _stated_and_confirmed_criteria(
+            db, session.id, include_unconfirmed=_uses_unconfirmed(session)
+        )
+    )
+    if policy is not None:
+        # recommendation_spec이 원문 발화에서 뽑은 명시적 필수조건도 행렬에 독립
+        # 기준으로 넣는다. constraintsNote 전체를 hard로 취급하지 않아 일반 선호까지
+        # 배제 조건으로 승격되는 것을 막는다.
+        for hard in policy.hard_constraints:
+            criteria.append({
+                "label": hard,
+                "kind": "constraint",
+                "priority": "must_have",
+                "enforcement": "hard",
+                "source": "direct_recommendation_spec",
+            })
+        if policy.price_min is not None or policy.price_max is not None:
+            if policy.price_min is not None and policy.price_max is not None:
+                price_label = f"price {policy.price_min}–{policy.price_max}"
+            elif policy.price_max is not None:
+                price_label = f"price at or below {policy.price_max}"
+            else:
+                price_label = f"price at or above {policy.price_min}"
+            criteria.append({
+                "label": price_label,
+                "kind": "constraint",
+                "priority": "must_have",
+                "enforcement": "hard",
+                "source": "direct_recommendation_spec",
+            })
     return {
         "scenario": meta.get("shoppingGoal") or meta.get("category") or "",
         "recentUtterances": [
@@ -157,13 +190,7 @@ def build_rerank_context(
         "statedConstraintsNote": (
             policy.constraints_note if policy is not None else constraints_note or ""
         ),
-        "criteria": (
-            [dict(c) for c in policy.criteria]
-            if policy is not None
-            else _stated_and_confirmed_criteria(
-                db, session.id, include_unconfirmed=_uses_unconfirmed(session)
-            )
-        ),
+        "criteria": criteria,
     }
 
 
@@ -235,8 +262,8 @@ async def run_recommendation(
     # 검증 안 된 상품을 정상 카드처럼 내보내면 "정확히 27인치" 세션에 24인치가 나간다
     # (2026-08-18 라이브 실측). 정직하게 재시도를 청한다 (fail-loud).
     if matrix.get("failed"):
-        hard_present = bool((intent_context.get("statedConstraintsNote") or "").strip()) or any(
-            c.get("kind") in ("constraint", "avoidance")
+        hard_present = any(
+            c.get("enforcement") == "hard"
             for c in (intent_context.get("criteria") or []))
         if hard_present:
             diag = {

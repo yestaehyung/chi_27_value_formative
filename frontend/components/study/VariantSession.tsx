@@ -493,10 +493,12 @@ export default function VariantSession({
   // (충돌 해소/수정으로 정리), rejected_by_user(거부). 이걸 빼야 방금 충돌로 정리한 기준을
   // 곧바로 다시 확인 요청하는 '이중 질문'이 안 생긴다. 물어볼 게 없으면 위젯 자체를 안 띄움.
   const E_SETTLED = ["confirmed", "corrected_by_user", "rejected_by_user"];
-  const eUnadjudicated = core.filter((c) => !E_SETTLED.includes(c.status ?? ""));
+  const eUnadjudicated = chips.filter((c) =>
+    c.askable === true && !E_SETTLED.includes(c.status ?? "")
+  );
   const eAskable = [...eUnadjudicated]
-    .sort((a, b) => (b.type === "uncertain" ? 1 : 0) - (a.type === "uncertain" ? 1 : 0))
-    .slice(0, 2);
+    .sort((a, b) => (b.askScore ?? 0) - (a.askScore ?? 0))
+    .slice(0, 1);
   const eKnown = core.filter((c) => !eAskable.some((x) => x.id === c.id));
   const recommendRounds = Object.keys(impressionsByTurn).length;
   const MIN_RECOMMEND_ROUNDS = 2;

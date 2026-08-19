@@ -303,13 +303,19 @@ async def rerank_by_intent(
         c["cid"] = f"c{ci + 1}"
     hard_cids = {
         c["cid"] for c in criteria
-        if c.get("kind") in ("constraint", "avoidance") or c.get("priority") == "must_have"
+        if c.get("enforcement") == "hard"
+        # 구 단위 테스트/외부 호출 호환: enforcement 필드가 없는 옛 기준만 종래 규칙.
+        or ("enforcement" not in c and (
+            c.get("kind") in ("constraint", "avoidance")
+            or c.get("priority") == "must_have"
+        ))
     }
     # 구매 옵션 속성(사이즈 등) — vio는 배제하되 unk는 배제 사유에서 면제 (2026-08-18)
     option_cids = {c["cid"] for c in criteria if c.get("purchaseOption")}
     label_by_cid = {c["cid"]: (c.get("label") or c["cid"]) for c in criteria}
     if (intent_context.get("statedConstraintsNote") or "").strip():
-        hard_cids.add("note")
+        # note에는 명시 선호와 맥락도 함께 있으므로 배제 기준이 아니다. 실제 필수조건은
+        # recommendation policy가 enforcement=hard인 개별 criterion으로 전달한다.
         label_by_cid["note"] = L("직접 말씀하신 조건", "your stated conditions")
     matrix["criterionLabels"] = label_by_cid  # 노출 셋의 unk 집계(확인 불가 고지)에 쓰인다
     context = {**intent_context, "criteria": criteria, "candidates": candidates}

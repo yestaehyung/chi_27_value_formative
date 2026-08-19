@@ -118,6 +118,14 @@ def build_planner_context(
     hypothesis_snapshot = snapshot if hypotheses_allowed else None
     return {
         "recentTurns": msgs,
+        # close 판정은 과거 purchase 이벤트가 아니라 *이번 발화*에만 근거해야 한다.
+        # 별도 필드로 두어 작은 모델이 긴 userUtterances/feedbackEvents에서 최신성을
+        # 놓치지 않게 하고, 아래 구조 정규화도 같은 사실을 읽는다.
+        "latestUserUtterance": next(
+            (m["content"] for m in reversed(msgs)
+             if m["role"] in ("user", "user_agent")),
+            "",
+        ),
         "userUtterances": user_utterances,
         "feedbackEvents": feedback_events,
         "lastShownProducts": last_shown_summary,
@@ -136,6 +144,13 @@ def build_planner_context(
                 if hypothesis_snapshot else {}
             ),
             "ragPrediction": rag_prediction if hypotheses_allowed else None,
+            "criteria": [
+                c for c in (
+                    (hypothesis_snapshot.user_visible_summary or {}).get("chips", [])
+                    if hypothesis_snapshot else []
+                )
+                if c.get("askable")
+            ][:1],
         },
         "hasRecommendations": has_recommendations,
         "lastAgentAction": last_agent_action,
@@ -178,6 +193,25 @@ async def fetch_plan(provider, context: dict, fallback_search_text: str) -> Plan
         # (2026-07-06: close만 강등되던 구현 버그 수정 — FS1 실측: 노출 0에서 answer가
         #  통과해 "조금 더 구체적으로…" 빈 응답이 나감).
         action = "recommend"
+    if action == "close":
+        # 과거 purchase feedback은 상품 참조용일 뿐, 이후 모든 턴을 close로 만드는
+        # 권한이 없다. 최신 발화가 질문·탐색·기준 수정이면 대화를 계속한다.
+        latest = str(context.get("latestUserUtterance") or "").strip().lower()
+        latest_acts = {
+            str(a).lower() for a in (context.get("latestDialogueActs") or [])
+            if isinstance(a, str)
+        }
+        exploratory_acts = {"inquire", "reveal", "revise", "interpret", "reject"}
+        exploratory_text = (
+            "?" in latest
+            or any(p in latest for p in (
+                "check the photo", "check the picture", "check the page",
+                "look at the photo", "look at the picture", "take a look",
+                "사진", "상품 페이지", "확인해볼", "살펴볼",
+            ))
+        )
+        if latest_acts & exploratory_acts or exploratory_text:
+            action = "answer" if context.get("hasRecommendations") else "recommend"
     if action == "clarify" and context.get("lastAgentAction") == "clarify":
         # 연속 clarify 금지 — mock 계약("직전 clarify→recommend")을 실 경로에 정렬
         # (2026-07-06: flash가 4연속 clarify → 참가자 세션 포기. 프롬프트의 "짧게 한 번"을

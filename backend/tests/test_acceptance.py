@@ -83,11 +83,12 @@ def test_2_hidden_intention_extraction(client):
     assert "선물로 너무 저렴해 보이지 않기" in topics
 
     topic = topics["선물로 너무 저렴해 보이지 않기"]
-    concept_labels = {c["label"] for c in topic["concepts"]}
-    assert concept_labels & {"선물의 체면", "사회적 적절성"}
+    # Participant turns no longer materialize Concept/Relation graph rows. Replay keeps the
+    # historical field for compatibility, but current sessions leave it empty.
+    assert topic["concepts"] == []
 
-    anchors = {a["anchor"] for a in topic["anchorMappings"]}
-    assert {"Social", "Conditional"} <= anchors
+    # 2026-08-19: TCV 매핑도 Concept/Relation과 같이 오프라인 백필로 이동 — 실시간엔 비어 있다.
+    assert topic["anchorMappings"] == []
 
     # CurrentUnderstandingPanel chip
     chips = out["updatedPreferenceState"]["userVisibleSummary"]["chips"]

@@ -103,7 +103,7 @@ def apply_motivation_signals(meta: dict, signals: list[dict]) -> dict:
 async def fetch_motivation_signals(provider, contents: list[str]) -> list[dict] | None:
     """LLM phase (no DB) — 설문 rubric 기반 동기 신호 감지 (M8).
     발화별로 채점해 신호를 합친다. 전부 실패하면 None (→ 키워드 폴백)."""
-    from app.llm.prompts import SYSTEM_BY_TASK, render_user_context
+    from app.llm.prompts import render_user_context, system_for
     from app.llm.provider import LLMMessage
 
     signals: list[dict] = []
@@ -111,7 +111,7 @@ async def fetch_motivation_signals(provider, contents: list[str]) -> list[dict] 
     for content in contents:
         try:
             out = await provider.generate_json(
-                [LLMMessage(role="system", content=SYSTEM_BY_TASK["motivation_detection"]),
+                [LLMMessage(role="system", content=system_for("motivation_detection")),
                  LLMMessage(role="user", content=render_user_context({"content": content}))],
                 task="motivation_detection", context={"content": content},
             )
@@ -120,5 +120,4 @@ async def fetch_motivation_signals(provider, contents: list[str]) -> list[dict] 
         except Exception:  # noqa: BLE001
             continue
     return signals if any_ok else None
-
 

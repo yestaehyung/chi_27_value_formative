@@ -44,6 +44,16 @@ def build_user_visible_summary(
             "status": t.status,
             "priority": t.priority,
             "confidence": round(t.confidence, 2),
+            "explicitness": t.explicitness,
+            "theoryBasis": (t.hints or {}).get("theoryBasis"),
+            "askable": bool(
+                ((t.hints or {}).get("theoryBasis") or {}).get("askable")
+                and t.explicitness != "explicit"
+                and t.status not in {
+                    "confirmed", "corrected_by_user", "rejected_by_user", "inactive",
+                }
+            ),
+            "askScore": int(((t.hints or {}).get("theoryBasis") or {}).get("askScore") or 0),
         }
         for t in top
     ]

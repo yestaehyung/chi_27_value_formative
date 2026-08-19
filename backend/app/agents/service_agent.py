@@ -325,6 +325,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             (session.meta or {}).get("shoppingGoal") or category or "",
             db=db, session=session, last_shown=prev_shown,
         )
+        planner_context["latestDialogueActs"] = list(dialogue_acts)
     if decision is None:
         decision = await planner.fetch_plan(
             provider, planner_context, fallback_search_text=content.strip(),
