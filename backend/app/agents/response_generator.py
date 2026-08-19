@@ -551,8 +551,12 @@ def close_text(product: models.Product | None) -> str:
     # 않는 중립 마무리 (노출 1위를 "선택하셨네요"로 단정하던 날조 제거, 2026-08-18).
     # 본실험 참가자는 영어 전용이라 이 문구는 영어만 둔다.
     if product is None:
-        return ("Happy to help you look around! If you'd like to keep searching"
-                " or adjust any criteria, just let me know.")
+        # 사용자가 대화로는 마무리 신호를 보냈지만 아직 Finish를 누르지 않은 상태 —
+        # 작별 인사를 주고받는 대신 과제를 실제로 끝내는 행동(Finish 버튼)으로 안내한다
+        # (2026-08-19 v4 관찰: "I'll take it!" 후 4분간 작별인사 루프 11턴).
+        return ("Glad I could help! If you've settled on a product, press the Finish"
+                " button to record your choice and wrap up this task — or tell me"
+                " what to adjust and we'll keep looking.")
     return (
         L(f"'{product.title}'(으)로 결정하셨네요. 좋은 선택이에요! "
           "이번 대화에서 제가 이해한 기준이 다르게 느껴진 부분이 있었다면 알려주세요.",
