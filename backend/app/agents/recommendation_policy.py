@@ -7,6 +7,7 @@ allowed by the assigned study condition, then exposes one policy consumed by bot
 """
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 
@@ -34,6 +35,8 @@ class RecommendationPolicy:
     price_max: int | None
     criteria: tuple[dict, ...]
     direct_evidence_ids: tuple[str, ...]
+    # "llm" = 스펙 컴파일러 정상 / "fallback" = 결정론 폴백 (감사용, 2026-08-19)
+    spec_source: str = "llm"
 
     def as_dict(self) -> dict:
         return {
@@ -45,6 +48,7 @@ class RecommendationPolicy:
             "priceMax": self.price_max,
             "criteria": [dict(c) for c in self.criteria],
             "directEvidenceIds": list(self.direct_evidence_ids),
+            "specSource": self.spec_source,
         }
 
 
@@ -285,7 +289,19 @@ async def build_recommendation_policy(
             context=context,
         )
     except Exception:  # noqa: BLE001 - evidence-safe deterministic fallback below
+        logging.exception("recommendation_spec LLM call failed — deterministic fallback")
         result = {}
+
+    # 폴백은 안전장치지 정상 경로가 아니다 — 침묵 강등이 하루 동안 160/164턴을 숨겼다
+    # (2026-08-19). 폴백 발동은 로그로 드러내고 spec_source로 데이터에도 남긴다
+    # (llm_calls의 recommendationPolicy에 실려 배치 단위 감사가 가능해진다).
+    spec_source = "llm"
+    if not _clean_text(result.get("searchText")):
+        spec_source = "fallback"
+        if provider.name != "mock":
+            logging.warning(
+                "recommendation_spec fell back (no usable searchText) — session=%s",
+                session.id)
 
     search_text = _clean_text(result.get("searchText")) or fallback["searchText"]
     constraints_note = (
@@ -318,4 +334,5 @@ async def build_recommendation_policy(
         price_max=price_max,
         criteria=tuple(criteria),
         direct_evidence_ids=tuple(evidence_ids),
+        spec_source=spec_source,
     )
