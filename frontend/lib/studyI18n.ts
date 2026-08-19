@@ -121,10 +121,10 @@ export const STUDY_UI = {
   },
   categories: {
     step: (step: number) => tr(`${step}단계 / 2단계`, `Step ${step} of 2`),
-    familiarTitle: tr("평소 잘 아는 상품군 2개를 골라 주세요", "Choose two product categories you know well"),
-    unfamiliarTitle: tr("잘 모르는 상품군 2개를 골라 주세요", "Choose two product categories you do not know well"),
+    familiarTitle: tr("평소 잘 아는 상품군 1개를 골라 주세요", "Choose one product category you know well"),
+    unfamiliarTitle: tr("잘 모르는 상품군 1개를 골라 주세요", "Choose one product category you do not know well"),
     familiarDescription: tr("상품을 고를 때 무엇을 봐야 하는지 스스로 잘 안다고 느끼는 쪽이에요.", "Select categories for which you feel you know what to consider when choosing a product."),
-    unfamiliarDescription: tr("이번에는 반대로, 잘 모른다고 느끼는 상품군이에요. 진행 순서는 무작위로 정해져요.", "Now select categories you feel less familiar with. The task order will be randomized."),
+    unfamiliarDescription: tr("이번에는 반대로, 잘 모른다고 느끼는 상품군이에요. 잘 아는 상품군부터 순서대로 진행해요.", "Now select a category you feel less familiar with. You will shop the familiar category first."),
     selected: (count: number, total: number) => tr(`선택 ${count}/${total}`, `Selected ${count}/${total}`),
     back: tr("이전", "Back"),
     next: tr("다음", "Next"),
@@ -157,7 +157,7 @@ export const STUDY_UI = {
     ),
     steps: tr(
       [
-        { key: "categories", title: "쇼핑할 상품군을 먼저 골라요", body: "평소 잘 아는 상품군 2개 → 잘 모르는 상품군 2개, 두 단계로 골라요.\n고른 4개를 무작위 순서로 한 번씩 쇼핑하게 돼요." },
+        { key: "categories", title: "쇼핑할 상품군을 먼저 골라요", body: "평소 잘 아는 상품군 1개 → 잘 모르는 상품군 1개, 두 단계로 골라요.\n고른 2개를 차례로 한 번씩 쇼핑하게 돼요." },
         { key: "chat", title: "에이전트와 대화해요", body: "원하는 걸 대화로 좁혀가요.\n에이전트가 더 묻거나 후보를 추천해줘요. (위는 예시 대화예요)" },
         { key: "products", title: "추천 상품", body: "기준에 맞춰 서로 다른 방향의 후보를 보여줘요.\n좌우로 넘기면서 비교할 수 있어요." },
         { key: "card-info", title: "카드에서 무엇을 보나요", body: "가격·평점·리뷰와 함께, 왜 이 상품을 골랐는지 이유가 적혀 있어요." },
