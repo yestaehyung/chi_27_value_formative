@@ -192,6 +192,28 @@ async def recommend_after_resolution(
     )
     products = [sp.product for sp in scored]
     state_for_llm = snapshot.user_visible_summary if snapshot else None
+
+    # 수정 반영 재추천의 결과 셋이 직전 노출과 동일하면 카드를 다시 나열하지 않는다 —
+    # 반영 사실 + 후보 유지를 한 문장으로 알리는 짧은 턴만 남긴다 (v4: "These are the
+    # same five desks…" 류의 어색한 반복 제거, impressions도 새로 만들지 않는다).
+    if (correction_context is not None and products
+            and {p.id for p in products} == {p.id for p in prev_shown}):
+        text = await rg.generate_reply(
+            provider, action="answer", template_text=rg.correction_applied_text(),
+            recent_turns=recent_turns, products=[], state_summary=state_for_llm,
+            conflict_explanation=None, must_ask_question=None,
+            previously_shown=prev_shown, recommendation_note=None,
+            just_corrected=correction_context,
+        )
+        agent_turn = models.Turn(
+            id=new_id("turn"), session_id=session.id,
+            turn_index=_next_turn_index(db, session.id), role="service_agent",
+            content=text, agent_action="answer", related_product_ids=[],
+        )
+        db.add(agent_turn)
+        db.commit()
+        return agent_turn, [], []
+
     near_miss = (rec_diag or {}).get("nearMiss") or {}
     rec_note = None
     if (rec_diag or {}).get("emptyHanded"):

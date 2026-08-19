@@ -376,12 +376,23 @@ export default function VariantSession({
     }
   }, [sessionId]);
 
-  // 칩 액션 — 기존 API 그대로 (안 B: edit_label / 안 3: confirm·reject)
-  const chipAction = useCallback(async (topicId: string, action: string, manualLabel?: string) => {
+  // 칩 수정 디바운스 — 수정은 즉시 저장(deferRecommend)하고, 재추천은 연속 수정이
+  // 잠잠해진 뒤(2.5s) refresh 1회로 모은다. v4 배치에서 수정 연타가 11/23 세션에서
+  // 에이전트 메시지 3~5연발을 만들던 문제의 픽스.
+  const pendingCorrections = useRef<{ action: string; criterionLabel?: string }[]>([]);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshInFlight = useRef(false);
+
+  const flushRefresh = useCallback(async () => {
+    if (refreshInFlight.current) return; // 완료 후 잔여분을 자체 재예약한다
+    const corrections = pendingCorrections.current;
+    if (!corrections.length) return;
+    pendingCorrections.current = [];
+    refreshInFlight.current = true;
     setBusy(true);
     try {
-      const res = await api.chipAction(topicId, action, manualLabel);
-      setState(res.newPreferenceState);
+      const res = await api.refreshRecommendation(sessionId, corrections);
+      if (res.newPreferenceState) setState(res.newPreferenceState);
       if (res.recommendTurn) {
         setTurns((prev) => prev.some((t) => t.id === res.recommendTurn.id)
           ? prev : [...prev, res.recommendTurn]);
@@ -392,6 +403,41 @@ export default function VariantSession({
         setChipSuggestions(null);
         loadChipSuggestions();
       }
+    } catch (e) {
+      console.error(e); // 수정 자체는 이미 반영됨 — 갱신 실패는 조용히 넘긴다
+    } finally {
+      refreshInFlight.current = false;
+      setBusy(false);
+      if (pendingCorrections.current.length) {
+        refreshTimer.current = setTimeout(flushRefresh, 2500);
+      }
+    }
+  }, [sessionId, loadChipSuggestions]);
+
+  useEffect(() => () => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+  }, []);
+
+  // 칩 액션 — 기존 API 그대로 (안 B: edit_label / 안 3: confirm·reject)
+  const chipAction = useCallback(async (topicId: string, action: string, manualLabel?: string) => {
+    setBusy(true);
+    try {
+      const res = await api.chipAction(topicId, action, manualLabel, true);
+      setState(res.newPreferenceState);
+      if (res.recommendTurn) { // 구버전 백엔드 호환 — defer가 무시된 경우 종전 동작
+        setTurns((prev) => prev.some((t) => t.id === res.recommendTurn.id)
+          ? prev : [...prev, res.recommendTurn]);
+        setImpressionsByTurn((prev) => ({
+          ...prev,
+          [res.recommendTurn.id]: res.recommendedProducts ?? [],
+        }));
+        setChipSuggestions(null);
+        loadChipSuggestions();
+      } else if (res.recommendationDeferred === "debounced") {
+        pendingCorrections.current.push({ action, criterionLabel: res.updatedTopic?.label });
+        if (refreshTimer.current) clearTimeout(refreshTimer.current);
+        refreshTimer.current = setTimeout(flushRefresh, 2500);
+      }
       showToast(res.message);
       return true;
     } catch (e) {
@@ -401,7 +447,7 @@ export default function VariantSession({
     } finally {
       setBusy(false);
     }
-  }, [loadChipSuggestions]);
+  }, [loadChipSuggestions, flushRefresh]);
 
   const saveChipEdit = useCallback(async (topicId: string, label: string) => {
     const saved = await chipAction(topicId, "edit_label", label);

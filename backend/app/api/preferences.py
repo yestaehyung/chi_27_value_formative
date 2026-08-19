@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session as DbSession
 from app.core.locale import L, product_display_title
 from app.db import models, serializers
 from app.db.database import get_db
-from app.db.schemas import ChipActionRequest
+from app.db.schemas import ChipActionRequest, RefreshRecommendationRequest
 from app.ontology.state_builder import build_snapshot
 
 router = APIRouter(prefix="/api/preferences", tags=["preferences"])
@@ -198,7 +198,10 @@ async def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Dep
         .filter(models.PreferenceConflict.status.in_(("open", "shown_to_user")))
         .count() > 0
     )
-    if req.action in correction_actions and not direct_open:
+    if req.action in correction_actions and req.deferRecommend:
+        # 프론트가 디바운스 중 — 수정은 저장·반영됐고 재추천은 refresh 1회로 모인다
+        response["recommendationDeferred"] = "debounced"
+    elif req.action in correction_actions and not direct_open:
         try:
             from app.agents import service_agent
 
@@ -222,6 +225,53 @@ async def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Dep
             response["recommendationRefreshFailed"] = True
     elif req.action in correction_actions and direct_open:
         response["recommendationDeferred"] = "open_direct_conflict"
+    return response
+
+
+@router.post("/sessions/{session_id}/refresh-recommendation")
+async def refresh_recommendation(
+    session_id: str, req: RefreshRecommendationRequest, db: DbSession = Depends(get_db),
+):
+    """디바운스된 수정 묶음에 대한 재추천 1회. 수정 자체는 chip_action에서 이미
+    저장·커밋됐으므로 여기서는 최신 상태로 스냅샷을 다시 만들어 추천만 갱신한다."""
+    session = db.get(models.Session, session_id)
+    if session is None:
+        raise HTTPException(404, "session not found")
+    direct_open = (
+        db.query(models.PreferenceConflict)
+        .filter(models.PreferenceConflict.session_id == session.id)
+        .filter(models.PreferenceConflict.severity == "direct")
+        .filter(models.PreferenceConflict.status.in_(("open", "shown_to_user")))
+        .count() > 0
+    )
+    if direct_open:
+        return {"recommendationDeferred": "open_direct_conflict"}
+    snapshot = build_snapshot(db, session)
+    db.commit()  # LLM-first-write-last: 재추천의 LLM 구간 전에 락을 풀어 둔다
+    corrections = [
+        {"action": c.get("action"), "criterionLabel": c.get("criterionLabel")}
+        for c in req.corrections if isinstance(c, dict)
+    ]
+    correction_context = (
+        corrections[0] if len(corrections) == 1
+        else {"actions": corrections} if corrections
+        else {"actions": []}
+    )
+    response: dict = {"newPreferenceState": serializers.snapshot_to_dict(snapshot)}
+    try:
+        from app.agents import service_agent
+
+        rec_turn, impressions, _ = await service_agent.recommend_after_resolution(
+            db, session, snapshot, correction_context=correction_context,
+        )
+        response["recommendTurn"] = serializers.turn_to_dict(rec_turn)
+        response["recommendedProducts"] = [
+            serializers.impression_to_dict(i, db.get(models.Product, i.product_id))
+            for i in impressions
+        ]
+    except Exception:  # noqa: BLE001 - 수정은 이미 반영됨; 갱신 실패만 알린다
+        logging.exception("debounced refresh recommend failed")
+        response["recommendationRefreshFailed"] = True
     return response
 
 

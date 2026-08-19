@@ -63,6 +63,16 @@ class ChipActionRequest(BaseModel):
         "edit_label", "show_evidence",
     ]
     manualLabel: Optional[str] = None
+    # true면 수정만 저장하고 재추천은 건너뛴다 — 프론트가 연속 수정을 디바운스해
+    # refresh-recommendation 1회로 모아 보낸다 (2026-08-19 v4: 11/23 세션에서
+    # 수정 연타가 에이전트 메시지 3~5연발을 만들던 문제).
+    deferRecommend: bool = False
+
+
+class RefreshRecommendationRequest(BaseModel):
+    # 마지막 재추천 이후 누적된 수정 내역(표시용) — 상태 진실은 DB가 이미 갖고 있고,
+    # 이 목록은 렌더러가 "무엇이 반영됐는지"를 서두에 언급하는 데만 쓴다.
+    corrections: list[dict] = []
 
 
 class SimulationRequest(BaseModel):

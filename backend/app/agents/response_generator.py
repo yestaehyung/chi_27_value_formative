@@ -63,6 +63,16 @@ def empty_handed_text(blocking_criteria: list[str]) -> str:
     )
 
 
+def correction_applied_text() -> str:
+    """수정을 반영해 재추천했는데 노출 셋이 직전과 동일할 때의 초안 — 같은 카드 5장을
+    다시 나열하는 대신("These are the same five desks…", v4 관찰) 반영 사실과 후보
+    유지를 한 문장으로 알린다. mock 출력 겸 실패 폴백."""
+    if is_en():
+        return ("I've applied your updated criteria — the current picks still fit best, "
+                "so I've kept them as they are.")
+    return "수정하신 기준을 반영했어요 — 지금 보여드린 후보가 여전히 가장 잘 맞아서 그대로 유지했어요."
+
+
 def near_miss_text(scored: list[ScoredProduct]) -> str:
     """전 후보가 제약 위반일 때의 정직 초안 (② 부분 정직, 2026-07-07) — 조건에 맞는
     상품의 부재를 먼저 알리고, 근접 대안이 어떤 점에서 다른지는 카드(weak)가 보여주며,

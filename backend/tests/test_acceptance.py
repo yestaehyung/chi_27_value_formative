@@ -220,6 +220,18 @@ def test_simulation_returns_evaluation(client):
     assert len(body["turns"]) >= 4
 
 
+def _assert_correction_visibly_acknowledged(body):
+    """수정 가시화 계약 (2026-08-19 v4 개정): 수정은 같은 상호작용 안에서 에이전트 턴으로
+    응답된다. 재추천 셋이 바뀌면 recommend + 카드, 직전 노출과 동일하면 answer 한 줄
+    (카드 재나열 생략 — "These are the same five desks" 반복 제거)."""
+    turn = body["recommendTurn"]
+    assert turn["agentAction"] in ("recommend", "answer")
+    if turn["agentAction"] == "recommend":
+        assert body["recommendedProducts"]
+    else:
+        assert body.get("recommendedProducts", []) == []
+
+
 def test_chip_correction(client):
     sid = new_session(client)
     out = say(client, sid, "운동 좋아하는 친구에게 줄 스마트워치를 찾고 있어요. 브랜드는 잘 몰라요.")
@@ -230,8 +242,7 @@ def test_chip_correction(client):
     body = r.json()
     new_chips = body["newPreferenceState"]["userVisibleSummary"]["chips"]
     assert all(c["id"] != target["id"] for c in new_chips)
-    assert body["recommendTurn"]["agentAction"] == "recommend"
-    assert "recommendedProducts" in body
+    _assert_correction_visibly_acknowledged(body)
 
     # evidence drawer
     other = next(c for c in chips if c["id"] != target["id"])
@@ -253,8 +264,7 @@ def test_priority_correction_is_user_backed_and_refreshes_recommendations(client
     body = r.json()
     assert body["updatedTopic"]["status"] == "corrected_by_user"
     assert body["updatedTopic"]["confidence"] == 1.0
-    assert body["recommendTurn"]["agentAction"] == "recommend"
-    assert "recommendedProducts" in body
+    _assert_correction_visibly_acknowledged(body)
 
 
 @pytest.mark.parametrize(
@@ -281,8 +291,33 @@ def test_every_chip_correction_refreshes_recommendations(
     assert body["updatedTopic"]["status"] == expected_status
     if manual_label is not None:
         assert body["updatedTopic"]["label"] == manual_label
-    assert body["recommendTurn"]["agentAction"] == "recommend"
-    assert "recommendedProducts" in body
+    _assert_correction_visibly_acknowledged(body)
+
+
+def test_chip_correction_debounce_defers_then_refreshes_once(client):
+    """디바운스 경로: deferRecommend=true 수정은 저장만 하고 재추천을 미루며,
+    refresh-recommendation 1회가 묶음 재추천 턴을 만든다 (v4 수정 연타 스톰 픽스)."""
+    sid = new_session(client)
+    out = say(client, sid, "운동 좋아하는 친구에게 줄 스마트워치를 찾고 있어요.")
+    chips = out["preferenceState"]["userVisibleSummary"]["chips"]
+
+    labels = []
+    for chip in chips[:2]:
+        r = client.post(f"/api/preferences/chips/{chip['id']}/action",
+                        json={"action": "confirm", "deferRecommend": True})
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["updatedTopic"]["status"] == "confirmed"
+        assert body["recommendationDeferred"] == "debounced"
+        assert "recommendTurn" not in body
+        labels.append(body["updatedTopic"]["label"])
+
+    r = client.post(f"/api/preferences/sessions/{sid}/refresh-recommendation",
+                    json={"corrections": [
+                        {"action": "confirm", "criterionLabel": lb} for lb in labels
+                    ]})
+    assert r.status_code == 200, r.text
+    _assert_correction_visibly_acknowledged(r.json())
 
 
 def test_exports(client):

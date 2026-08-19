@@ -88,10 +88,17 @@ export const api = {
       body: JSON.stringify({ optionId, manualText }),
     }),
 
-  chipAction: (topicId: string, action: string, manualLabel?: string) =>
+  chipAction: (topicId: string, action: string, manualLabel?: string, deferRecommend?: boolean) =>
     request<any>(`/api/preferences/chips/${topicId}/action`, {
       method: "POST",
-      body: JSON.stringify({ action, manualLabel }),
+      body: JSON.stringify({ action, manualLabel, deferRecommend }),
+    }),
+
+  // 디바운스된 수정 묶음에 대한 재추천 1회 (corrections는 표시용 요약)
+  refreshRecommendation: (sessionId: string, corrections: { action: string; criterionLabel?: string }[]) =>
+    request<any>(`/api/preferences/sessions/${sessionId}/refresh-recommendation`, {
+      method: "POST",
+      body: JSON.stringify({ corrections }),
     }),
 
   topicEvidence: (topicId: string) =>
