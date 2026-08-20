@@ -625,8 +625,26 @@ export default function VariantSession({
               title={canFinish ? undefined : STUDY_UI.chat.finishLocked}
               className={`btn btn-primary shrink-0 whitespace-nowrap px-2.5 py-1 text-xs ${canFinish ? "" : "cursor-not-allowed opacity-40"}`}
             >
-              <span className="sm:hidden">{STUDY_UI.chat.finishShort}</span>
-              <span className="hidden sm:inline">{STUDY_UI.chat.finish}</span>
+              {/* 잠긴 동안 버튼이 진행도(1/2)를 스스로 말한다 — 호버 툴팁·토스트를
+                  못 보는 참가자도 "2까지 채워야 열린다"를 상시로 본다 (2026-08-20). */}
+              <span className="sm:hidden">
+                {STUDY_UI.chat.finishShort}
+                {!canFinish && (
+                  <span className="ml-1 font-extrabold tabular-nums">
+                    · {Math.min(recommendRounds, MIN_RECOMMEND_ROUNDS)}/{MIN_RECOMMEND_ROUNDS}
+                  </span>
+                )}
+              </span>
+              <span className="hidden sm:inline">
+                {canFinish ? STUDY_UI.chat.finish : (
+                  <>
+                    {STUDY_UI.chat.finishShort}
+                    <span className="ml-1 font-extrabold tabular-nums">
+                      · {Math.min(recommendRounds, MIN_RECOMMEND_ROUNDS)}/{MIN_RECOMMEND_ROUNDS}
+                    </span>
+                  </>
+                )}
+              </span>
             </button>
           </div>
         ) : (

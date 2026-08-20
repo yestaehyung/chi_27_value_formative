@@ -187,8 +187,8 @@ export const STUDY_UI = {
     finishShort: tr("마치기", "Finish"),
     finish: tr("이 쇼핑 마치기", "Finish This Shopping Task"),
     browseGuide: tr(
-      "추천을 충분히 받아보시고, 마음에 드는 상품을 찾으면 '마치기'를 눌러주세요.",
-      "Take your time browsing. When you find a product you'd actually buy, press Finish.",
+      "추천을 충분히 받아보시고, 마음에 드는 상품을 찾으면 '마치기'를 눌러주세요. 마치기는 추천을 2회 이상 받은 뒤부터 누를 수 있어요 — 비교해 보고 결정해 주세요.",
+      "Take your time browsing. When you find a product you'd actually buy, press Finish. You can finish after receiving at least 2 rounds of recommendations — compare before you decide.",
     ),
     catalogNote: tr(
       "상품은 연구용 카탈로그(2023년 Amazon 데이터)에서 제공됩니다 — 가격은 현재 시세와 다를 수 있고, 실제 구매는 이루어지지 않습니다. 답변 생성에는 20–30초가 걸릴 수 있어요.",
