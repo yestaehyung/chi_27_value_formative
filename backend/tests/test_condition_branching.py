@@ -91,6 +91,30 @@ def test_baseline1_still_answers_and_recommends(client):
     assert r["out"]["agentResponse"]["content"].strip()
 
 
+def test_baseline1_recommendation_evidence_is_current_request_only(client):
+    """2026-08-20 정의 명확화: b1 = 무상태 검색 챗봇. 조작 변인은 지속적 사용자 모델의
+    유무이므로, b1의 추천 증거(스펙 컴파일 입력)는 마지막 사용자 발화 + 그 이후
+    피드백으로 한정된다 — 이전 턴 발화가 검색·하드 제약으로 누적되지 않는다.
+    (플래너·렌더러의 대화 문맥은 별개 — 여기서 지키는 건 추천 증거 경계다.)"""
+    from app.agents.recommendation_policy import _direct_evidence_context
+
+    r = run_session(client, "baseline1")
+    sid = r["sessionId"]
+    second = "가능하면 저렴한 게 좋아요."
+    client.post(f"/api/sessions/{sid}/turns", json={"role": "user", "content": second})
+
+    db = SessionLocal()
+    try:
+        session = db.get(models.Session, sid)
+        direct = _direct_evidence_context(db, session, current_request_only=True)
+        assert [u["content"] for u in direct["userUtterances"]] == [second]
+        # 대조: 스위치 없이는 두 발화가 모두 누적된다 (b2·ours의 종전 동작)
+        full = _direct_evidence_context(db, session)
+        assert len(full["userUtterances"]) == 2
+    finally:
+        db.close()
+
+
 def test_baseline1_never_reads_cross_session_rig_or_latent_planner_state(client, monkeypatch):
     """의도 추론 없음은 현재 세션 토픽뿐 아니라 cross-session RIG 가설까지 포함한다."""
     import app.rig as rig

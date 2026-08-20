@@ -144,7 +144,8 @@ def eligible_criteria(
     return out
 
 
-def _direct_evidence_context(db: DbSession, session: models.Session) -> dict:
+def _direct_evidence_context(db: DbSession, session: models.Session,
+                             *, current_request_only: bool = False) -> dict:
     turns = (
         db.query(models.Turn)
         .filter(models.Turn.session_id == session.id)
@@ -152,6 +153,13 @@ def _direct_evidence_context(db: DbSession, session: models.Session) -> dict:
         .order_by(models.Turn.turn_index)
         .all()
     )
+    if current_request_only and turns:
+        # baseline1 (2026-08-20 정의 명확화): 조작 변인은 지속적 사용자 모델의 유무다.
+        # b1의 추천 증거는 "현재 요청"으로 한정한다 — 마지막 사용자 발화 1개 + 그 이후의
+        # 피드백(지금 보고 있는 결과에 대한 반응)만. 대화 이력에서 조건을 누적 컴파일하면
+        # b1도 사실상 대화 수준 사용자 모델을 갖게 되어 b2와의 경계가 사라진다.
+        # 플래너·렌더러의 대화 문맥은 그대로다 — 좁히는 것은 검색·행렬 증거뿐.
+        turns = [turns[-1]]
     feedback_rows = (
         db.query(models.FeedbackEvent)
         .filter(models.FeedbackEvent.session_id == session.id)
@@ -159,6 +167,10 @@ def _direct_evidence_context(db: DbSession, session: models.Session) -> dict:
         .order_by(models.FeedbackEvent.created_at)
         .all()
     )
+    if current_request_only and turns:
+        cutoff = turns[-1].created_at
+        feedback_rows = [f for f in feedback_rows
+                         if cutoff is None or f.created_at is None or f.created_at >= cutoff]
     feedback = []
     for event in feedback_rows:
         product = db.get(models.Product, event.product_id) if event.product_id else None
@@ -292,7 +304,12 @@ async def build_recommendation_policy(
 ) -> RecommendationPolicy:
     """Build the only evidence object retrieval and reranking may consume."""
     criteria = eligible_criteria(db, session)
-    direct = _direct_evidence_context(db, session)
+    direct = _direct_evidence_context(
+        db, session,
+        # b1 = 무상태 검색 챗봇: 추천 증거를 현재 요청(마지막 발화 + 그 이후 피드백)으로
+        # 한정한다. 세 조건은 "사용자 모델: 없음/숨김/수정가능" 한 축에 놓인다.
+        current_request_only=condition_for(session) == "baseline1",
+    )
     meta = session.meta or {}
     # recommendation_spec은 검색/하드 필터를 컴파일하므로 hard 기준만 받는다.
     # soft 기준은 아래 policy.criteria를 통해 rerank 순위에만 영향을 준다.
