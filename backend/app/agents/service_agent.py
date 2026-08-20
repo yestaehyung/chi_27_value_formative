@@ -148,6 +148,22 @@ async def _classify_dialogue_acts(provider, content: str) -> list[str]:
         return []
 
 
+def _task_ui_state(db: DbSession, session: models.Session, *, showing_cards: bool) -> dict:
+    """스터디 화면 상태를 렌더러에 전달 — Finish 버튼은 추천(카드) 턴 2회부터 열린다
+    (frontend VariantSession MIN_RECOMMEND_ROUNDS=2와 동일 규칙). 이번 턴에 카드를
+    보여주면 그 라운드까지 포함해 센다 (impressions는 write-last라 아직 DB에 없다)."""
+    card_turns = (
+        db.query(models.ProductImpression.turn_id)
+        .filter(models.ProductImpression.session_id == session.id)
+        .distinct()
+        .count()
+    ) + (1 if showing_cards else 0)
+    return {
+        "finishUnlocked": card_turns >= 2,
+        "unlockRule": "the Finish button unlocks after two rounds of recommendations",
+    }
+
+
 async def recommend_after_resolution(
     db: DbSession, session: models.Session, snapshot: models.PreferenceStateSnapshot,
     correction_context: dict | None = None,
@@ -461,6 +477,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             recent_turns=recent_turns, products=products, state_summary=state_for_llm,
             conflict_explanation=conflict_explanation, must_ask_question=value_question,
             previously_shown=prev_shown, recommendation_note=rec_note,
+            task_ui=_task_ui_state(db, session, showing_cards=bool(products)),
         )
     else:
         text = await rg.generate_reply(
@@ -468,6 +485,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             products=products, state_summary=state_for_llm,
             conflict_explanation=conflict_explanation, must_ask_question=value_question,
             previously_shown=prev_shown,
+            task_ui=_task_ui_state(db, session, showing_cards=False),
         )
     logging.info("service_agent.generate_reply_latency_sec=%.3f", time.perf_counter() - t_reply)
 

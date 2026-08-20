@@ -181,6 +181,7 @@ async def generate_reply(
     previously_shown: list[models.Product] | None = None,
     recommendation_note: dict | None = None,
     just_corrected: dict | None = None,
+    task_ui: dict | None = None,
 ) -> str:
     """LLM-grounded reply; falls back to the deterministic template on mock/error."""
     if provider.name == "mock":
@@ -230,6 +231,10 @@ async def generate_reply(
         # 사용자가 방금 칩(기준)을 수정해서 이 재추천이 일어났음 — 응답 서두에서
         # 그 수정이 반영되었음을 언급하게 한다 (통제감 가시화, 2026-08-18 파일럿).
         "justCorrected": just_corrected,
+        # 스터디 화면 상태 (2026-08-20): Finish 버튼 잠금 여부 — 사용자가 종료를
+        # 원하는데 잠겨 있으면 어떤 액션이든 응답이 여는 방법을 알 수 있어야 한다
+        # (close 경로에서만 안내하면 "버튼이 안 눌려요" 같은 질문 턴에서 구멍).
+        "taskUi": task_ui,
         "draftTemplate": template_text,
     }
     try:
