@@ -546,10 +546,18 @@ def _strip_markdown(text: str) -> str:
     return text.strip()
 
 
-def close_text(product: models.Product | None) -> str:
+def close_text(product: models.Product | None, *, finish_unlocked: bool = True) -> str:
     # product는 사용자가 실제로 고른(구매 피드백) 상품일 때만 — 없으면 결정을 전제하지
     # 않는 중립 마무리 (노출 1위를 "선택하셨네요"로 단정하던 날조 제거, 2026-08-18).
     # 본실험 참가자는 영어 전용이라 이 문구는 영어만 둔다.
+    if not finish_unlocked:
+        # Finish 버튼은 추천 2회 이상부터 열린다(스터디 규칙) — 잠긴 상태에서 버튼을
+        # 가리키면 참가자가 비활성 버튼 앞에 갇힌다 (2026-08-20 실측: 64턴 루프).
+        # 열리는 조건 자체를 알려 다음 행동(추천 한 번 더)을 만든다.
+        return ("Happy to wrap up soon! The Finish button unlocks after you've seen"
+                " at least two rounds of recommendations — ask me for one more round"
+                " (for example, tweak a condition or say \"show me a few more\"),"
+                " then press Finish to record your choice.")
     if product is None:
         # 사용자가 대화로는 마무리 신호를 보냈지만 아직 Finish를 누르지 않은 상태 —
         # 작별 인사를 주고받는 대신 과제를 실제로 끝내는 행동(Finish 버튼)으로 안내한다

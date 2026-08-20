@@ -392,7 +392,16 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             .first()
         )
         chosen = db.get(models.Product, purchased.product_id) if purchased else None
-        text = rg.close_text(chosen)
+        # Finish 버튼은 추천(카드) 턴 2회부터 열린다 — frontend VariantSession의
+        # MIN_RECOMMEND_ROUNDS=2와 같은 값. 잠긴 상태에서 "버튼을 누르라"고 안내하면
+        # 참가자가 비활성 버튼 앞에 갇힌다 (2026-08-20 실측 64턴 루프).
+        card_turns = (
+            db.query(models.ProductImpression.turn_id)
+            .filter(models.ProductImpression.session_id == session.id)
+            .distinct()
+            .count()
+        )
+        text = rg.close_text(chosen, finish_unlocked=card_turns >= 2)
         products = [chosen] if chosen else []
         session.current_stage = "decision"
     else:  # recommend — 실행(검색→rerank→3개)은 추천 에이전트(③)가 아래에서 수행.

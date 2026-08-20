@@ -611,15 +611,24 @@ export default function VariantSession({
           {scenarioTitle && <span className="ml-1.5 rounded-md bg-indigo-50 px-2 py-0.5 text-sm font-semibold text-[#4F46E5]">{categoryLabel(scenarioTitle)}</span>}
         </div>
         {study ? (
-          <button
-            onClick={openFinalChoice}
-            disabled={!canFinish}
-            title={canFinish ? undefined : STUDY_UI.chat.finishLocked}
-            className="btn btn-primary shrink-0 whitespace-nowrap px-2.5 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <span className="sm:hidden">{STUDY_UI.chat.finishShort}</span>
-            <span className="hidden sm:inline">{STUDY_UI.chat.finish}</span>
-          </button>
+          // 잠금 사유를 클릭/인라인으로 알린다 — title 툴팁은 모바일에서 안 보여
+          // 참가자가 비활성 버튼 앞에 갇혔다 (2026-08-20 실측: 64턴 "Ready to finish" 루프).
+          <div className="flex shrink-0 items-center gap-2">
+            {!canFinish && (
+              <span className="hidden max-w-[220px] text-right text-[10px] leading-tight text-[#9ca3af] sm:block">
+                {STUDY_UI.chat.finishLocked}
+              </span>
+            )}
+            <button
+              onClick={() => (canFinish ? openFinalChoice() : showToast(STUDY_UI.chat.finishLocked))}
+              aria-disabled={!canFinish}
+              title={canFinish ? undefined : STUDY_UI.chat.finishLocked}
+              className={`btn btn-primary shrink-0 whitespace-nowrap px-2.5 py-1 text-xs ${canFinish ? "" : "cursor-not-allowed opacity-40"}`}
+            >
+              <span className="sm:hidden">{STUDY_UI.chat.finishShort}</span>
+              <span className="hidden sm:inline">{STUDY_UI.chat.finish}</span>
+            </button>
+          </div>
         ) : (
           <span className="shrink-0 rounded-full bg-[#eef2ff] px-2.5 py-1 text-[10px] font-semibold text-[#4f46e5]">
             {VARIANT_META[variant].label}
