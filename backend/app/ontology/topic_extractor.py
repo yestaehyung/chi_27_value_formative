@@ -123,7 +123,11 @@ async def extract_topic_update(
         LLMMessage(role="system", content=system_for("topic_extraction")),
         LLMMessage(role="user", content=render_user_context(context)),
     ]
-    out = await provider.generate_json(messages, task="topic_extraction", context=context)
+    # 추출은 집행층과 같은 최대 결정론(temp 0.0) — qwen3.8에서 temp 0.1 샘플링이
+    # 같은 발화에 대해 간헐적으로 빈 topics를 내는 것을 실측 (2026-08-20, 3회 중 1회).
+    # 빈 추출은 침묵 강등처럼 사용자 모델에 구멍을 내므로 그리디로 고정한다.
+    out = await provider.generate_json(messages, task="topic_extraction", context=context,
+                                       temperature=0.0)
     topics = [t for t in (out.get("topics") or []) if isinstance(t, dict)]
     prior_candidates = [
         c for c in (current_state or {}).get("criterionQuestionCandidates", [])
