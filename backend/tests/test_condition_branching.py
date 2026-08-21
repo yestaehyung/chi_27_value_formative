@@ -91,6 +91,31 @@ def test_baseline1_still_answers_and_recommends(client):
     assert r["out"]["agentResponse"]["content"].strip()
 
 
+def test_baseline1_basic_path_skips_rerank_and_never_clarifies(client, monkeypatch):
+    """2026-08-21 '완전 basic' b1: ① 추천은 관련도순(판정행렬 리랭크를 타지 않음),
+    ② 플래너가 clarify를 내도 recommend로 강제된다(선제 질문 = 선호 유도 = 모델링 행위).
+    b2·ours의 리랭크·clarify 동작은 기존 테스트들이 그대로 보증한다."""
+    from app.agents import planner
+    from app.agents import response_generator as rg
+
+    async def no_rerank(*a, **k):
+        raise AssertionError("baseline1 must not run the rerank matrix")
+
+    async def always_clarify(provider, context, fallback_search_text):
+        return planner.PlannerDecision(
+            action="clarify", reason="test", search_text=fallback_search_text,
+            probe_question="어떤 용도로 쓰시나요?",
+        )
+
+    monkeypatch.setattr(rg, "rerank_by_intent", no_rerank)
+    monkeypatch.setattr(planner, "fetch_plan", always_clarify)
+    r = run_session(client, "baseline1")
+    out = r["out"]
+    # clarify가 recommend로 강제되어 질문 없이 카드가 나간다 (rerank는 안 탐)
+    assert out["agentResponse"]["agentAction"] == "recommend"
+    assert out["recommendedProducts"], "basic 경로가 관련도순 카드를 보여줘야 한다"
+
+
 def test_baseline1_recommendation_evidence_is_current_request_only(client):
     """2026-08-20 정의 명확화: b1 = 무상태 검색 챗봇. 조작 변인은 지속적 사용자 모델의
     유무이므로, b1의 추천 증거(스펙 컴파일 입력)는 마지막 사용자 발화 + 그 이후

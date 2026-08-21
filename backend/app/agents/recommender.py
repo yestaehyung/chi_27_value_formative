@@ -116,9 +116,15 @@ def unverified_criteria(matrix: dict, shown_ids: list[str]) -> dict[str, int]:
     labels = matrix.get("criterionLabels") or {}
     out: dict[str, int] = {}
     for pid in shown_ids:
-        for cid, val in (verdicts.get(pid) or {}).items():
-            if val == "unk":
-                label = labels.get(cid, cid)
+        cells = verdicts.get(pid) or {}
+        for cid, label in labels.items():
+            if cid == "note":
+                continue  # constraintsNote 묶음 라벨 — 개별 기준이 아니다
+            # 페일세이프 (2026-08-21): flash는 판정 불가 셀을 unk로 쓰는 대신 행렬에서
+            # **생략**한다 (실측: boom mic 미표기 15후보 전원 셀 부재 → 고지 누락 →
+            # "made sure every option has a built-in mic" 과잉확언, trust 2). 빠진 셀은
+            # unk로 간주해 '확인 안 됨' 고지가 모델의 셀 규율과 무관하게 살아남게 한다.
+            if cells.get(cid, "unk") == "unk":
                 out[label] = out.get(label, 0) + 1
     return out
 
@@ -216,6 +222,43 @@ def _previously_shown(db: DbSession, session: models.Session, cap: int = 10) -> 
         if len(out) >= cap:
             break
     return out
+
+
+async def run_basic_recommendation(
+    db: DbSession,
+    provider,
+    session: models.Session,
+    recent_turns,
+    top_k: int = 5,
+) -> tuple[list[ScoredProduct], dict[str, dict], dict]:
+    """baseline1 전용 (2026-08-21 '완전 basic' 조정): 검색엔진 수준의 추천.
+
+    유지 — 현재 발화의 LLM 검색어 재작성(스펙 컴파일, current-request-only)과
+    search_products의 결정론 레이어(가격/카테고리 필터, 뮤텍스 태그) — "무선 달라는데
+    유선"류의 티 나는 실패를 막는 바보 방지선.
+    제거 — LLM 판정행렬 리랭크(소프트 기준 적합도·보완적 구성·기준별 확인불가 고지·
+    후보 영속성): 관련도순 top_k를 그대로 보여준다. 카드 사유 텍스트도 없다.
+    반환 형태는 run_recommendation과 동일 (진단 dict에 bucket="basic" 표기)."""
+    policy = await build_recommendation_policy(db, provider, session)
+    pool = search_products(
+        db,
+        query=policy.search_text,
+        category=(session.meta or {}).get("category"),
+        hard_constraints=list(policy.hard_constraints),
+        price_min=policy.price_min,
+        price_max=policy.price_max,
+        return_pool=True,
+        pool_size=top_k * 3,
+    )
+    shown = pool[:top_k]
+    diag = {
+        "bucket": "basic",
+        "searchText": policy.search_text,
+        "recommendationPolicy": policy.as_dict(),
+        "poolSize": len(pool),
+        "shownIds": [sp.product.id for sp in shown],
+    }
+    return shown, {}, diag
 
 
 async def run_recommendation(

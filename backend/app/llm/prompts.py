@@ -392,6 +392,10 @@ AGENT_REPLY_SYSTEM = """너는 네이버 쇼핑형 대화 쇼핑 도우미(servi
    한 문장으로 알린다 (예: "추천을 한 라운드 더 요청하시면 — 조건을 바꾸거나 '몇 개 더
    보여줘'라고 하시면 — Finish 버튼이 열려요"). 잠겨 있는 동안에는 버튼을 누르라는
    말을 하지 않는다.
+18. taskUi.searchScope가 "currentRequestOnly"이면 이번 상품 검색은 방금 발화만 반영한
+   것이다 — 이전 턴에서 나온 조건(예산·색상 등)을 "반영해 뒀다/유지했다"고 말하지
+   말라. 지금 요청에서 말한 조건만 언급한다. 좋은 예: "Here are over-ear headphones —
+   let me know any price range or features you'd like." (이전 예산을 아는 척하지 않음)
 
 최종 응답 텍스트만 출력하라 (JSON 아님)."""
 

@@ -158,10 +158,16 @@ def _task_ui_state(db: DbSession, session: models.Session, *, showing_cards: boo
         .distinct()
         .count()
     ) + (1 if showing_cards else 0)
-    return {
+    ui = {
         "finishUnlocked": card_turns >= 2,
         "unlockRule": "the Finish button unlocks after two rounds of recommendations",
     }
+    if not infers_intention(session):
+        # baseline1: 상품 검색은 매턴 현재 요청만 반영한다 — 응답이 이전 턴 조건을
+        # "반영해 뒀다"고 말하면 검색 실물과 어긋난다 (실측: priceMax를 버린 검색에
+        # "keeping that under-$50 budget in mind"라고 발화). 렌더러 규칙 18이 읽는다.
+        ui["searchScope"] = "currentRequestOnly"
+    return ui
 
 
 async def recommend_after_resolution(
@@ -368,6 +374,12 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         decision = await planner.fetch_plan(
             provider, planner_context, fallback_search_text=content.strip(),
         )
+        if decision.action == "clarify" and not infers_intention(session):
+            # baseline1 '완전 basic' (2026-08-21): 선제 질문은 선호 유도(사용자 모델
+            # 구축 행위)다 — b1은 묻지 않고 현재 요청에 반응만 한다. clarify는
+            # recommend로 강제한다 (searchText는 이미 폴백으로 현재 발화).
+            decision.action = "recommend"
+            decision.probe_question = None
         if decision.action == "clarify" and not decision.probe_question:
             # 폴백: LLM이 질문을 안 주면 기존 가치질문 도구
             decision.probe_question, decision.probe_dimension = build_value_question(
@@ -433,11 +445,20 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     scored: list[ScoredProduct] = []
     rec_diag: dict | None = None
     if decision.action == "recommend":
-        scored, card_texts, rec_diag = await recommender.run_recommendation(
-            db, provider, session,
-            recent_turns=recent_turns,
-            top_k=decision.recommend_count or 5,
-        )
+        if not infers_intention(session):
+            # baseline1 '완전 basic' (2026-08-21): 판정행렬 리랭크 없이 관련도순 top-5.
+            # 결정론 필터(가격·카테고리·뮤텍스 태그)는 search_products 안에 남아 있다.
+            scored, card_texts, rec_diag = await recommender.run_basic_recommendation(
+                db, provider, session,
+                recent_turns=recent_turns,
+                top_k=decision.recommend_count or 5,
+            )
+        else:
+            scored, card_texts, rec_diag = await recommender.run_recommendation(
+                db, provider, session,
+                recent_turns=recent_turns,
+                top_k=decision.recommend_count or 5,
+            )
         products = [sp.product for sp in scored]
         related_ids = [p.id for p in products]
         # ② 부분 정직 (2026-07-07): 노출 전체가 근접 대안이면(준수 후보 0 = rerank의
