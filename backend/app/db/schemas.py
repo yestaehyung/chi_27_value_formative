@@ -23,7 +23,7 @@ class CreateSessionRequest(BaseModel):
     category: Optional[str] = None
     #: 참가자가 스스로 매긴 그 카테고리에 대한 친숙도. 본실험의 within-subjects 요인이다
     #: (친근 2 + 비친근 2). 시나리오에 고정할 수 없는, 참가자가 선택 시점에 주는 값이다.
-    familiarity: Optional[Literal["familiar", "unfamiliar"]] = None
+    familiarity: Optional[Literal["familiar", "unfamiliar", "none"]] = None
 
 
 class TurnRequest(BaseModel):

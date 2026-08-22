@@ -47,6 +47,7 @@ import {
 } from "@/lib/localizedMainSurvey";
 import { completeTask, nextTask } from "@/lib/taskQueue";
 import { categoryLabel, productTitle, productUsd, STUDY_UI, tr } from "@/lib/studyI18n";
+import { taskForCategory } from "@/lib/studyTasks";
 
 export type UiVariant = "a" | "b" | "c" | "d" | "e";
 
@@ -77,6 +78,7 @@ export default function VariantSession({
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [scenarioTitle, setScenarioTitle] = useState("");
+  const sessionTask = taskForCategory(scenarioTitle); // T과제 설명 (카테고리 매핑, 비과제 카테고리는 null)
   const [initialNeed, setInitialNeed] = useState<string | null>(null);
   const [chipSuggestions, setChipSuggestions] = useState<string[] | null>(null);
   const [chatInput, setChatInput] = useState("");
@@ -663,6 +665,18 @@ export default function VariantSession({
             </div>
             {study && (
               <>
+                {/* T과제 설명 (2026-08-23) — 참가자가 이번 과제의 상황을 세션 안에서
+                    다시 읽을 수 있어야 한다 (선택 화면에서 한 번 본 것으론 잊힌다). */}
+                {sessionTask && (
+                  <div className="mx-auto mt-4 max-w-md rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 text-left">
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-[#4f46e5]">
+                      {STUDY_UI.tasks.inSession} · {sessionTask.title}
+                    </div>
+                    <p className="mt-1 text-[12px] leading-relaxed text-[#4b5563]">
+                      {sessionTask.description}
+                    </p>
+                  </div>
+                )}
                 <p className="mx-auto mt-3 max-w-sm text-[13px] leading-relaxed text-[#9aa0a6]">
                   {STUDY_UI.chat.browseGuide}
                 </p>

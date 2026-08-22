@@ -119,6 +119,14 @@ export const STUDY_UI = {
     responseExcluded: tr("이 응답은 연구 참여 제외 사유입니다.", "This response makes you ineligible to participate in the study."),
     returnToProlific: tr("Prolific으로 돌아가기", "Return your submission on Prolific"),
   },
+  tasks: {
+    title: tr("수행할 쇼핑 과제 2개를 골라 주세요", "Choose two shopping tasks to complete"),
+    description: tr(
+      "아래 네 가지 쇼핑 상황 중 자신의 실제 상황에 비추어 답할 수 있는 과제 2개를 골라 주세요. 진행 순서는 무작위로 정해져요.",
+      "From the four shopping situations below, choose two you can answer from your own real life. The order of the two tasks will be randomized.",
+    ),
+    inSession: tr("이번 과제", "Your task"),
+  },
   categories: {
     step: (step: number) => tr(`${step}단계 / 2단계`, `Step ${step} of 2`),
     familiarTitle: tr("평소 잘 아는 상품군 1개를 골라 주세요", "Choose one product category you know well"),

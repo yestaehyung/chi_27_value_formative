@@ -296,7 +296,7 @@ export type Snapshot = PreferenceState;
 
 /** 참가자가 스스로 매긴 카테고리 친숙도 — 본실험 within-subjects 요인 (2+2 선택).
  *  과제 직전 설문(TPRE_K1/K2)은 이 이분법의 조작 점검(연속 측정)으로 함께 쓰인다. */
-export type Familiarity = "familiar" | "unfamiliar";
+export type Familiarity = "familiar" | "unfamiliar" | "none";
 
 /** 카테고리 선택 화면의 한 항목 (`GET /api/meta/categories`). */
 export type CategoryOption = {

@@ -494,7 +494,7 @@ def ground_truth_gap(session_id: str, db: DbSession = Depends(get_db)):
 # 세션의 finalChoice+postSurvey 마커(둘 다 종료 플로우의 필수 단계)로 서버가 센다.
 
 class TaskPlanRequest(BaseModel):
-    tasks: list[dict]  # [{category: str, familiarity: "familiar"|"unfamiliar"}]
+    tasks: list[dict]  # [{category, familiarity: "familiar"|"unfamiliar"|"none"}] — "none" = 과제 배정(2026-08-23 T과제 개편, 친숙도는 측정 변수로 이동)
 
 
 @router.put("/participants/{participant_id}/task-plan")
@@ -508,7 +508,7 @@ def save_task_plan(participant_id: str, req: TaskPlanRequest, db: DbSession = De
     for t in req.tasks[:8]:
         cat = str(t.get("category") or "").strip()
         fam = t.get("familiarity")
-        if not cat or fam not in ("familiar", "unfamiliar"):
+        if not cat or fam not in ("familiar", "unfamiliar", "none"):
             raise HTTPException(422, "each task needs category + familiarity")
         tasks.append({"category": cat, "familiarity": fam})
     if not tasks:
