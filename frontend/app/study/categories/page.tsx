@@ -31,7 +31,6 @@ export default function TaskSelectPage() {
   const [participantId, setParticipantId] = useState("");
   const [picked, setPicked] = useState<string[]>([]); // task id 순서 무관 — 시작 시 셔플
   const [starting, setStarting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setParticipantId(new URLSearchParams(window.location.search).get("pid") ?? "");
@@ -123,7 +122,6 @@ export default function TaskSelectPage() {
         </button>
       </div>
 
-      {error && <p className="mt-3 text-xs text-rose-600">{error}</p>}
     </div>
   );
 }
