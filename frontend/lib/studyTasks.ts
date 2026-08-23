@@ -40,12 +40,16 @@ export const STUDY_TASKS: StudyTask[] = [
     ),
   },
   {
+    // 2026-08-23 교체: 원래 "여름 야외 결혼식"이었으나 참가자 발화의 "outdoor/summer"가
+    // 임베딩 검색에서 아웃도어·트로피컬 셔츠를 끌어와 1턴 품질이 무너졌다 (하와이안·
+    // 플란넬 혼입, 3회 검증 재현). 사무실 어휘는 카탈로그의 드레스 셔츠 공급과 정렬돼
+    // 1턴부터 적합 — 행사 규범형 압력(격식 수위 해석·첫인상·옷장 조화)은 유지된다.
     id: "T4",
     category: "Shirts & Blouses",
-    title: tr("여름 야외 결혼식 착용 셔츠", "A shirt for a summer outdoor wedding"),
+    title: tr("새 직장 첫 출근을 위한 셔츠", "A shirt for your first week at a new job"),
     description: tr(
-      "한여름 낮에 야외에서 진행되는 지인의 결혼식에 참석해야 합니다. 자신이 실제로 가지고 있는 옷과 평소 스타일을 고려하여, 이 행사에 입을 셔츠/블라우스 하나를 찾아보세요.",
-      "You are attending an acquaintance's wedding held outdoors on a midsummer day. Considering the clothes you actually own and your usual style, find one shirt or blouse to wear to this event.",
+      "다음 주부터 새 직장으로 첫 출근을 합니다. 사무실은 비즈니스 캐주얼 분위기입니다. 자신이 실제로 가지고 있는 옷과 평소 스타일을 고려하여, 첫 주에 입을 셔츠/블라우스 하나를 찾아보세요.",
+      "You are starting a new job next week, and the office has a business-casual dress code. Considering the clothes you actually own and your usual style, find one shirt or blouse to wear during your first week.",
     ),
   },
 ];
