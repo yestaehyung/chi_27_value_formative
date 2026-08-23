@@ -112,19 +112,17 @@ def unverified_criteria(matrix: dict, shown_ids: list[str]) -> dict[str, int]:
     핵심 기준이 전 후보에서 확인 불가한데 5장을 채워 보여주면(체형 의자 좌판 높이 사례,
     2026-08-15 테스트) 확인된 것처럼 읽힌다. 이 집계를 렌더러에 넘겨 '확인되지 않았다'를
     말하게 한다 — 몇 개부터 언급할지는 렌더러 LLM의 판단."""
+    # 셀 의미 계약 (2026-08-23 정합화): FORMAT이 "생략=ok"를 명시하므로 여기서도
+    # **명시된 unk만** 센다. 이전 페일세이프(생략=unk 간주, 78a2850)는 이 계약을 몰라
+    # 정당한 ok-생략까지 '확인 불가' 고지 대상으로 잡았다 — 진짜 문제(모델이 unk를
+    # 생략으로 뭉갬)는 FORMAT의 unk 명시 예시로 잡는다.
     verdicts = matrix.get("verdicts") or {}
     labels = matrix.get("criterionLabels") or {}
     out: dict[str, int] = {}
     for pid in shown_ids:
-        cells = verdicts.get(pid) or {}
-        for cid, label in labels.items():
-            if cid == "note":
-                continue  # constraintsNote 묶음 라벨 — 개별 기준이 아니다
-            # 페일세이프 (2026-08-21): flash는 판정 불가 셀을 unk로 쓰는 대신 행렬에서
-            # **생략**한다 (실측: boom mic 미표기 15후보 전원 셀 부재 → 고지 누락 →
-            # "made sure every option has a built-in mic" 과잉확언, trust 2). 빠진 셀은
-            # unk로 간주해 '확인 안 됨' 고지가 모델의 셀 규율과 무관하게 살아남게 한다.
-            if cells.get(cid, "unk") == "unk":
+        for cid, val in (verdicts.get(pid) or {}).items():
+            if val == "unk":
+                label = labels.get(cid, cid)
                 out[label] = out.get(label, 0) + 1
     return out
 
