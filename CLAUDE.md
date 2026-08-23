@@ -44,6 +44,16 @@ bash run_nv_study.sh          # pins VC_SEED_DIR=seed_naver (600 enriched NAVER 
 # detached (survives shell/session close): nohup bash run_nv_study.sh > .uvicorn_naver.log 2>&1 & disown
 ```
 
+## 현행 본실험 스택 (2026-08-23 — 이 블록이 최신; 아래 구식 배포 문단보다 우선)
+
+**라이브 = Railway 프로젝트 `chi-valuecommit-v2`** (서비스 `v2_backend`/`v2_front`, https://shopping-lab.up.railway.app) — 아래의 agent-shopping/amazon_ko 문단은 FS1 시절 기록이다. 현행 구성:
+
+- **시드/DB**: `VC_SEED_DIR=/data/seed_en_v2` (영어 45,960개 — 로컬에는 충돌 셔츠 6개를 제거한 45,954판이 있고 볼륨 업로드는 미완) + `VC_DB_PATH=/data/study_en_v2.db`. **라이브 DB는 배치별로 리셋되는 소모성** — wipe 전 sha256 검증 백업 필수 (`backend/data/study_en_v2_backup/`), FTS 테이블명이 `product_fts`(단수)라 wipe 스크립트에서 "fts" 포함 테이블 전체 제외할 것.
+- **LLM**: **공식 DeepSeek API** (`VC_DEEPSEEK_BASE_URL=https://api.deepseek.com`, `VC_DEEPSEEK_MODEL=deepseek-v4-flash` — `deepseek-chat` 별칭이 아니라 명시, `VC_DEEPSEEK_THINKING=off` 유지). 리랭크급 3~5.6초·실턴 17~26초로 부하 무관 안정, 비용 ~$2/10명 배치 (오프피크 = KST 평일 19시 이후·주말 전체; 피크 = 평일 10-13시·15-19시, 2배 요금). **SDS(macmini Tailscale funnel, 로컬 `.env`의 100.116.33.96)는 같은 모델(v4-flash)을 무료 서빙하므로 로컬 개발·반복 테스트 전용** — macmini에 다른 작업이 돌면 호출이 2~3배 느려지니 테스트 전 소형/리랭크급 프로브로 상태 확인.
+- **과제 (T과제 4종, `frontend/lib/studyTasks.ts`)**: T1 Monitors(홈 워크스페이스)/T2 Headphones(왕복 2시간 통근)/T3 Desks(좁은 방)/T4 Shirts & Blouses(**새 직장 첫 출근** — 원래 "여름 야외 결혼식"이었으나 참가자 발화의 outdoor/sweat이 임베딩 검색에서 아웃도어·트로피컬 셔츠를 끌어와 1턴이 무너져 교체; 과제 어휘는 카탈로그 공급과 정렬돼야 한다). 참가자는 4종 중 2개 자기선택(개인 맥락 없는 과제 강요 방지), 순서는 셔플, `familiarity="none"`(친숙도는 배정 축이 아니라 지식행렬+SPK로 **측정**). `VC_OFFERED_CATEGORIES=Monitors,Headphones,Desks,Shirts & Blouses`.
+- **조건**: b1 = '완전 basic'(선제 질문 없음 + `run_basic_recommendation` 관련도순, 결정론 필터만; 리랭크·판정행렬 미사용) / b2 = 숨은 추론(소프트 전용) / ours = 이론 파이프라인 + 칩 확인·수정(디바운스 2.5s). 조건 전환은 `PUT /api/research/study-config {"forcedCondition": ...}` (X-Research-Key) — **배치 게시 전에 먼저 설정·확인** (전환 지연으로 조기 진입자가 타 조건에 배정된 사고 이력 2회).
+- **운영 원칙**: 배치 중 배포·조건 변경 절대 금지(참가자가 갇히는 결함도 먼저 보고 후 승인) · 검증 세션은 확인 즉시 라이브 DB에서 삭제 · 원격 작업은 `railway ssh --service v2_backend`(구 별칭 `railway-valuecommit-backend`는 **다른 프로젝트**로 연결되니 금지) · 대용량 다운로드는 40MB 청크+base64+sha256 대조.
+
 ## Deployment (Railway, Nixpacks — no Docker)
 
 Two Railway services off one GitHub repo (`valuecommit/` is the repo root). See `DEPLOY.md` for the step-by-step runbook. Backend uses `backend/Procfile` (`uvicorn … --port $PORT`); frontend is auto-detected Next.js (`next build`/`next start`, honors `$PORT`). All config is env-driven (`app/core/config.py`) — see `backend/.env.example`. SQLite lives on a Railway volume at `/data`. (Docker/compose files were removed 2026-06-19 — Nixpacks builds both services.)
@@ -63,7 +73,7 @@ The frontend proxies `/api/*` to the backend via `next.config.mjs` rewrite (`BAC
 
 ## LLM provider layer (central abstraction)
 
-All model calls go through `app/llm/provider.py::get_provider()`, selected by `VC_LLM_PROVIDER` (`mock` | `openai` | `deepseek` | `anthropic`). Config + `.env` loading is in `app/core/config.py`. `DeepSeekProvider` subclasses `OpenAIProvider` (DeepSeek is OpenAI-compatible, base `https://api.deepseek.com`; model via `VC_DEEPSEEK_MODEL`).
+All model calls go through `app/llm/provider.py::get_provider()`, selected by `VC_LLM_PROVIDER` (`mock` | `openai` | `deepseek` | `anthropic`). Config + `.env` loading is in `app/core/config.py`. `DeepSeekProvider` subclasses `OpenAIProvider` (OpenAI-compatible; base는 `VC_DEEPSEEK_BASE_URL`로 스왑 — **라이브=공식 `https://api.deepseek.com`, 로컬 `.env`=SDS macmini**, 둘 다 같은 `deepseek-v4-flash`라 행동 동일; model via `VC_DEEPSEEK_MODEL`). qwen 계열은 `chat_template_kwargs`로 thinking을 끄는 분기가 `_augment_payload`에 있고, **qwen3.8은 temp 0.1 샘플링에서 짧은 발화 추출이 간헐적으로 비는 결함**이 있어 추출은 temp 0.0 고정이다.
 
 - Pipeline stages never call a model directly — they call `provider.generate_json(messages, task="...", context={...})`. The `task` string is the dispatch key.
 - **MockLLMProvider** is a deterministic rule engine (`app/llm/mock_rules.py`, `TASK_HANDLERS` dict). It is the default, requires no API key, reproduces the gift-smartwatch demo exactly, and is what **all tests run against**. Every pipeline `task` must have a mock handler.
