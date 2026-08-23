@@ -16,7 +16,7 @@
 // 인구통계 추가, 조건별 섹션 필터 제거, Choice Confidence 7점 통일.
 // 원척도 문항 수는 줄이지 않고, referent(에이전트명 등)만 맥락에 맞게 바꾼다.
 
-export type MQType = "single" | "likert" | "text";
+export type MQType = "single" | "likert" | "slider" | "text";
 
 export type MQuestion = {
   id: string;
@@ -26,8 +26,10 @@ export type MQuestion = {
   /** 리커트 양 끝 라벨. 생략 시 기본(전혀 그렇지 않다 ~ 매우 그렇다) */
   minLabel?: string;
   maxLabel?: string;
-  /** 역문항 — 구인 평균 계산 시 (8 - v)로 뒤집는다 */
+  /** 역문항 — 구인 평균 계산 시 (points+1 - v)로 뒤집는다 */
   reverse?: boolean;
+  /** 리커트 점수 범위 (기본 LIKERT_POINTS=7). CC는 원척도 9점. */
+  points?: number;
   /** 미응답이면 제출 불가 (참여 동의 문항) */
   required?: boolean;
   /** 이 값을 고르면 연구 참여 제외 */
@@ -103,7 +105,7 @@ export const PRE_STUDY: MSection[] = [
         "전혀 없음", "월 1회 미만", "월 1–3회", "주 1–2회", "주 3회 이상",
       ]),
       sg("FACT_AI_REC", "ChatGPT, Claude, Gemini 등 생성형 AI에게 상품 추천이나 구매 관련 조언을 요청한 빈도는 어느 정도입니까?", [
-        "경험 없음", "월 1–3회", "주 1–2회", "주 3–5회", "매일 사용",
+        "경험 없음", "1에서 2회", "3에서 5회", "월 1에서 3회", "주 1회 이상",
       ]),
       lk("FACT_COMPARE", "나는 상품을 구매하기 전에 여러 후보를 비교하는 편이다."),
     ],
@@ -135,15 +137,12 @@ export const KNOWLEDGE_SECTIONS: MSection[] = [
       lk("SPK_4", '대부분의 사람들과 비교하면, 나는 "{category}"에 대해 덜 알고 있다.', true),
       lk("SPK_5", '"{category}"에 관해서라면 나는 정말 많이 알지 못한다.', true),
       sg("EXP_BUY", '"{category}" 상품을 직접 구매해 본 경험은 몇 회입니까?', [
-        "구매 경험 없음", "1회", "2–3회", "4–6회", "7회 이상",
+        "구매 경험 없음", "1회", "2에서 3회", "4회 이상",
       ]),
       lk("INIT_CLARITY", '현재 나는 "{category}" 상품을 고를 때 무엇을 중요하게 보아야 할지 명확히 알고 있다.'),
-      {
-        id: "INIT_CRITERIA_FREE",
-        type: "text",
-        label: '현재 "{category}" 상품을 고를 때 중요하다고 생각하는 조건이나 기준을 모두 적어 주세요.',
-        placeholder: "예: 예산 10만원 이내, 무게, 디자인… 아직 정하지 못했다면 “미정”",
-      },
+      // INIT_CRITERIA_FREE 제거 (2026-08-24 동결 문서 P0-4) — 사전 기준 나열은 아직
+      // 표현되지 않은 기준을 강제로 명시하게 해 연구하려는 현상 자체를 바꾼다.
+      // 초기 표현의 기준선은 첫 발화·초기 대화 로그로 잡는다.
     ],
   },
 ];
@@ -163,7 +162,8 @@ export function computeKnowledgeScore(answers: Record<string, unknown>, prefix: 
 // ─────────────────────────────────────────────────────────────────────
 // 3. 각 과제 후 — Choice Confidence (Heitmann, Lehmann, & Herrmann 2007)
 // ─────────────────────────────────────────────────────────────────────
-// 원척도 9점 → 설문 내 일관성을 위해 7점으로 조정(adapted). 1번 역채점.
+// 원척도 9점 그대로 사용 (2026-08-24 동결 문서 — adapted 7점을 원척도로 복원). 1번 역채점.
+// "하나의 상품을 최종 선택했다" 과제에만 제시 — 그 외 상태는 NA (게이팅은 VariantSession).
 // 최종 선택 직후·기준 감사 화면을 보여주기 **전에** 응답한다.
 export const POST_TASK: MSection[] = [
   {
@@ -171,9 +171,9 @@ export const POST_TASK: MSection[] = [
     title: "최종 선택에 대한 확신",
     desc: "방금 마친 쇼핑에서의 선택을 떠올리며 답해 주세요.",
     questions: [
-      lk("CC_1", "어떤 상품이 내 선호에 가장 잘 맞는지 확신하는 것은 불가능했다.", true),
-      lk("CC_2", "내 선호에 가장 잘 맞는 상품 하나를 골라낼 때 확신이 있었다."),
-      lk("CC_3", "내 필요를 가장 잘 충족하는 상품을 찾았다고 확신한다."),
+      { ...lk("CC_1", "어떤 상품이 내 선호에 가장 잘 맞는지 확신하는 것은 불가능했다.", true), points: 9 },
+      { ...lk("CC_2", "내 선호에 가장 잘 맞는 상품 하나를 골라낼 때 확신이 있었다."), points: 9 },
+      { ...lk("CC_3", "내 필요를 가장 잘 충족하는 상품을 찾았다고 확신한다."), points: 9 },
     ],
   },
 ];
@@ -207,7 +207,26 @@ export const CRITERION_CHECK_MIN = 3;
 // ─────────────────────────────────────────────────────────────────────
 // 5. 네 과제 종료 후 (참가자 1회 · 6구성개념 × 3문항 · 세 조건 공통)
 // ─────────────────────────────────────────────────────────────────────
+// Raw NASA-TLX (Hart 1986; 쌍대비교 생략 RTLX) — guardrail (2026-08-24 동결 문서 §5).
+// 0~100, 5 간격 21눈금, 기본값 미선택. 수행 문항만 방향이 반대(0=매우 좋음)로 보이지만
+// 문서 지시대로 "0=매우 좋음/성공적, 100=매우 나쁨"으로 두어 여섯 문항 모두 높음=부담.
+const tlx = (id: string, label: string, minLabel: string, maxLabel: string): MQuestion =>
+  ({ id, label, type: "slider", minLabel, maxLabel, required: true });
+
 export const POST_STUDY: MSection[] = [
+  {
+    id: "nasa_tlx",
+    title: "작업 부담 (두 과제 전체)",
+    desc: "방금 수행한 두 번의 쇼핑 과제에서 쇼핑 에이전트와 상호작용한 경험 전체에 관한 문항입니다. 설문 작성 과정은 제외하고, 상품을 탐색·비교하여 최종 선택 여부를 판단한 과정만 생각해 주세요. 각 항목을 0에서 100 사이에서 평가해 주세요.",
+    questions: [
+      tlx("TLX_MENTAL", "과제를 수행하는 데 어느 정도의 정신적, 지각적 활동이 필요했습니까? (생각하기, 결정하기, 기억하기, 보기, 찾기 등) 과제는 쉬웠습니까, 아니면 정신적으로 부담이 컸습니까?", "매우 낮음", "매우 높음"),
+      tlx("TLX_PHYSICAL", "과제를 수행하는 데 어느 정도의 신체적 활동이 필요했습니까? (누르기, 움직이기, 입력하고 조작하기 등) 과제는 편안했습니까, 아니면 신체적으로 힘들었습니까?", "매우 낮음", "매우 높음"),
+      tlx("TLX_TEMPORAL", "과제나 과제 요소가 진행되는 속도 때문에 어느 정도의 시간 압박을 느꼈습니까? 진행 속도는 느긋했습니까, 아니면 빠르고 촉박했습니까?", "매우 낮음", "매우 높음"),
+      tlx("TLX_PERFORMANCE", "과제의 목표를 달성하는 데 본인이 얼마나 성공적이었다고 생각합니까? 그 목표를 달성한 자신의 수행에 얼마나 만족합니까?", "매우 좋음, 성공적임", "매우 나쁨, 성공적이지 않음"),
+      tlx("TLX_EFFORT", "자신의 수행 수준에 도달하기 위해 정신적으로, 신체적으로 얼마나 열심히 노력해야 했습니까?", "매우 낮음", "매우 높음"),
+      tlx("TLX_FRUSTRATION", "과제를 수행하는 동안 얼마나 불안하고, 낙담하고, 짜증 나고, 스트레스를 받고, 신경이 쓰였습니까?", "매우 낮음", "매우 높음"),
+    ],
+  },
   {
     // CRS-Que (Jin et al. 2024) — CUI Understanding (원: Borsci et al. 2022)
     id: "understanding",
@@ -268,6 +287,20 @@ export const POST_STUDY: MSection[] = [
       lk("ITU_3", "나는 친구들에게 이 쇼핑 에이전트에 대해 이야기할 것이다."),
     ],
   },
+  // 탐색 축소 개방형 (동결 문서 §7) — 검증 척도 아님, 합산 없음, 질적 해석 전용.
+  {
+    id: "exploration_narrowing",
+    title: "탐색 범위에 대한 경험",
+    questions: [
+      {
+        id: "OPEN_NARROWING",
+        type: "text",
+        label: "에이전트와 대화하는 동안, 에이전트가 제시하거나 강조한 내용 때문에 탐색 범위가 필요 이상으로 좁아졌거나 다른 중요한 기준 또는 상품을 충분히 고려하지 못했다고 느낀 적이 있었습니까? 없다면 '없음'이라고 적고, 있다면 당시 상황과 선택에 미친 영향을 설명해 주세요.",
+        placeholder: "없다면 '없음'",
+        required: true,
+      },
+    ],
+  },
 ];
 
 // 조건별 UI 게이트 (백엔드 app/core/conditions.py와 짝)
@@ -309,7 +342,8 @@ export function allQuestions(sections: MSection[]): MQuestion[] {
   return sections.flatMap((s) => s.questions);
 }
 
-/** 리커트 문항만 대상으로 섹션별 평균. reverse 문항은 (8 - v)로 뒤집는다.
+/** 리커트(문항별 points 반영)·슬라이더 문항 대상 섹션별 평균. reverse는 (points+1 - v).
+ *  슬라이더(RTLX)는 0~100 원값 평균 — 여섯 차원 산술평균이 Raw NASA-TLX다.
  *  구성개념은 각각 보고하며 전체 합산 점수는 만들지 않는다 (측정 계획 §10). */
 export function computeSectionScores(
   sections: MSection[],
@@ -319,10 +353,12 @@ export function computeSectionScores(
   for (const sec of sections) {
     const vals: number[] = [];
     for (const q of sec.questions) {
-      if (q.type !== "likert") continue;
+      if (q.type !== "likert" && q.type !== "slider") continue;
       const v = Number(answers[q.id]);
-      if (!Number.isFinite(v) || v <= 0) continue;
-      vals.push(q.reverse ? LIKERT_POINTS + 1 - v : v);
+      if (!Number.isFinite(v) || (q.type === "likert" && v <= 0) || v < 0) continue;
+      if (q.type === "slider") { vals.push(v); continue; }
+      const pts = q.points ?? LIKERT_POINTS;
+      vals.push(q.reverse ? pts + 1 - v : v);
     }
     if (vals.length) {
       out[sec.id] = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100;

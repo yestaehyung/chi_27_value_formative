@@ -202,10 +202,10 @@ export const api = {
     }),
 
   // 본실험 과제 계획(4과제)의 서버 저장 + 서버 기준 진행 조회 — sessionStorage 큐는 캐시일 뿐
-  saveTaskPlan: (participantId: string, tasks: { category: string; familiarity: Familiarity }[]) =>
+  saveTaskPlan: (participantId: string, tasks: { category: string; familiarity: Familiarity }[], extras?: Record<string, unknown>) =>
     request<{ ok: boolean; count: number }>(`/api/study/participants/${participantId}/task-plan`, {
       method: "PUT",
-      body: JSON.stringify({ tasks }),
+      body: JSON.stringify({ tasks, ...extras }),
     }),
   getTaskProgress: (participantId: string) =>
     request<{

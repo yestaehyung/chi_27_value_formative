@@ -60,7 +60,7 @@ export const PRE_STUDY_EN: MSection[] = [
         "Not at all", "Less than once a month", "1–3 times a month", "1–2 times a week", "3+ times a week",
       ]),
       sg("FACT_AI_REC", "How often have you asked generative AI (ChatGPT, Claude, Gemini, etc.) for product recommendations or purchase advice?", [
-        "Never", "1–3 times a month", "1–2 times a week", "3–5 times a week", "Daily",
+        "Never", "1–2 times", "3–5 times", "1–3 times a month", "Weekly or more",
       ]),
       lk("FACT_COMPARE", "I tend to compare multiple candidates before purchasing a product."),
     ],
@@ -85,15 +85,9 @@ export const KNOWLEDGE_SECTIONS_EN: MSection[] = [
       lk("SPK_4", 'Compared to most other people, I know less about "{category}".', true),
       lk("SPK_5", 'When it comes to "{category}", I really do not know a lot.', true),
       sg("EXP_BUY", 'How many times have you purchased products in the "{category}" category yourself?', [
-        "Never", "Once", "2–3 times", "4–6 times", "7+ times",
+        "Never", "Once", "2–3 times", "4+ times",
       ]),
       lk("INIT_CLARITY", 'Right now, I clearly know what to look for when choosing a product in the "{category}" category.'),
-      {
-        id: "INIT_CRITERIA_FREE",
-        type: "text",
-        label: 'Please list all the conditions or criteria you currently consider important when choosing a product in the "{category}" category.',
-        placeholder: 'e.g., budget under $110, weight, design… write "undecided" if you have not decided yet',
-      },
     ],
   },
 ];
@@ -105,9 +99,9 @@ export const POST_TASK_EN: MSection[] = [
     title: "Confidence in Your Final Choice",
     desc: "Please answer with the shopping task you just completed in mind.",
     questions: [
-      lk("CC_1", "It was impossible to be sure which product best matched my preferences.", true),
-      lk("CC_2", "I was confident I could single out the one product that best matched my preferences."),
-      lk("CC_3", "I am confident that I found the product that best meets my needs."),
+      { ...lk("CC_1", "It was impossible to be sure which product best matched my preferences.", true), points: 9 },
+      { ...lk("CC_2", "I was confident I could single out the one product that best matched my preferences."), points: 9 },
+      { ...lk("CC_3", "I am confident that I found the product that best meets my needs."), points: 9 },
     ],
   },
 ];
@@ -128,7 +122,25 @@ export const CRITERION_CHECK_EN: MQuestion[] = [
   ]),
 ];
 
+// Raw NASA-TLX (Hart 1986; RTLX, pairwise weights omitted) — guardrail. Original
+// NASA wording; PERFORMANCE keeps the original direction (0=Good) so all six read high=load.
+const tlx = (id: string, label: string, minLabel: string, maxLabel: string): MQuestion =>
+  ({ id, label, type: "slider", minLabel, maxLabel, required: true });
+
 export const POST_STUDY_EN: MSection[] = [
+  {
+    id: "nasa_tlx",
+    title: "Workload (both shopping tasks)",
+    desc: "The following items are about your overall experience interacting with the shopping agent across the two shopping tasks you just completed. Exclude filling in surveys; think only of exploring and comparing products and deciding on a final choice. Rate each item from 0 to 100.",
+    questions: [
+      tlx("TLX_MENTAL", "How much mental and perceptual activity was required (e.g., thinking, deciding, remembering, looking, searching)? Was the task easy or demanding, simple or complex?", "Very low", "Very high"),
+      tlx("TLX_PHYSICAL", "How much physical activity was required (e.g., pressing, moving, typing and operating)? Was the task easy or physically demanding?", "Very low", "Very high"),
+      tlx("TLX_TEMPORAL", "How much time pressure did you feel due to the rate or pace at which the task elements occurred? Was the pace slow and leisurely or rapid and frantic?", "Very low", "Very high"),
+      tlx("TLX_PERFORMANCE", "How successful do you think you were in accomplishing the goals of the task? How satisfied were you with your performance in accomplishing these goals?", "Good / successful", "Poor / unsuccessful"),
+      tlx("TLX_EFFORT", "How hard did you have to work (mentally and physically) to accomplish your level of performance?", "Very low", "Very high"),
+      tlx("TLX_FRUSTRATION", "How insecure, discouraged, irritated, stressed, and annoyed were you during the task?", "Very low", "Very high"),
+    ],
+  },
   {
     id: "understanding",
     title: "Agent Understanding",
@@ -181,6 +193,19 @@ export const POST_STUDY_EN: MSection[] = [
       lk("ITU_1", "I will use this shopping agent again."),
       lk("ITU_2", "I will use this shopping agent frequently."),
       lk("ITU_3", "I will tell my friends about this shopping agent."),
+    ],
+  },
+  {
+    id: "exploration_narrowing",
+    title: "Your Exploration Experience",
+    questions: [
+      {
+        id: "OPEN_NARROWING",
+        type: "text",
+        label: "While talking with the agent, did you ever feel that what the agent presented or emphasized narrowed your exploration more than necessary, or kept you from fully considering other important criteria or products? If not, write 'None'. If so, describe the situation and how it affected your choice.",
+        placeholder: "Write 'None' if this did not happen",
+        required: true,
+      },
     ],
   },
 ];

@@ -488,10 +488,12 @@ export default function VariantSession({
 
   const openFinalChoice = () => {
     if (seenProducts.length === 0) {
-      // 본 상품이 없으면 고를 것도 없다 — 기록만 남기고 바로 확신 설문으로.
+      // 본 상품이 없으면 고를 것도 없다 — 기록만 남기고 다음 단계로.
+      // CC는 "하나의 상품을 최종 선택했다" 과제에만 제시한다 (2026-08-24 동결 문서
+      // 4.7 — shortlist·탐색 계속·적합 없음은 강제 응답 없이 NA).
       api.submitFinalChoice(sessionId, { status: "none_suitable", noneReason: "no_products" })
         .catch(console.error);
-      setPostSurveyOpen(true);
+      proceedAfterPostSurvey().catch(() => setFinished(true));
       return;
     }
     setFinalChoiceOpen(true);
@@ -502,7 +504,11 @@ export default function VariantSession({
     try {
       await api.submitFinalChoice(sessionId, payload);
       setFinalChoiceOpen(false);
-      setPostSurveyOpen(true);
+      if (payload.status === "final") {
+        setPostSurveyOpen(true); // CC 3문항 — 최종 선택 과제에만
+      } else {
+        await proceedAfterPostSurvey(); // CC 없이 기준 감사로 (CC=NA)
+      }
     } catch (e) {
       console.error(e);
       showToast(STUDY_UI.chat.saveFailed);

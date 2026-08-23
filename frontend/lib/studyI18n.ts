@@ -126,6 +126,16 @@ export const STUDY_UI = {
       "From the four shopping situations below, choose two you can answer from your own real life. The order of the two tasks will be randomized.",
     ),
     inSession: tr("이번 과제", "Your task"),
+    hTitle: tr("가장 잘 안다고 느끼는 제품군을 골라 주세요", "Choose the product category you feel you know best"),
+    hDescription: tr(
+      "아래 네 가지 쇼핑 과제 중, 현재 본인이 그 제품군에 대해 가장 잘 안다고 느끼는 과제 하나를 선택해 주세요.",
+      "From the four shopping tasks below, choose the one whose product category you currently feel you know best.",
+    ),
+    lTitle: tr("가장 잘 모른다고 느끼는 제품군을 골라 주세요", "Choose the product category you feel you know least"),
+    lDescription: tr(
+      "나머지 세 과제 중, 현재 본인이 그 제품군에 대해 가장 잘 모른다고 느끼는 과제 하나를 선택해 주세요. 선택한 두 과제의 진행 순서는 무작위로 정해져요.",
+      "From the remaining three tasks, choose the one whose product category you currently feel you know least. The order of your two tasks will be randomized.",
+    ),
   },
   categories: {
     step: (step: number) => tr(`${step}단계 / 2단계`, `Step ${step} of 2`),

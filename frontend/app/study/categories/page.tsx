@@ -1,21 +1,22 @@
 "use client";
 
-// 본실험 과제 선택 화면 (2026-08-23 T과제 개편) — 친숙/비친숙 2단계 선택을 대체.
+// 본실험 과제 선정 화면 (2026-08-24 동결 문서 P0-3) — H/L 2단계 선정.
 //
-// 참가자는 상황 기반 과제 4종(T1~T4, lib/studyTasks.ts) 중 **자신의 실제 상황에 맞는
-// 2개**를 고른다. 자기선택을 남기는 이유: 과제가 "실제 통근 경로", "실제로 가진 옷"처럼
-// 개인 맥락을 요구하므로, 무작위 배정은 맥락이 없는 참가자(통근 안 함 등)에게 허구
-// 응답을 강요한다. 진행 순서는 설계가 정한다(선택 2개를 무작위 셔플 — 순서 자기선택
-// 편향 차단). 친숙도는 이제 배정 축이 아니라 측정 변수다(지식 행렬 + SPK).
-import { useEffect, useState } from "react";
+//   1단계  네 과제 후보 중 **가장 잘 안다고 느끼는 제품군** 1개 (H)
+//   2단계  나머지 세 후보 중 **가장 잘 모른다고 느끼는 제품군** 1개 (L)
+//
+// - 후보 카드의 나열 순서는 참가자마다 무작위 (표시 순서를 로그로 남긴다)
+// - 두 과제의 진행 순서는 HL/LH 무작위 (sequence로 저장 — 자기선택 편향 차단)
+// - H/L은 배정이 아니라 참가자의 상대적 자기선택이다: 시스템 조건만 무작위 조작이며,
+//   실제 지식은 지식 행렬(SPK)로 측정해 선정 확인(selection check)으로 보고한다.
+// - 제품 지식을 높이거나 낮추는 개입이 없으므로 H/L 차이는 인과효과로 해석하지 않는다.
+import { useMemo, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { api } from "@/lib/api";
 import { saveQueue, type PlannedTask } from "@/lib/taskQueue";
 import { STUDY_UI } from "@/lib/studyI18n";
-import { STUDY_TASKS } from "@/lib/studyTasks";
-
-const NEED = 2; // 과제 2개
+import { STUDY_TASKS, type StudyTask } from "@/lib/studyTasks";
 
 function shuffled<T>(items: T[]): T[] {
   const arr = [...items];
@@ -29,63 +30,74 @@ function shuffled<T>(items: T[]): T[] {
 export default function TaskSelectPage() {
   const router = useRouter();
   const [participantId, setParticipantId] = useState("");
-  const [picked, setPicked] = useState<string[]>([]); // task id 순서 무관 — 시작 시 셔플
+  const [step, setStep] = useState<1 | 2>(1);
+  const [hTask, setHTask] = useState<string | null>(null); // task id — 가장 잘 아는 것
+  const [lTask, setLTask] = useState<string | null>(null); // task id — 가장 잘 모르는 것
   const [starting, setStarting] = useState(false);
+  // 후보 나열 순서 — 참가자마다 무작위, 화면 생애 동안 고정 (로그로 저장)
+  const displayOrder = useMemo(() => shuffled(STUDY_TASKS), []);
 
   useEffect(() => {
     setParticipantId(new URLSearchParams(window.location.search).get("pid") ?? "");
   }, []);
 
-  const full = picked.length >= NEED;
+  // 2단계 선택지 = 1단계에서 고른 것 제외 (중복 선택 차단)
+  const stepOptions = step === 1 ? displayOrder : displayOrder.filter((t) => t.id !== hTask);
+  const picked = step === 1 ? hTask : lTask;
+  const setPicked = step === 1 ? setHTask : setLTask;
 
-  const toggle = (id: string) => {
-    setPicked((prev) =>
-      prev.includes(id)
-        ? prev.filter((t) => t !== id)
-        : prev.length >= NEED ? prev : [...prev, id],
-    );
+  const goStep2 = () => {
+    if (!hTask) return;
+    if (lTask === hTask) setLTask(null);
+    setStep(2);
   };
 
   const start = () => {
-    if (picked.length !== NEED || starting) return;
+    if (!hTask || !lTask || hTask === lTask || starting) return;
     setStarting(true);
-    // 순서는 설계가 정한다 — 고른 2개를 무작위 셔플 (순서 자기선택 편향 차단).
-    const tasks: PlannedTask[] = shuffled(
-      STUDY_TASKS.filter((t) => picked.includes(t.id)),
-    ).map((t) => ({ category: t.category, familiarity: "none" }));
-    saveQueue(participantId || "anon", tasks);
-    // 서버에도 계획을 저장 — 진행(남은 과제/다음 과제)의 진실은 서버가 갖는다.
-    if (participantId) void api.saveTaskPlan(participantId, tasks).catch(() => {});
-    // 첫 세션은 지식 행렬(측정 계획 §4)을 마친 뒤에 연다.
+    const h = STUDY_TASKS.find((t) => t.id === hTask) as StudyTask;
+    const l = STUDY_TASKS.find((t) => t.id === lTask) as StudyTask;
+    // 진행 순서 HL/LH 무작위 (동결 문서: 조건 내 균형은 배치 규모에서 자연 근사)
+    const sequence = Math.random() < 0.5 ? "HL" : "LH";
+    const ordered: PlannedTask[] = (sequence === "HL" ? [h, l] : [l, h]).map((t) => ({
+      category: t.category,
+      familiarity: t.id === hTask ? "familiar" : "unfamiliar", // H=familiar, L=unfamiliar 역할 저장
+    }));
+    saveQueue(participantId || "anon", ordered);
+    if (participantId) {
+      void api.saveTaskPlan(participantId, ordered, {
+        candidateDisplayOrder: displayOrder.map((t) => t.id),
+        sequence,
+        hTaskId: hTask,
+        lTaskId: lTask,
+      }).catch(() => {});
+    }
     router.push(participantId ? `/study/knowledge?pid=${participantId}` : "/study/knowledge");
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="msg-in text-xl font-bold text-[#191919]">
-        {STUDY_UI.tasks.title}
+    <div key={step} className="mx-auto max-w-3xl px-4 py-8">
+      <div className="msg-in text-[11px] font-semibold tabular-nums text-[#9aa0a6]">
+        {STUDY_UI.categories.step(step)}
+      </div>
+      <h1 className="msg-in mt-1 text-xl font-bold text-[#191919]" style={{ animationDelay: "40ms" }}>
+        {step === 1 ? STUDY_UI.tasks.hTitle : STUDY_UI.tasks.lTitle}
       </h1>
-      <p className="msg-in mt-2 text-sm leading-relaxed text-[#5f6368]" style={{ animationDelay: "60ms" }}>
-        {STUDY_UI.tasks.description}
+      <p className="msg-in mt-2 text-sm leading-relaxed text-[#5f6368]" style={{ animationDelay: "80ms" }}>
+        {step === 1 ? STUDY_UI.tasks.hDescription : STUDY_UI.tasks.lDescription}
       </p>
 
       <div className="mt-6 space-y-2">
-        {STUDY_TASKS.map((t, i) => {
-          const on = picked.includes(t.id);
-          const dim = !on && full;
+        {stepOptions.map((t, i) => {
+          const on = picked === t.id;
           return (
             <button
               key={t.id}
-              onClick={() => toggle(t.id)}
-              disabled={dim}
+              onClick={() => setPicked(on ? null : t.id)}
               aria-pressed={on}
-              style={{ animationDelay: `${120 + i * 50}ms` }}
-              className={`msg-in flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-[border-color,background-color,opacity] duration-150 ${
-                on
-                  ? "border-[#4f46e5] bg-[#f5f5ff]"
-                  : dim
-                    ? "cursor-not-allowed border-[#eceff1] bg-[#fafbfc] opacity-60"
-                    : "border-[#e4e8eb] bg-white hover:border-[#4f46e5]"
+              style={{ animationDelay: `${140 + i * 50}ms` }}
+              className={`msg-in flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-[border-color,background-color] duration-150 ${
+                on ? "border-[#4f46e5] bg-[#f5f5ff]" : "border-[#e4e8eb] bg-white hover:border-[#4f46e5]"
               }`}
             >
               <div className="min-w-0 flex-1">
@@ -105,23 +117,34 @@ export default function TaskSelectPage() {
         })}
       </div>
 
-      <div className="msg-in mt-6 flex items-center justify-between gap-4" style={{ animationDelay: "340ms" }}>
-        <span className="text-xs tabular-nums text-[#9aa0a6]">
-          {STUDY_UI.categories.selected(picked.length, NEED)}
-        </span>
-        <button
-          onClick={start}
-          disabled={!full || starting}
-          className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-[background-color,color,scale] duration-150 active:scale-[0.96] ${
-            full && !starting
-              ? "bg-[#4f46e5] text-white hover:bg-[#4338ca]"
-              : "cursor-not-allowed bg-[#f5f6f7] text-[#c4c8cc]"
-          }`}
-        >
-          {starting ? STUDY_UI.categories.starting : STUDY_UI.categories.start}
-        </button>
+      <div className="msg-in mt-6 flex items-center justify-end gap-2" style={{ animationDelay: "340ms" }}>
+        {step === 2 && (
+          <button onClick={() => setStep(1)} className="btn px-4 py-2.5 text-sm">
+            {STUDY_UI.categories.back}
+          </button>
+        )}
+        {step === 1 ? (
+          <button
+            onClick={goStep2}
+            disabled={!hTask}
+            className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-[background-color,color,scale] duration-150 active:scale-[0.96] ${
+              hTask ? "bg-[#4f46e5] text-white hover:bg-[#4338ca]" : "cursor-not-allowed bg-[#f5f6f7] text-[#c4c8cc]"
+            }`}
+          >
+            {STUDY_UI.categories.next}
+          </button>
+        ) : (
+          <button
+            onClick={start}
+            disabled={!lTask || starting}
+            className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-[background-color,color,scale] duration-150 active:scale-[0.96] ${
+              lTask && !starting ? "bg-[#4f46e5] text-white hover:bg-[#4338ca]" : "cursor-not-allowed bg-[#f5f6f7] text-[#c4c8cc]"
+            }`}
+          >
+            {starting ? STUDY_UI.categories.starting : STUDY_UI.categories.start}
+          </button>
+        )}
       </div>
-
     </div>
   );
 }

@@ -494,7 +494,12 @@ def ground_truth_gap(session_id: str, db: DbSession = Depends(get_db)):
 # 세션의 finalChoice+postSurvey 마커(둘 다 종료 플로우의 필수 단계)로 서버가 센다.
 
 class TaskPlanRequest(BaseModel):
-    tasks: list[dict]  # [{category, familiarity: "familiar"|"unfamiliar"|"none"}] — "none" = 과제 배정(2026-08-23 T과제 개편, 친숙도는 측정 변수로 이동)
+    tasks: list[dict]  # [{category, familiarity: "familiar"(H)|"unfamiliar"(L)|"none"}]
+    # 선정 로그 (2026-08-24 동결 문서 P0-8) — 후보 표시 순서·HL/LH 진행 순서·H/L 과제 id
+    candidateDisplayOrder: list[str] | None = None
+    sequence: str | None = None  # "HL" | "LH"
+    hTaskId: str | None = None
+    lTaskId: str | None = None
 
 
 @router.put("/participants/{participant_id}/task-plan")
@@ -513,7 +518,9 @@ def save_task_plan(participant_id: str, req: TaskPlanRequest, db: DbSession = De
         tasks.append({"category": cat, "familiarity": fam})
     if not tasks:
         raise HTTPException(422, "tasks must not be empty")
-    part.task_plan = {"tasks": tasks,
+    extras = {k: getattr(req, k) for k in ("candidateDisplayOrder", "sequence", "hTaskId", "lTaskId")
+              if getattr(req, k) is not None}
+    part.task_plan = {"tasks": tasks, **extras,
                       "savedAt": datetime.now(timezone.utc).isoformat()}
     db.commit()
     return {"ok": True, "count": len(tasks)}
@@ -532,7 +539,10 @@ def task_progress(participant_id: str, db: DbSession = Depends(get_db)):
     completed_categories = set()
     for s in sessions:
         meta = s.meta or {}
-        if meta.get("finalChoice") and meta.get("postSurvey"):
+        # CC(postSurvey)는 최종 선택 과제에만 제시된다 (2026-08-24 동결 문서 4.7) —
+        # shortlist·탐색계속·적합없음 과제는 finalChoice만으로 완료다 (CC=NA).
+        fc = meta.get("finalChoice") or {}
+        if fc and (meta.get("postSurvey") or fc.get("status") != "final"):
             cat = meta.get("category") or (s.scenario_id or "").removeprefix("cat:")
             if cat:
                 completed_categories.add(cat)

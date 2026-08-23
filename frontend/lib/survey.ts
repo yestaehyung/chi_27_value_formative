@@ -1,7 +1,7 @@
 // FS1 사전 설문 정의 (formative_study_pre_survey.md 기반).
 // 선언형 — survey 페이지가 이 데이터를 렌더한다. 7점 리커트 + 객관식 + 주관식.
 
-export type QType = "single" | "multi" | "likert" | "text" | "textlong";
+export type QType = "single" | "multi" | "likert" | "slider" | "text" | "textlong";
 
 export type SurveyQuestion = {
   id: string;

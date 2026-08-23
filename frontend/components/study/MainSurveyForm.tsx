@@ -7,7 +7,7 @@ import type { MQuestion, MSection } from "@/lib/mainSurvey";
 import { LIKERT_POINTS } from "@/lib/mainSurvey";
 import { LIKERT_MAX_LOCALIZED, LIKERT_MIN_LOCALIZED } from "@/lib/localizedMainSurvey";
 
-const SCALE = Array.from({ length: LIKERT_POINTS }, (_, i) => i + 1);
+
 
 export function QuestionRow({
   q,
@@ -39,10 +39,38 @@ export function QuestionRow({
           placeholder={q.placeholder}
           className="mt-1.5 w-full resize-none rounded-lg border border-[#e4e8eb] px-3 py-2 text-xs leading-relaxed focus:border-[#4f46e5] focus:outline-none"
         />
+      ) : q.type === "slider" ? (
+        /* Raw NASA-TLX — 0~100, 5 간격 21눈금, 기본값 미선택(응답 전엔 빈 상태). */
+        <>
+          <div className="mt-2 flex flex-wrap gap-1">
+            {Array.from({ length: 21 }, (_, i) => i * 5).map((n) => {
+              const on = value === String(n);
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => onChange(String(n))}
+                  aria-pressed={on}
+                  className={`h-8 w-[calc(100%/21-0.25rem)] min-w-[26px] flex-none rounded border text-[9px] font-semibold tabular-nums transition-[color,background-color,border-color] duration-100 ${
+                    on
+                      ? "border-[#4f46e5] bg-[#4f46e5] text-white"
+                      : "border-[#e4e8eb] text-slate-500 hover:border-[#4f46e5]"
+                  }`}
+                >
+                  {n}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-0.5 flex justify-between text-[9px] text-slate-400">
+            <span>0 = {min}</span>
+            <span>100 = {max}</span>
+          </div>
+        </>
       ) : q.type === "likert" ? (
         <>
           <div className="mt-1.5 flex gap-1">
-            {SCALE.map((n) => {
+            {Array.from({ length: q.points ?? LIKERT_POINTS }, (_, i) => i + 1).map((n) => {
               const on = value === String(n);
               return (
                 <button
