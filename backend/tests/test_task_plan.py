@@ -37,7 +37,7 @@ def pid(client):
 
 
 def _complete_session(client, pid, category):
-    """카테고리 세션을 만들고 종료 플로우의 두 마커(finalChoice+postSurvey)를 채운다."""
+    """카테고리 세션을 만들고 종료 플로우(finalChoice+postSurvey+criterionAudit)를 채운다."""
     r = client.post("/api/sessions", json={
         "scenarioId": f"cat:{category}", "participantId": pid,
         "metadata": {"category": category},
@@ -49,6 +49,9 @@ def _complete_session(client, pid, category):
     assert r.status_code == 200, r.text
     r = client.put(f"/api/study/sessions/{sid}/final-choice",
                    json={"status": "none_suitable", "noneReason": "test"})
+    assert r.status_code == 200, r.text
+    r = client.post(f"/api/study/sessions/{sid}/criterion-validations",
+                    json={"items": [], "ownCriteria": [], "missingCriteria": []})
     assert r.status_code == 200, r.text
     return sid
 

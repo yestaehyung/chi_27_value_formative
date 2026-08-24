@@ -187,7 +187,7 @@ export const STUDY_UI = {
         { key: "composer", title: "쇼핑을 마치면", body: "충분히 살펴보셨으면 위쪽 '이 쇼핑 마치기'를 눌러주세요.\n마친 뒤 이번 쇼핑에 대한 짧은 질문을 드려요." },
       ],
       [
-        { key: "categories", title: "Choose Your Product Categories", body: "First choose two categories you know well, then two categories you know less well.\nYou will complete one shopping task for each of the four categories in random order." },
+        { key: "categories", title: "Choose Your Product Categories", body: "Pick the category you know best, then the one you know least.\nYou will complete one shopping task for each of the two categories." },
         { key: "chat", title: "Talk with the Shopping Agent", body: "Refine what you are looking for through conversation.\nThe agent may ask follow-up questions or recommend products. The conversation shown above is an example." },
         { key: "products", title: "Review Recommended Products", body: "The agent presents alternatives that represent different ways to meet your criteria.\nSwipe horizontally to compare them." },
         { key: "card-info", title: "Review Product Information", body: "Each card shows the price, rating, review count, and an explanation of why the product was recommended." },

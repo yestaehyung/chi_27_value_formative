@@ -539,10 +539,11 @@ def task_progress(participant_id: str, db: DbSession = Depends(get_db)):
     completed_categories = set()
     for s in sessions:
         meta = s.meta or {}
-        # CC(postSurvey)는 최종 선택 과제에만 제시된다 (2026-08-24 동결 문서 4.7) —
-        # shortlist·탐색계속·적합없음 과제는 finalChoice만으로 완료다 (CC=NA).
+        # 완료 = finalChoice + (CC가 final이면 postSurvey) + criterionAudit 모두 존재.
+        # criterionAudit 없이 새로고침하면 다음 과제로 넘어가는 것을 방지한다.
         fc = meta.get("finalChoice") or {}
-        if fc and (meta.get("postSurvey") or fc.get("status") != "final"):
+        has_audit = bool(meta.get("criterionAudit"))
+        if fc and has_audit and (meta.get("postSurvey") or fc.get("status") != "final"):
             cat = meta.get("category") or (s.scenario_id or "").removeprefix("cat:")
             if cat:
                 completed_categories.add(cat)
