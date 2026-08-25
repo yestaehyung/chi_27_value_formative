@@ -89,6 +89,17 @@ export default function FinalChoiceModal({
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-[#5f6368]">
           {tr("이 쇼핑 과제의 결정 상태를 선택해 주세요. 확정 후에는 바꿀 수 없어요.", "Select the state of your decision for this shopping task. You cannot change it after confirming.")}
+          {/* 구매를 이미 누른 사용자에게 "왜 또 묻지?"가 되지 않도록 — 그 상품이
+              아래 목록에 미리 선택돼 있다는 사실을 알려준다 (2026-08-25 QA). */}
+          {products.some((p) => p.purchased) && (
+            <>
+              {" "}
+              {tr(
+                "대화에서 '구매'를 누른 상품은 아래에 미리 선택해 두었어요.",
+                "The product you marked for purchase is already selected below.",
+              )}
+            </>
+          )}
         </p>
 
         {/* 결정 상태 4범주 */}
