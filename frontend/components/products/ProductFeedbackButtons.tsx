@@ -60,6 +60,9 @@ export default function ProductFeedbackButtons({
       onClick={() => setShowReason(false)}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={tr("싫어요 이유", "Dislike reason")}
         className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -114,7 +117,7 @@ export default function ProductFeedbackButtons({
   // 세로 모드 — 상품 옆 좁은 컬럼용 세그먼트 스택: 구분선으로 나뉜 한 덩어리 (버튼 4개가
   // 따로 노는 것보다 시각 부피가 작다). 행 높이는 40px 유지(핵심 인터랙션 히트 영역).
   if (vertical) {
-    const row = "min-h-10 w-full px-2 text-[11px] font-medium text-[#5f6368] transition-[background-color,color] duration-150 hover:bg-[#fafbfc] disabled:opacity-50";
+    const row = "min-h-11 w-full px-2 text-[11px] font-medium text-[#5f6368] transition-[background-color,color] duration-150 hover:bg-[#fafbfc] disabled:opacity-50";
     return (
       <div className="flex w-full flex-col divide-y divide-[#f0f2f4] overflow-hidden rounded-xl border border-[#e4e8eb] bg-white">
         <button
@@ -155,28 +158,28 @@ export default function ProductFeedbackButtons({
     <div className="grid grid-cols-4 gap-1.5">
       {/* min-h-10(40px): 연구의 핵심 인터랙션이라 최소 히트 영역 40px 보장 */}
       <button
-        className={`btn min-h-10 px-2 text-xs ${has("like") ? "border-emerald-400 bg-emerald-50 text-emerald-700" : ""}`}
+        className={`btn min-h-11 px-2 text-xs ${has("like") ? "border-emerald-400 bg-emerald-50 text-emerald-700" : ""}`}
         disabled={disabled || has("like")}
         onClick={() => onFeedback({ type: "like" })}
       >
         👍 {tr("좋아요", "Like")}
       </button>
       <button
-        className={`btn min-h-10 px-2 text-xs ${has("dislike") ? "border-rose-300 bg-rose-50 text-rose-700" : ""}`}
+        className={`btn min-h-11 px-2 text-xs ${has("dislike") ? "border-rose-300 bg-rose-50 text-rose-700" : ""}`}
         disabled={disabled || has("dislike")}
         onClick={() => setShowReason(true)}
       >
         👎 {tr("싫어요", "Dislike")}
       </button>
       <button
-        className="btn min-h-10 px-2 text-xs"
+        className="btn min-h-11 px-2 text-xs"
         disabled={disabled || has("view_detail")}
         onClick={() => onFeedback({ type: "view_detail" })}
       >
         {tr("자세히", "Details")}
       </button>
       <button
-        className={`btn min-h-10 px-2 text-xs ${has("purchase") ? "border-emerald-500 bg-emerald-600 text-white" : ""}`}
+        className={`btn min-h-11 px-2 text-xs ${has("purchase") ? "border-emerald-500 bg-emerald-600 text-white" : ""}`}
         disabled={disabled || has("purchase")}
         onClick={() => onFeedback({ type: "purchase" })}
       >

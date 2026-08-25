@@ -186,7 +186,7 @@ function Question({
                   key={n}
                   type="button"
                   onClick={() => onSingle(String(n))}
-                  className={`h-10 flex-1 rounded-md border text-sm font-semibold tabular-nums transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] ${
+                  className={`min-h-11 flex-1 rounded-md border text-sm font-semibold tabular-nums transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] ${
                     on ? "border-[#4f46e5] bg-[#4f46e5] text-white" : "border-[#e4e8eb] text-slate-600 hover:border-[#4f46e5]"
                   }`}
                 >
@@ -213,7 +213,7 @@ function Question({
                 key={opt}
                 type="button"
                 onClick={() => onSingle(opt)}
-                className={`block w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors duration-150 active:scale-[0.99] ${
+                className={`block min-h-11 w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors duration-150 active:scale-[0.99] ${
                   on ? "border-[#4f46e5] bg-[#eef2ff] font-medium" : "border-[#e4e8eb] hover:border-[#4f46e5]"
                 }`}
               >
@@ -234,7 +234,7 @@ function Question({
                 key={opt}
                 type="button"
                 onClick={() => onMulti(opt)}
-                className={`rounded-full border px-3 py-1.5 text-sm transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] ${
+                className={`min-h-11 rounded-full border px-4 py-1.5 text-sm transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] ${
                   on ? "border-[#4f46e5] bg-[#4f46e5] text-white" : "border-[#e4e8eb] text-slate-600 hover:border-[#4f46e5]"
                 }`}
               >

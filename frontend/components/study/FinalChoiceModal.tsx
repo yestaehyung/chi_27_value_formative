@@ -83,7 +83,12 @@ export default function FinalChoiceModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="card flex max-h-[88dvh] w-full max-w-2xl flex-col p-5">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={tr("결정 상태 확인", "Confirm your decision")}
+        className="card flex max-h-[88dvh] w-full max-w-2xl flex-col p-5"
+      >
         <h2 className="text-base font-bold text-[#191919]">
           {tr("마치기 전에, 현재 결정 상태를 알려주세요", "Before Finishing, Tell Us Where You Stand")}
         </h2>
@@ -111,7 +116,7 @@ export default function FinalChoiceModal({
                 key={o.value}
                 onClick={() => setStatus(o.value)}
                 aria-pressed={on}
-                className={`block w-full rounded-xl border px-4 py-2.5 text-left text-xs font-medium transition-[color,background-color,border-color] duration-150 ${
+                className={`block min-h-11 w-full rounded-xl border px-4 py-2.5 text-left text-xs font-medium transition-[color,background-color,border-color] duration-150 ${
                   on ? "border-[#4f46e5] bg-[#eef2ff] text-[#4f46e5]" : "border-[#e4e8eb] text-[#404040] hover:border-[#4f46e5]"
                 }`}
               >

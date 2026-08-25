@@ -51,7 +51,12 @@ export default function SurveyModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
-      <div className="card flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="card flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden"
+      >
         <div className="border-b border-[#f0f2f4] px-5 py-4 sm:px-6">
           <h2 className="text-base font-bold text-[#191919]">{title}</h2>
           {desc && <p className="mt-1 text-xs leading-relaxed text-[#9aa0a6]">{desc}</p>}
@@ -66,8 +71,15 @@ export default function SurveyModal({
         <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6">
           {/* id는 미응답 스크롤 타깃 — MainSurveyForm 바깥에서 감싼다 */}
           <div>
-            {sections.map((sec) => (
+            {sections.map((sec, si) => (
               <div key={sec.id} className="mb-5 last:mb-0">
+                {/* 긴 설문에서 "얼마나 남았나" — 헤더 진행 바(문항 단위)에 더해
+                    섹션 단위 위치도 보여준다 (2026-08-25 QA: 6화면 분량 피로). */}
+                {sections.length > 1 && (
+                  <div className="mb-1 text-[10px] font-semibold tabular-nums text-slate-400">
+                    {si + 1} / {sections.length}
+                  </div>
+                )}
                 <MainSurveyForm
                   sections={[sec]}
                   answers={answers}

@@ -6,6 +6,7 @@
 import type { MQuestion, MSection } from "@/lib/mainSurvey";
 import { LIKERT_POINTS } from "@/lib/mainSurvey";
 import { LIKERT_MAX_LOCALIZED, LIKERT_MIN_LOCALIZED } from "@/lib/localizedMainSurvey";
+import { tr } from "@/lib/studyI18n";
 
 
 
@@ -59,7 +60,7 @@ export function QuestionRow({
                   /* 트랙 클릭 없이 썸(50)만 눌러 확정하는 경우도 응답으로 기록 */
                   onPointerUp={(e) => onChange((e.target as HTMLInputElement).value)}
                   aria-label={q.label}
-                  className={`h-6 w-full cursor-pointer accent-[#4f46e5] transition-opacity duration-150 ${
+                  className={`min-h-11 w-full cursor-pointer accent-[#4f46e5] transition-opacity duration-150 ${
                     answered ? "" : "opacity-40"
                   }`}
                 />
@@ -73,12 +74,18 @@ export function QuestionRow({
                   <span>100 = {max}</span>
                 </div>
               </div>
+              {/* 미응답 시 "—"는 썸이 50에 보이는 것과 겹쳐 "이미 50인가?"로 읽혔다
+                  (2026-08-25 QA) — 행동 지시로 바꿔 모호성 제거. */}
               <span
-                className={`mt-0.5 w-9 shrink-0 rounded-md py-1 text-center text-sm font-bold tabular-nums ${
-                  answered ? "bg-[#eef2ff] text-[#4f46e5]" : "text-slate-300"
+                className={`mt-0.5 shrink-0 rounded-md px-1.5 py-1 text-center tabular-nums ${
+                  answered
+                    ? "w-10 bg-[#eef2ff] text-sm font-bold text-[#4f46e5]"
+                    : "text-[10px] font-medium leading-tight text-slate-400"
                 }`}
               >
-                {answered ? n : "—"}
+                {answered ? n : tr("눌러서\n선택", "Tap to\nanswer").split("\n").map((l, i) => (
+                  <span key={i} className="block whitespace-nowrap">{l}</span>
+                ))}
               </span>
             </div>
           );
@@ -94,7 +101,7 @@ export function QuestionRow({
                   type="button"
                   onClick={() => onChange(String(n))}
                   aria-pressed={on}
-                  className={`h-10 flex-1 rounded-md border text-xs font-semibold tabular-nums transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] ${
+                  className={`min-h-11 flex-1 rounded-md border text-xs font-semibold tabular-nums transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] ${
                     on
                       ? "border-[#4f46e5] bg-[#4f46e5] text-white"
                       : "border-[#e4e8eb] text-slate-600 hover:border-[#4f46e5]"
@@ -121,7 +128,7 @@ export function QuestionRow({
                 type="button"
                 onClick={() => onChange(opt)}
                 aria-pressed={on}
-                className={`rounded-md border px-3 py-2 text-left text-xs leading-snug transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.99] ${
+                className={`min-h-11 rounded-md border px-3 py-2 text-left text-xs leading-snug transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.99] ${
                   on
                     ? "border-[#4f46e5] bg-[#eef2ff] font-semibold text-[#4f46e5]"
                     : "border-[#e4e8eb] text-slate-600 hover:border-[#4f46e5]"
@@ -156,15 +163,21 @@ export default function MainSurveyForm({
         <section key={sec.id}>
           <h3 className="text-xs font-bold text-[#4f46e5]">{sec.title}</h3>
           {sec.desc && <p className="mt-0.5 text-[11px] text-[#9aa0a6]">{sec.desc}</p>}
-          <div className="mt-2 space-y-3.5">
-            {sec.questions.map((q) => (
-              <QuestionRow
+          {/* 문항 사이 옅은 구분선 — 같은 척도가 반복되는 긴 설문(지식 행렬 등)에서
+              어디까지가 한 문항인지 시각 경계를 준다 (2026-08-25 QA). */}
+          <div className="mt-2">
+            {sec.questions.map((q, i) => (
+              <div
                 key={q.id}
-                q={q}
-                value={answers[q.id]}
-                onChange={(v) => onChange(q.id, v)}
-                invalid={missing.has(q.id)}
-              />
+                className={`py-3 ${i > 0 ? "border-t border-[#f3f4f6]" : "pt-1"}`}
+              >
+                <QuestionRow
+                  q={q}
+                  value={answers[q.id]}
+                  onChange={(v) => onChange(q.id, v)}
+                  invalid={missing.has(q.id)}
+                />
+              </div>
             ))}
           </div>
         </section>

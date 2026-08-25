@@ -184,7 +184,12 @@ export default function CriterionCheckModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
-      <div className="card flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={step === "A" ? tr("내 기준 나열", "List your criteria") : tr("기준 검토", "Review criteria")}
+        className="card flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden"
+      >
         <div className="border-b border-[#f0f2f4] px-5 py-4 sm:px-6">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-[#191919]">
@@ -217,9 +222,9 @@ export default function CriterionCheckModal({
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); addOwn(); } }}
                   placeholder={tr("예: 예산 10만원 이내, 배터리 오래감…", "e.g., budget under $110, long battery life…")}
-                  className="min-w-0 flex-1 rounded-lg border border-[#e4e8eb] px-3 py-2 text-xs focus:border-[#4f46e5] focus:outline-none"
+                  className="min-h-11 min-w-0 flex-1 rounded-lg border border-[#e4e8eb] px-3 py-2 text-xs focus:border-[#4f46e5] focus:outline-none"
                 />
-                <button onClick={addOwn} disabled={!draft.trim()} className="btn btn-primary shrink-0 px-3 py-2 text-xs">
+                <button onClick={addOwn} disabled={!draft.trim()} className="btn btn-primary min-h-11 shrink-0 px-3 py-2 text-xs">
                   {tr("추가", "Add")}
                 </button>
               </div>
@@ -299,7 +304,7 @@ export default function CriterionCheckModal({
                         return next;
                       })}
                       aria-pressed={on}
-                      className={`block w-full rounded-lg border px-3 py-2 text-left text-xs transition-[color,background-color,border-color] duration-150 ${
+                      className={`block min-h-11 w-full rounded-lg border px-3 py-2 text-left text-xs transition-[color,background-color,border-color] duration-150 ${
                         on ? "border-[#4f46e5] bg-[#eef2ff] font-semibold text-[#4f46e5]" : "border-[#e4e8eb] text-slate-600 hover:border-[#4f46e5]"
                       }`}
                     >

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { STUDY_UI } from "@/lib/studyI18n";
+import { STUDY_UI, tr } from "@/lib/studyI18n";
 
 export type SpotStep = { selector: string; title: string; body: string };
 
@@ -118,7 +118,7 @@ export default function Spotlight({
       <div className="absolute w-[320px]" style={tipStyle}>
         <div key={i} className="tip-in rounded-2xl bg-white p-4 shadow-xl">
         <div className="text-[11px] font-semibold tabular-nums text-[#4f46e5]">
-          {i + 1} / {steps.length}
+          {tr("튜토리얼", "Tutorial")} {i + 1} / {steps.length}
         </div>
         <h3 className="mt-1 text-sm font-bold text-[#191919]">{step.title}</h3>
         <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-[#404040]">{step.body}</p>
