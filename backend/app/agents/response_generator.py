@@ -10,6 +10,12 @@ from app.llm.prompts import AGENT_REPLY_SYSTEM, render_user_context
 from app.llm.provider import LLMMessage, LLMProvider
 from app.products.search import ScoredProduct
 
+
+def _norm_label(s: str) -> str:
+    """표시용 라벨 동치 판정 — 대소문자·공백·부호만 무시하는 기계적 정규화.
+    의미 유사도는 쓰지 않는다 (다른 기준을 합치면 미확인 경고가 숨는다)."""
+    return "".join(ch for ch in s.lower() if ch.isalnum())
+
 def clarify_text(category: str | None) -> str:
     if category is None:
         return L(
@@ -397,12 +403,24 @@ async def rerank_by_intent(
                                 if val == "unk" and cid in hard_cids
                                 and cid not in option_cids]
                     if unk_hard:
-                        labels = ", ".join(label_by_cid.get(cid, cid) for cid in unk_hard)
+                        # 같은 요구가 두 통로(칩·스펙 hardConstraints)로 별도 cid를 받아
+                        # 라벨이 반복되던 결함('lightweight, lightweight' — 2026-08-25 QA).
+                        # 정규화 일치(대소문자·공백·부호 무시)로만 합친다 — 유사도 매칭은
+                        # 다른 기준을 잘못 합쳐 진짜 미확인 경고를 숨길 수 있어 쓰지 않는다.
+                        # (통로 병합 자체는 tech-debt.md D1)
+                        uniq: list[str] = []
+                        for cid in unk_hard:
+                            lab = label_by_cid.get(cid, cid)
+                            if _norm_label(lab) not in {_norm_label(u) for u in uniq}:
+                                uniq.append(lab)
+                        shown = ", ".join(uniq[:2])
+                        more = len(uniq) - 2
+                        labels = shown + (f" 외 {more}건" if more > 0 and not is_en()
+                                          else f" and {more} more" if more > 0 else "")
                         matrix["hardUnk"][pid] = L(f"'{labels}' 확인 불가",
                                                    f"'{labels}' not confirmed in the listing")
-                        for cid in unk_hard:
-                            klabel = label_by_cid.get(cid, cid)
-                            matrix["hardUnkCounts"][klabel] = matrix["hardUnkCounts"].get(klabel, 0) + 1
+                        for lab in uniq:
+                            matrix["hardUnkCounts"][lab] = matrix["hardUnkCounts"].get(lab, 0) + 1
             for idx in raw.get("order") or []:
                 if idx in by_index and idx not in order:
                     order.append(idx)
