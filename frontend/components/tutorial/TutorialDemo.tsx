@@ -84,9 +84,9 @@ export default function TutorialDemo({
         <div className="flex min-h-[calc(100dvh-12rem)] flex-col items-center justify-center">
           <div className="w-full max-w-2xl px-4" data-tutorial="categories">
             <div className="text-[11px] font-semibold tabular-nums text-[#9aa0a6]">{STUDY_UI.categories.step(1)}</div>
-            <h2 className="mt-1 text-xl font-bold text-[#191919]">{STUDY_UI.categories.familiarTitle}</h2>
+            <h2 className="mt-1 text-xl font-bold text-[#191919]">{STUDY_UI.tasks.hTitle}</h2>
             <p className="mt-2 text-sm leading-relaxed text-[#5f6368]">
-              {STUDY_UI.categories.familiarDescription}
+              {STUDY_UI.tasks.hDescription}
             </p>
             <div className="mt-5 space-y-2">
               {DEMO_CATEGORIES.map((c) => (

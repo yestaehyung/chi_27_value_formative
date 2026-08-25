@@ -159,18 +159,21 @@ export const STUDY_UI = {
     previous: tr("이전", "Back"),
     next: tr("다음", "Next"),
     start: tr("시작하기", "Start Study"),
+    // 실제 과제 화면(/study/categories)과 반드시 같은 목록이어야 한다 — 구 카탈로그
+    // 더미(블루투스 스피커 등)가 남아 튜토리얼과 실제 선택지가 달랐다 (2026-08-25 QA).
+    // H/L 1단계 재현이므로 선택 표시는 1개만.
     demoCategories: tr(
       [
-        { name: "블루투스 스피커", blurb: "집·야외에서 쓸 무선 스피커", on: true },
-        { name: "티셔츠", blurb: "일상에서 입을 티셔츠", on: true },
-        { name: "책상", blurb: "작업용 책상", on: false },
-        { name: "데스크체어", blurb: "오래 앉아 일할 의자", on: false },
+        { name: "홈 워크스페이스용 모니터", blurb: "집에서 주로 하는 작업에 맞는 모니터", on: true },
+        { name: "매일의 이동 시간을 위한 헤드폰", blurb: "왕복 두 시간 대중교통 이동에 쓸 헤드폰", on: false },
+        { name: "좁은 방에 맞는 작업 책상", blurb: "좁은 방에 작업 공간을 만들 책상", on: false },
+        { name: "새 직장 첫 출근을 위한 셔츠", blurb: "첫 주에 입을 셔츠·블라우스", on: false },
       ],
       [
-        { name: "Bluetooth Speakers", blurb: "Wireless speakers for indoor or outdoor use", on: true },
-        { name: "T-shirts", blurb: "T-shirts for everyday wear", on: true },
-        { name: "Desks", blurb: "Desks for work or study", on: false },
-        { name: "Office Chairs", blurb: "Chairs for extended desk work", on: false },
+        { name: "A monitor for your home workspace", blurb: "For the work you mainly do at home", on: true },
+        { name: "Headphones for your daily commute", blurb: "For about two hours a day on public transport", on: false },
+        { name: "A desk for a small room", blurb: "To set up a workspace in a small room", on: false },
+        { name: "A shirt for your first week at a new job", blurb: "A shirt or blouse for your first week", on: false },
       ],
     ),
     steps: tr(
