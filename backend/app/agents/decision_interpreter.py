@@ -1,8 +1,8 @@
-"""Selective value/motivation interpretation for clarification decisions.
+"""Selective TCV value interpretation for clarification decisions.
 
-This module is deliberately separate from M8 motivation measurement.  Its output is stored only
-under ``IntentionTopic.hints.theoryBasis`` and may shape one confirmation question; it never
-writes ``session.meta.motivationScores`` and never ranks products directly.
+Output is stored only under ``IntentionTopic.hints.theoryBasis`` and may shape one
+confirmation question; it never ranks products directly. (clarification_motivation은
+2026-08-25 제거 — 이론 프레이밍 TCV 단일 축.)
 """
 from __future__ import annotations
 
@@ -16,12 +16,6 @@ from app.ontology.merge import _similar
 logger = logging.getLogger(__name__)
 
 TCV = {"Functional", "Social", "Emotional", "Epistemic", "Conditional"}
-MOTIVATIONS = {
-    "Adventure", "Gratification", "Role", "BargainValue",
-    "SocialShopping", "Idea", "Utilitarian",
-}
-
-
 def candidate_is_activated(candidate: dict | None, *, has_prior_impression: bool) -> bool:
     """The decision layer starts only after products were shown and evidence is substantive."""
     if not has_prior_impression or not isinstance(candidate, dict):
@@ -66,62 +60,31 @@ async def fetch_value_interpretation(
     }
 
 
-async def fetch_clarification_motivation(
-    provider: LLMProvider, candidate: dict,
-) -> dict:
-    context = {"candidate": candidate}
-    out = await provider.generate_json(
-        [LLMMessage(role="system", content=system_for("clarification_motivation")),
-         LLMMessage(role="user", content=render_user_context(context))],
-        task="clarification_motivation",
-        context=context,
-    )
-    if not isinstance(out, dict):
-        raise ValueError("clarification_motivation returned a non-object")
-    motivation = out.get("motivation")
-    if motivation not in MOTIVATIONS:
-        motivation = None
-    return {
-        "criterionLabel": str(out.get("criterionLabel") or candidate.get("criterionLabel") or "").strip(),
-        "motivation": motivation,
-        "rationale": str(out.get("rationale") or "").strip() or None,
-        "questionHint": str(out.get("questionHint") or "").strip() or None,
-        "analysisStatus": out.get("analysisStatus")
-        if out.get("analysisStatus") in {"ok", "insufficient_evidence"}
-        else "insufficient_evidence",
-    }
-
-
 def apply_theory_basis(
     topics: list[models.IntentionTopic],
     candidate: dict,
     value_result: dict | None,
-    motivation_result: dict | None,
 ) -> models.IntentionTopic | None:
-    """Attach one auditable decision-layer hypothesis to the matching criterion topic."""
+    """Attach one auditable decision-layer hypothesis to the matching criterion topic.
+
+    2026-08-25: clarification_motivation 제거 (TCV 단일 축) — theoryBasis와
+    askable 판정은 가치 해석(criterion_value_interpretation) 하나로 선다.
+    """
     label = str(candidate.get("criterionLabel") or "").strip()
     topic = next((t for t in topics if _similar(t.label, label)), None)
     if topic is None:
         return None
-    failed = []
-    if value_result is None:
-        failed.append("criterion_value_interpretation")
-    if motivation_result is None:
-        failed.append("clarification_motivation")
-    usable = any(
-        isinstance(result, dict) and result.get("analysisStatus") == "ok"
-        for result in (value_result, motivation_result)
-    )
+    failed = [] if value_result is not None else ["criterion_value_interpretation"]
+    usable = isinstance(value_result, dict) and value_result.get("analysisStatus") == "ok"
     status = (
-        "failed" if len(failed) == 2
-        else "partial" if failed
+        "failed" if failed
         else "ok" if usable
         else "insufficient_evidence"
     )
     askable = (
         topic.explicitness != "explicit"
         and topic.status not in {"confirmed", "corrected_by_user", "rejected_by_user", "inactive"}
-        and status in {"ok", "partial"}
+        and status == "ok"
     )
     hints = dict(topic.hints or {})
     hints["theoryBasis"] = {
@@ -130,7 +93,6 @@ def apply_theory_basis(
         "signalType": candidate.get("signalType"),
         "strength": candidate.get("strength"),
         "valueInterpretation": value_result,
-        "clarificationMotivation": motivation_result,
         "analysisStatus": status,
         "fallback": "direct_criteria_only" if failed or not usable else None,
         "failedTasks": failed,

@@ -110,15 +110,11 @@ async def run_preference_commit(
 
     raw_conflicts: list = []
     value_interpretation: dict | None = None
-    clarification_motivation: dict | None = None
     # 한 줄 요약은 칩이 바뀐 commit(pending_new 있음)에서만 새로 생성한다. 안 바뀌면
     # None → build_snapshot이 직전 문장을 이어받는다(깜빡임 방지).
     state_summary_text: str | None = None
     if pending_new:
-        from app.agents.decision_interpreter import (
-            fetch_clarification_motivation,
-            fetch_value_interpretation,
-        )
+        from app.agents.decision_interpreter import fetch_value_interpretation
         from app.preference_commit.summary_builder import fetch_state_summary
 
         existing_ctx = [
@@ -135,7 +131,9 @@ async def run_preference_commit(
                for p in pending_new if p.get("kind") != "context"]
         )[:8]
         scenario = (session.meta or {}).get("shoppingGoal") or (session.meta or {}).get("category") or ""
-        # 충돌 + 요약(+ 해석 후보 시 가치·동기)을 한 왕복에 병렬 실행한다.
+        # 충돌 + 요약(+ 해석 후보 시 가치 해석)을 한 왕복에 병렬 실행한다.
+        # (clarification_motivation은 2026-08-25 제거 — TCV 단일 축; 저장만 되고
+        #  런타임에서 읽는 곳이 없었다. theoryBasis는 가치 해석만 싣는다.)
         # Concept/Relation 그래프와 AnchorMapping(TCV 매핑)은 참가자 턴에서 만들지
         # 않는다 — 추천·발화에 쓰이지 않는 측정층이라, 분석 시점에 저장된 원자료
         # (토픽·근거·theoryBasis)로 오프라인 일괄 계산한다 (2026-08-19 결정,
@@ -146,33 +144,22 @@ async def run_preference_commit(
                   "criterion_value_interpretation", analysis_failures)
             if decision_candidate_active else asyncio.sleep(0, result=None)
         )
-        motivation_coro = (
-            _safe(fetch_clarification_motivation(provider, interpretation_candidate), None,
-                  "clarification_motivation", analysis_failures)
-            if decision_candidate_active else asyncio.sleep(0, result=None)
-        )
         (raw_conflicts, state_summary_text,
-         value_interpretation, clarification_motivation) = await asyncio.gather(
+         value_interpretation) = await asyncio.gather(
             _safe(fetch_conflicts(provider, existing_ctx, [p["label"] for p in pending_new]),
                   [], "conflict_detection", analysis_failures),
             _safe(fetch_state_summary(provider, prov_criteria, scenario, user_contents),
                   None, "state_summary", analysis_failures),
             value_coro,
-            motivation_coro,
         )
         t4 = time.perf_counter()
         logger.info("commit_engine.stage2_6_latency_sec=%.3f (conflicts+summary)", t4 - t3)
     elif decision_candidate_active:
-        from app.agents.decision_interpreter import (
-            fetch_clarification_motivation,
-            fetch_value_interpretation,
-        )
+        from app.agents.decision_interpreter import fetch_value_interpretation
 
-        value_interpretation, clarification_motivation = await asyncio.gather(
-            _safe(fetch_value_interpretation(provider, interpretation_candidate), None,
-                  "criterion_value_interpretation", analysis_failures),
-            _safe(fetch_clarification_motivation(provider, interpretation_candidate), None,
-                  "clarification_motivation", analysis_failures),
+        value_interpretation = await _safe(
+            fetch_value_interpretation(provider, interpretation_candidate), None,
+            "criterion_value_interpretation", analysis_failures,
         )
         logger.info("commit_engine.stage2_decision_only=completed")
     else:
@@ -204,19 +191,14 @@ async def run_preference_commit(
     ][-8:]
     meta["criterionQuestionCandidates"] = candidates
     if decision_candidate_active:
-        failed = []
-        if value_interpretation is None:
-            failed.append("criterion_value_interpretation")
-        if clarification_motivation is None:
-            failed.append("clarification_motivation")
-        usable = any(
-            isinstance(result, dict) and result.get("analysisStatus") == "ok"
-            for result in (value_interpretation, clarification_motivation)
+        failed = [] if value_interpretation is not None else ["criterion_value_interpretation"]
+        usable = (
+            isinstance(value_interpretation, dict)
+            and value_interpretation.get("analysisStatus") == "ok"
         )
         meta["decisionAnalysis"] = {
             "analysisStatus": (
-                "failed" if len(failed) == 2
-                else "partial" if failed
+                "failed" if failed
                 else "ok" if usable
                 else "insufficient_evidence"
             ),
@@ -231,7 +213,7 @@ async def run_preference_commit(
         from app.agents.decision_interpreter import apply_theory_basis
 
         applied = apply_theory_basis(
-            touched, interpretation_candidate, value_interpretation, clarification_motivation,
+            touched, interpretation_candidate, value_interpretation,
         )
         if applied is None:
             # 해석 후보는 본질적으로 **새로운 숨은 기준**이라 기존 토픽과 라벨이 안 겹치는
@@ -260,7 +242,7 @@ async def run_preference_commit(
                     db, session, [candidate_ext], source="agent_inference")
                 applied = apply_theory_basis(
                     cand_created or touched, interpretation_candidate,
-                    value_interpretation, clarification_motivation,
+                    value_interpretation,
                 )
                 created.extend(cand_created)
                 touched.extend(cand_created)
