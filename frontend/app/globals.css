@@ -128,3 +128,45 @@
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }
+
+/* NASA-TLX 슬라이더 (MainSurveyForm) — 미응답 상태에서 썸을 숨긴다.
+   네이티브 accent 렌더는 썸이 항상 50에 보여 "이미 응답됨"으로 읽혔다 (2026-08-25 QA).
+   커스텀 트랙/썸: appearance-none 필수 (썸 pseudo 스타일링 조건). */
+.vc-tlx-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+.vc-tlx-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: #e5e7eb;
+}
+.vc-tlx-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
+  border-radius: 9999px;
+  background: #4f46e5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition-property: opacity, scale;
+  transition-duration: 150ms;
+}
+.vc-tlx-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: #e5e7eb;
+}
+.vc-tlx-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 9999px;
+  background: #4f46e5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.vc-tlx-slider.vc-unanswered::-webkit-slider-thumb { opacity: 0; }
+.vc-tlx-slider.vc-unanswered::-moz-range-thumb { opacity: 0; }

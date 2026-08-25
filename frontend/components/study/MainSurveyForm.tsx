@@ -60,8 +60,8 @@ export function QuestionRow({
                   /* 트랙 클릭 없이 썸(50)만 눌러 확정하는 경우도 응답으로 기록 */
                   onPointerUp={(e) => onChange((e.target as HTMLInputElement).value)}
                   aria-label={q.label}
-                  className={`min-h-11 w-full cursor-pointer accent-[#4f46e5] transition-opacity duration-150 ${
-                    answered ? "" : "opacity-40"
+                  className={`vc-tlx-slider min-h-11 w-full cursor-pointer ${
+                    answered ? "" : "vc-unanswered"
                   }`}
                 />
                 <div className="flex justify-between px-0.5" aria-hidden>

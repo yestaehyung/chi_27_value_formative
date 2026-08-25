@@ -122,6 +122,7 @@ export default function ProductFeedbackButtons({
       <div className="flex w-full flex-col divide-y divide-[#f0f2f4] overflow-hidden rounded-xl border border-[#e4e8eb] bg-white">
         <button
           className={`${row} ${has("like") ? "bg-emerald-50 font-semibold text-emerald-700" : ""}`}
+          aria-pressed={has("like")}
           disabled={disabled || has("like")}
           onClick={() => onFeedback({ type: "like" })}
         >
@@ -129,6 +130,7 @@ export default function ProductFeedbackButtons({
         </button>
         <button
           className={`${row} ${has("dislike") ? "bg-rose-50 font-semibold text-rose-700" : ""}`}
+          aria-pressed={has("dislike")}
           disabled={disabled || has("dislike")}
           onClick={() => setShowReason(true)}
         >
@@ -139,10 +141,11 @@ export default function ProductFeedbackButtons({
           disabled={disabled || has("view_detail")}
           onClick={() => onFeedback({ type: "view_detail" })}
         >
-          {tr("자세히", "Details")}
+          {tr("AI에게 묻기", "Ask AI")}
         </button>
         <button
           className={`${row} ${has("purchase") ? "bg-emerald-600 font-semibold text-white" : ""}`}
+          aria-pressed={has("purchase")}
           disabled={disabled || has("purchase")}
           onClick={() => onFeedback({ type: "purchase" })}
         >
@@ -159,6 +162,7 @@ export default function ProductFeedbackButtons({
       {/* min-h-10(40px): 연구의 핵심 인터랙션이라 최소 히트 영역 40px 보장 */}
       <button
         className={`btn min-h-11 px-2 text-xs ${has("like") ? "border-emerald-400 bg-emerald-50 text-emerald-700" : ""}`}
+        aria-pressed={has("like")}
         disabled={disabled || has("like")}
         onClick={() => onFeedback({ type: "like" })}
       >
@@ -166,6 +170,7 @@ export default function ProductFeedbackButtons({
       </button>
       <button
         className={`btn min-h-11 px-2 text-xs ${has("dislike") ? "border-rose-300 bg-rose-50 text-rose-700" : ""}`}
+        aria-pressed={has("dislike")}
         disabled={disabled || has("dislike")}
         onClick={() => setShowReason(true)}
       >
@@ -176,10 +181,11 @@ export default function ProductFeedbackButtons({
         disabled={disabled || has("view_detail")}
         onClick={() => onFeedback({ type: "view_detail" })}
       >
-        {tr("자세히", "Details")}
+        {tr("AI에게 묻기", "Ask AI")}
       </button>
       <button
         className={`btn min-h-11 px-2 text-xs ${has("purchase") ? "border-emerald-500 bg-emerald-600 text-white" : ""}`}
+        aria-pressed={has("purchase")}
         disabled={disabled || has("purchase")}
         onClick={() => onFeedback({ type: "purchase" })}
       >

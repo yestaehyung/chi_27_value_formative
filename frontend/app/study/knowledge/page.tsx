@@ -37,6 +37,19 @@ function KnowledgeInner() {
   const [target, setTarget] = useState<Target | null>(null);
   const [taskNo, setTaskNo] = useState<{ n: number; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  // 부분 응답 드래프트 (2026-08-25 QA) — 대상 카테고리별 키, 세션 열기 성공 시 삭제
+  const draftKey = target ? `vc:draft:knowledge:${target.category}` : null;
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (raw) setAnswers(JSON.parse(raw));
+    } catch { /* 드래프트 없음/파손 */ }
+  }, [draftKey]);
+  useEffect(() => {
+    if (!draftKey || Object.keys(answers).length === 0) return;
+    try { sessionStorage.setItem(draftKey, JSON.stringify(answers)); } catch { /* quota */ }
+  }, [answers, draftKey]);
 
   const openSession = async (task: Target) => {
     const res = await api.createCategorySession(task.category, task.familiarity, pid || undefined);
@@ -115,6 +128,7 @@ function KnowledgeInner() {
         }),
       );
       if (pid) await api.submitKnowledgeSurvey(pid, canonicalAnswers, scores, [target.category]);
+      if (draftKey) try { sessionStorage.removeItem(draftKey); } catch { /* noop */ }
       await openSession(target);
     } catch (e) {
       console.error(e);

@@ -25,6 +25,20 @@ type Answers = Record<string, string | string[]>;
 export default function SurveyPage() {
   const router = useRouter();
   const [answers, setAnswers] = useState<Answers>({});
+  // 부분 응답 드래프트 (2026-08-25 QA: 새로고침 시 39문항 응답 소실) — 제출 성공 시 삭제
+  const DRAFT_KEY = "vc:draft:presurvey";
+  const [draftRestored, setDraftRestored] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) setAnswers(JSON.parse(raw));
+    } catch { /* 드래프트 없음/파손 */ }
+    setDraftRestored(true);
+  }, []);
+  useEffect(() => {
+    if (!draftRestored) return;
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(answers)); } catch { /* quota */ }
+  }, [answers, draftRestored]);
   const [submitting, setSubmitting] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
@@ -67,6 +81,7 @@ export default function SurveyPage() {
       // URL이 아니라 sessionStorage로: 주소창·히스토리에 조건 라벨이 보이면
       // 참가자가 자기 조건을 알게 되어 블라인딩이 깨진다.
       if (res.studyCondition) sessionStorage.setItem("vc:studyCond", res.studyCondition);
+      try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* noop */ }
       router.push(`/study/tutorial?pid=${res.participantId}`);
     } catch (e) {
       console.error(e);

@@ -37,6 +37,23 @@ export default function TaskSelectPage() {
   // 후보 나열 순서 — 참가자마다 무작위, 화면 생애 동안 고정 (로그로 저장)
   const displayOrder = useMemo(() => shuffled(STUDY_TASKS), []);
 
+  // 선택 드래프트 (2026-08-25 QA: 새로고침 시 H/L 선택 소실) — 시작 성공 시 삭제
+  const DRAFT_KEY = "vc:draft:tasksel";
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d?.hTask) setHTask(d.hTask);
+        if (d?.lTask) setLTask(d.lTask);
+        if (d?.step === 2 && d?.hTask) setStep(2);
+      }
+    } catch { /* 드래프트 없음/파손 */ }
+  }, []);
+  useEffect(() => {
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ step, hTask, lTask })); } catch { /* quota */ }
+  }, [step, hTask, lTask]);
+
   useEffect(() => {
     setParticipantId(new URLSearchParams(window.location.search).get("pid") ?? "");
   }, []);
@@ -63,6 +80,7 @@ export default function TaskSelectPage() {
       category: t.category,
       familiarity: t.id === hTask ? "familiar" : "unfamiliar", // H=familiar, L=unfamiliar 역할 저장
     }));
+    try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* noop */ }
     saveQueue(participantId || "anon", ordered);
     if (participantId) {
       void api.saveTaskPlan(participantId, ordered, {

@@ -120,7 +120,6 @@ export default function VariantSession({
   const advancedRef = useRef(false);
   const [criterionOpen, setCriterionOpen] = useState(false);
   const [criteria, setCriteria] = useState<CriterionCandidate[]>([]);
-  const [postStudyOpen, setPostStudyOpen] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const loadedRef = useRef(false); // 초기 로드 1회 가드 — 늦게 온 getSession이 낙관적 첫 발화를 덮어쓰는 레이스 방지
@@ -214,7 +213,11 @@ export default function VariantSession({
             const infers = !!(cond && INFERS_INTENTION[cond]);
             proceedAfterPostSurvey(infers).catch(() => {});
           }
+        } else if (fc && meta.criterionAudit) {
+          // 종료 절차를 이미 마친 세션 — 대화가 아니라 완료 화면(다음 과제/최종 설문)으로
+          setFinished(true);
         }
+        if (cond) try { sessionStorage.setItem("vc:studyCond", cond); } catch { /* noop */ }
       }
     }).catch(console.error);
   }, [sessionId, study]);
@@ -1037,29 +1040,6 @@ export default function VariantSession({
         />
       )}
 
-      {study && postStudyOpen && (
-        <SurveyModal
-          title={STUDY_UI.surveyModal.finalTitle}
-          desc={STUDY_UI.surveyModal.finalDescription}
-          sections={postStudySectionsFor(condition)}
-          submitLabel={STUDY_UI.surveyModal.finalSubmit}
-          submitting={postSubmitting}
-          onSkip={TEST_SURVEY_SKIP ? () => { setPostStudyOpen(false); router.push("/study/done"); } : undefined}
-          onSubmit={async (answers, profile) => {
-            setPostSubmitting(true);
-            try {
-              if (participantId) await api.submitPostStudySurvey(participantId, answers, profile);
-              setPostStudyOpen(false);
-              router.push("/study/done");
-            } catch (e) {
-              console.error(e);
-              showToast(STUDY_UI.surveyModal.saveFailed);
-            } finally {
-              setPostSubmitting(false);
-            }
-          }}
-        />
-      )}
 
       {/* 완료 화면 — 큐가 남았으면 다음 쇼핑으로 가는 길 하나뿐이다 (2026-08-11:
           "모든 쇼핑을 마쳤어요" 중도 이탈 버튼 제거 — 4과제 완주가 설계 전제).
@@ -1085,10 +1065,12 @@ export default function VariantSession({
             ) : (
               <button
                 onClick={() => {
-                  setFinished(false);
-                  // 이 조건에 물을 섹션이 하나도 없으면 설문 없이 종료 화면으로
-                  if (postStudySectionsFor(condition).length === 0) router.push("/study/done");
-                  else setPostStudyOpen(true);
+                  // 이 조건에 물을 섹션이 하나도 없으면 설문 없이 종료 화면으로.
+                  // 전체 종료 설문은 모달이 아니라 페이지다 (2026-08-25) — 새로고침에도
+                  // URL·드래프트가 유지된다. 조건은 sessionStorage로 전달(블라인딩).
+                  if (postStudySectionsFor(condition).length === 0) { router.push("/study/done"); return; }
+                  if (condition) try { sessionStorage.setItem("vc:studyCond", condition); } catch { /* noop */ }
+                  router.push(participantId ? `/study/final-survey?pid=${participantId}` : "/study/final-survey");
                 }}
                 className="btn btn-primary mt-4 w-full py-2"
               >
