@@ -82,37 +82,22 @@ async def run_preference_commit(
         user_contents = [t.content for t in rows if t.role in ("user", "user_agent") and t.content]
 
     # ────────────────── LLM phase (reads only) ──────────────────
-    # Stage 1 — topic extraction (+ motivation 감지를 같은 왕복에 병렬로)
-    from app.agents.motivation import fetch_motivation_signals
-
+    # Stage 1 — topic extraction.
+    # (motivation 감지는 2026-08-25 제거 — 이론 프레이밍을 TCV 단일 축으로 좁히면서
+    #  detect-only 축이던 쇼핑 동기 호출을 뺐다. 모듈·mock 핸들러·과거 데이터의
+    #  meta.motivationScores는 그대로 두고 새로 감지하지 않는다.)
     t1 = time.perf_counter()
     analysis_failures: list[str] = []
-    motivation_signals: list[dict] | None = None
-    if user_contents:
-        extraction_update, motivation_signals = await asyncio.gather(
-            _safe(extract_topic_update(db, provider, session, turn_ids, feedback_ids, current_state),
-                  {"topics": [], "questionSignals": [], "interpretationCandidate": None},
-                  "topic_extraction", analysis_failures),
-            _safe(fetch_motivation_signals(provider, user_contents), None,
-                  "motivation_detection", analysis_failures),
-        )
-    else:
-        extraction_update = await _safe(
-            extract_topic_update(db, provider, session, turn_ids, feedback_ids, current_state),
-            {"topics": [], "questionSignals": [], "interpretationCandidate": None},
-            "topic_extraction", analysis_failures,
-        )
+    extraction_update = await _safe(
+        extract_topic_update(db, provider, session, turn_ids, feedback_ids, current_state),
+        {"topics": [], "questionSignals": [], "interpretationCandidate": None},
+        "topic_extraction", analysis_failures,
+    )
     extracted = extraction_update.get("topics") or []
     question_signals = extraction_update.get("questionSignals") or []
     interpretation_candidate = extraction_update.get("interpretationCandidate")
-    if user_contents and motivation_signals is None and "motivation_detection" not in analysis_failures:
-        analysis_failures.append("motivation_detection")
-        logger.warning(
-            "preference commit stage 'motivation_detection' returned no usable analysis"
-            " — applying deterministic measurement fallback"
-        )
     t2 = time.perf_counter()
-    logger.info("commit_engine.stage1_latency_sec=%.3f (topic_extraction+motivation)", t2 - t1)
+    logger.info("commit_engine.stage1_latency_sec=%.3f (topic_extraction)", t2 - t1)
 
     pending_new = plan_new_topics(pre_existing, extracted)
 
@@ -240,19 +225,6 @@ async def run_preference_commit(
             "criterionLabel": (interpretation_candidate or {}).get("criterionLabel"),
         }
     session.meta = meta
-
-    # 동기 층 누적 (M8/M4) — snapshot이 meta를 읽으므로 build_snapshot 전에 갱신
-    if user_contents:
-        from app.agents.motivation import apply_motivation_signals, detect_motivation, merge_motivation
-
-        meta = dict(session.meta or {})
-        if motivation_signals is not None:
-            meta = apply_motivation_signals(meta, motivation_signals)
-        else:  # LLM 실패 — 구 키워드 경로 폴백
-            for content in user_contents:
-                meta["motivationScores"] = merge_motivation(
-                    meta.get("motivationScores", {}), detect_motivation(content))
-        session.meta = meta
 
     touched, created = merge_topics(db, session, extracted, source=source)  # Stage 5
     if decision_candidate_active:

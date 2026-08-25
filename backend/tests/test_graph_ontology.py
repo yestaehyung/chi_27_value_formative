@@ -156,24 +156,13 @@ def test_graph_scope_validation(client):
 
 
 # ---------------------------------------------------------------------------
-# M8 + M4 — survey-rubric motivation levels with promotion + polarity guard
+# 동기 감지 제거 가드 (2026-08-25) — 이론 프레이밍을 TCV 단일 축으로 좁히면서
+# 턴 루프의 motivation_detection 호출을 뺐다. 다시 살아나면 여기서 잡는다.
 # ---------------------------------------------------------------------------
-def test_motivation_levels_and_promotion(client):
+def test_motivation_detection_removed(client):
     sid = new_session(client)
     out = say(client, sid, "친구 생일 선물 찾고 있어요. 요즘 뭐가 인기인지 잘 몰라서요.")
-    scores = out["preferenceState"]["motivationScores"]
-    assert scores.get("Role") == 0.5  # suggests 레벨의 캐시값 (levels.py)
-    # 같은 차원의 독립 신호 2개째 → M4 승격 (suggests×2 → asserts 등가 0.8)
-    out2 = say(client, sid, "친구가 좋아할 만한 선물이면 좋겠어요.")
-    assert out2["preferenceState"]["motivationScores"].get("Role") == 0.8
-
-
-def test_motivation_polarity_guard(client):
-    sid = new_session(client)
-    out = say(client, sid, "너무 저렴해 보이는 건 좀 그래요.")
-    scores = out["preferenceState"]["motivationScores"]
-    # '저렴' cue가 있지만 회피 맥락 — BargainValue의 증거가 아니다 (M8 극성 검사)
-    assert "BargainValue" not in scores
+    assert not (out["preferenceState"].get("motivationScores") or {})
 
 
 # ---------------------------------------------------------------------------

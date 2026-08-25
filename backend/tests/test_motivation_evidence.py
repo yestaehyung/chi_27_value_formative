@@ -1,9 +1,10 @@
-"""동기 근거 노출 (2026-07-03) — 동기 radar가 발화와 연결되도록.
+"""동기 감지 제거 가드 (2026-08-25).
 
-배경: 감지 LLM은 quote(발화 인용)를 내고 apply_motivation_signals가
-meta.motivationEvidence = {dim: {best, counts, quotes}}로 저장하지만, 직렬화가
-motivationScores(숫자)만 내보내 UI는 제네릭 문구("대화에서 이 동기가 보였어요")뿐이었다.
-참가자 preferenceState에 {dim: quotes}를 실어 근거 인용을 보이게 한다 (DG3 정합).
+원래 이 파일은 동기 근거 인용(meta.motivationEvidence)이 참가자 preferenceState로
+노출되는지를 검증했다. 이론 프레이밍을 TCV 단일 축으로 좁히면서 턴 루프의
+motivation_detection 호출을 제거했으므로(commit_engine Stage 1), 이제는 반대로
+새 세션에서 동기 점수·근거가 더 이상 쌓이지 **않는 것**을 보증한다.
+(agents/motivation.py 모듈과 mock 핸들러, 과거 세션의 저장 데이터는 그대로 둔다.)
 """
 import os
 import tempfile
@@ -23,23 +24,20 @@ def client():
         yield c
 
 
-def test_motivation_evidence_quotes_exposed_to_participant(client):
+def test_motivation_no_longer_accumulates(client):
     r = client.post("/api/sessions", json={"mode": "manual", "scenarioId": "gift_for_other",
                                            "studyCondition": "ours"})
     sid = r.json()["sessionId"]
-    # "빨리/필요해" = mock motivation_detection의 Utilitarian cue → quote가 잡힌다
+    # 예전 mock 규칙에서 Utilitarian cue였던 발화 — 이제 아무 동기도 쌓이면 안 된다
     out = client.post(f"/api/sessions/{sid}/turns",
                       json={"role": "user", "content": "운동하는 친구에게 줄 스마트워치가 급해서 빨리 필요해요"}).json()
 
-    ev = (out["preferenceState"] or {}).get("motivationEvidence") or {}
-    assert "Utilitarian" in ev, f"turn response missing motivation evidence: {ev}"
-    util = ev["Utilitarian"]
-    # {best, count, quotes} — level(직접 말함/함의/힌트) + 신호 횟수 + 발화 인용
-    assert util.get("best") in ("asserts", "suggests", "hints"), util
-    assert isinstance(util.get("count"), int) and util["count"] >= 1, util
-    assert util.get("quotes") and all(isinstance(q, str) and q for q in util["quotes"])
+    state = out["preferenceState"] or {}
+    assert not (state.get("motivationScores") or {})
+    assert not (state.get("motivationEvidence") or {})
 
-    # 세션 재로드(새로고침)에도 같은 근거가 실린다
+    # 세션 재로드에도 동일
     d = client.get(f"/api/sessions/{sid}").json()
-    ev2 = (d["preferenceState"] or {}).get("motivationEvidence") or {}
-    assert ev2.get("Utilitarian", {}).get("quotes"), ev2
+    state2 = d["preferenceState"] or {}
+    assert not (state2.get("motivationScores") or {})
+    assert not (state2.get("motivationEvidence") or {})
