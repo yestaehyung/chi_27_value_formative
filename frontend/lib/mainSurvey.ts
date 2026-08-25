@@ -200,8 +200,10 @@ export const CRITERION_CHECK: MQuestion[] = [
   ]),
 ];
 
-/** 검증 대상으로 제시할 추론 기준 개수 상한 (주요 기준 3–5개) */
-export const CRITERION_CHECK_MAX = 5;
+/** 검증 대상으로 제시할 추론 기준 개수 상한.
+ * 5 → 10 (2026-08-25): 사용자가 명시한 기준이 6개인데 5개만 검증 대상이 되어
+ * 'Bluetooth multipoint'가 회고에서 빠진 QA 사례 — 실사용 칩 수를 덮는 상한으로. */
+export const CRITERION_CHECK_MAX = 10;
 export const CRITERION_CHECK_MIN = 3;
 
 // ─────────────────────────────────────────────────────────────────────

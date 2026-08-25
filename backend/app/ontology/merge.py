@@ -146,9 +146,63 @@ def plan_new_topics(
         label = (ext.get("label") or "").strip()
         if not label:
             continue
+        # revision은 기존 기준의 내용 교체다 — 새 라벨이 기존 라벨과 안 닮았어도
+        # 새 토픽이 아니다 (merge_topics의 revision 경로와 판정을 맞춘다).
+        if _find_revision_target(existing, ext) is not None:
+            continue
         if next((t for t in existing if _similar(t.label, label)), None) is None:
             new.append(ext)
     return new
+
+
+def _find_revision_target(
+    existing: list[models.IntentionTopic], ext: dict,
+) -> models.IntentionTopic | None:
+    """revisesLabel이 지목한 기존 기준 — 정확 일치 우선, 유사도 폴백."""
+    revises = (ext.get("revisesLabel") or "").strip()
+    if not revises or ext.get("confidenceLevel") != "directly_stated":
+        return None
+    target = next((t for t in existing if t.label == revises), None)
+    if target is None:
+        target = next((t for t in existing if _similar(t.label, revises)), None)
+    if target is not None and target.status == "rejected_by_user":
+        return None  # 사용자가 거부한 기준은 수정으로도 되살리지 않는다
+    return target
+
+
+def _apply_label_revision(
+    db: DbSession,
+    session: models.Session,
+    match: models.IntentionTopic,
+    label: str,
+    ext: dict,
+) -> None:
+    """기준 내용 교체 + CorrectionEvent 기록 — 칩에서 고치든 말로 고치든
+    '사용자가 시스템 이해를 수정했다'는 같은 사건이므로 같은 로그에 남긴다.
+    사용자가 칩에서 손수 쓴 라벨(corrected_by_user)은 문구를 보존한다."""
+    if match.status == "corrected_by_user" or label == match.label:
+        return
+    before = {"label": match.label, "status": match.status,
+              "priority": match.priority, "confidence": match.confidence}
+    match.label = label
+    if ext.get("description"):
+        match.description = ext["description"]
+    last_turn = (
+        db.query(models.Turn)
+        .filter(models.Turn.session_id == session.id)
+        .order_by(models.Turn.turn_index.desc())
+        .first()
+    )
+    db.add(models.CorrectionEvent(
+        id=new_id("corr"),
+        session_id=session.id,
+        topic_id=match.id,
+        action="revised_by_utterance",
+        turn_index=last_turn.turn_index if last_turn else 0,
+        before=before,
+        after={"label": match.label, "status": match.status,
+               "priority": match.priority, "confidence": match.confidence},
+    ))
 
 
 def merge_topics(
@@ -186,7 +240,16 @@ def merge_topics(
                 ext["confidence"] = 0.5
         if ext.get("priority") not in ("low", "medium", "high", "must_have"):
             ext["priority"] = "medium"
-        match = next((t for t in existing if _similar(t.label, label)), None)
+        # 기준 수정(revision) — 발화가 기존 기준의 내용을 바꾼 경우 (2026-08-25).
+        # 추출이 revisesLabel로 대상 기준을 지목하면 라벨을 새 내용으로 교체한다.
+        # 가격 특례(아래 priceMin/priceMax 경로)의 일반화: $35→$50뿐 아니라
+        # 색상 변경·완화도 같은 통로로 흐른다. directly_stated(사용자가 직접 말함)
+        # 한정 — 약한 재추론이 라벨을 바꾸지 못하게 한다.
+        match = _find_revision_target(existing, ext)
+        if match is not None:
+            _apply_label_revision(db, session, match, label, ext)
+        else:
+            match = next((t for t in existing if _similar(t.label, label)), None)
         evidence = [
             e for e in (ext.get("sourceEvidence") or [])
             if isinstance(e, dict) and e.get("id")

@@ -200,10 +200,37 @@ export default function VariantSession({
       }
       if (study) {
         setParticipantId(d.session?.participantId ?? "");
-        setCondition((d.session?.metadata?.studyCondition as StudyCondition) ?? null);
+        const meta = d.session?.metadata ?? {};
+        const cond = (meta.studyCondition as StudyCondition) ?? null;
+        setCondition(cond);
+        // 종료 설문 중단 복구 (2026-08-25 QA): finalChoice는 저장됐는데 기준 감사
+        // 전에 새로고침·재접속하면 대화 화면으로 떨어져 설문이 사라졌다. 서버 완료
+        // 판정은 criterionAudit까지 요구하므로, 중단된 단계부터 다시 연다.
+        const fc = meta.finalChoice as { status?: string } | undefined;
+        if (fc && !meta.criterionAudit) {
+          if (fc.status === "final" && !meta.postSurvey) {
+            setPostSurveyOpen(true); // CC(확신 설문)부터 재개
+          } else {
+            const infers = !!(cond && INFERS_INTENTION[cond]);
+            proceedAfterPostSurvey(infers).catch(() => {});
+          }
+        }
       }
     }).catch(console.error);
   }, [sessionId, study]);
+
+  // 종료 설문(최종 선택·CC·기준 감사) 진행 중 새로고침·창 닫기 경고 — 브라우저는
+  // 완전 차단을 허용하지 않으므로 확인창 한 겹 + 이탈 시 위 재개 로직의 이중 방어.
+  const surveyInProgress = finalChoiceOpen || postSurveyOpen || criterionOpen;
+  useEffect(() => {
+    if (!surveyInProgress) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [surveyInProgress]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -344,6 +371,9 @@ export default function VariantSession({
         }
       }
       if (payload.type === "purchase") showToast(STUDY_UI.chat.selectedProduct);
+      // 싫어요는 이유 모달을 거쳐 제출되므로, 저장 완료가 화면에 안 보이면
+      // "눌렀는데 반영이 안 됐다"로 읽힌다 (2026-08-24 QA #4) — 완료 토스트로 확정.
+      if (payload.type === "dislike") showToast(STUDY_UI.chat.dislikeRecorded);
     } catch (e) {
       console.error(e);
       showToast(STUDY_UI.chat.feedbackFailed);
@@ -518,9 +548,11 @@ export default function VariantSession({
   };
 
   /** 확신 설문 다음 단계 — 기준 감사. A파트(내 기준 나열)는 **세 조건 공통**이므로
-   *  추론 기준이 없어도(baseline1) 감사는 항상 연다. B파트만 후보 유무로 갈린다. */
-  const proceedAfterPostSurvey = async () => {
-    const list = infersIntention
+   *  추론 기준이 없어도(baseline1) 감사는 항상 연다. B파트만 후보 유무로 갈린다.
+   *  infersOverride: 초기 로드의 중단 복구 경로에서 쓴다 — 그 시점엔 condition
+   *  state가 아직 반영 전이라 파생값(infersIntention)이 낡아 있다. */
+  const proceedAfterPostSurvey = async (infersOverride?: boolean) => {
+    const list = (infersOverride ?? infersIntention)
       ? (((await api.criterionCandidates(sessionId, CRITERION_CHECK_MAX))?.criteria ??
           []) as CriterionCandidate[])
       : [];

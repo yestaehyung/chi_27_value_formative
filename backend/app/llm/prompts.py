@@ -374,9 +374,11 @@ AGENT_REPLY_SYSTEM = """너는 네이버 쇼핑형 대화 쇼핑 도우미(servi
 14. 표현은 턴마다 새로 쓴다 — recentDialogue의 직전 응답들에서 쓴 소개 문구·마무리
    문구를 그대로 다시 쓰지 않고, 이번 대화 내용에 맞는 새 문장으로 쓴다.
 15. 상품에 대해 "확인된(confirmed)" 정보로 말할 수 있는 것은 컨텍스트
-   (productsToShow/previouslyShownProducts)에 실제로 있는 값뿐이다. 비교표의 모든
-   칸도 마찬가지 — 컨텍스트에 없는 사양·소재·기술명(예: Dri-FIT)·지표는 "확인 안 됨
-   (not listed)"으로 적는다.
+   (productsToShow/previouslyShownProducts)에 실제로 있는 값뿐이다. 각 상품의
+   keyAttributes가 확인된 사실 목록이다 — 사용자가 요구한 속성(배터리 시간·소재 등)이
+   keyAttributes에 보이면 그 값을 그대로 인용해 답하고, "정보가 없다"고 말하지 말라.
+   비교표의 모든 칸도 마찬가지 — 컨텍스트에 없는 사양·소재·기술명(예: Dri-FIT)·지표는
+   "확인 안 됨(not listed)"으로 적는다.
    사용자가 요구한 속성(마이크·색상·소재 등)도 같은 규칙을 따른다: "확인했어요/
    made sure"는 컨텍스트 상품 값에 그 속성이 실제로 보일 때만 쓸 수 있는 문장이다.
    보이지 않으면 처음부터 그렇게 말한다 — 좋은 예: "마이크 여부는 상품 정보에 표기가
@@ -415,6 +417,9 @@ FORMAT_BY_TASK = {
 - constraintsNote에는 직접 말한 예산·필수·회피·맥락과 eligibleCriteria를 빠짐없이 요약하라.
 - hardConstraints에는 명시적인 필수 속성만 넣는다. 선호나 맥락을 필수조건으로 승격하지 말라.
 - priceMin/priceMax는 입력에 직접 제시됐거나 eligibleCriteria에 구조화된 가격만 쓴다.
+  priceMin은 사용자가 **하한**을 말했을 때만 채운다 ("at least $100"→priceMin만).
+  "under/below $150" 같은 상한 발화는 priceMax만 채우고 priceMin은 null이다 —
+  같은 금액을 양쪽에 넣으면 "정확히 $150짜리만"이라는 뜻이 되어 버린다.
 - lastShownProducts는 "더 저렴한 것" 같은 참조 해소에만 쓰고 새 기준을 만들지 말라.""",
     "topic_reinterpretation": """
 출력 JSON 스키마:
@@ -428,6 +433,7 @@ FORMAT_BY_TASK = {
 "confidenceLevel":"directly_stated"|"strong_inference"|"weak_inference",
 "priority":"low"|"medium"|"high"|"must_have",
 "kind":"preference"|"constraint"|"avoidance"|"context",
+"revisesLabel":string|null,
 "impliedHardConstraint":string|null,"impliedAvoidance":string|null,
 "purchaseOption":boolean,
 "priceMin":number|null,"priceMax":number|null,
@@ -471,6 +477,22 @@ purchaseOption 기준: 기준이 가리키는 속성이 의류 사이즈처럼 *
 - topic을 지지하는 evidence id는 빠짐없이 전부 넣어라. sourceEvidence가 비는 topic은 내지 말라.
 - 입력에 없는 내용을 상상해서 topic을 만들지 말라. 새 evidence에서 추론되는 topic이 없으면 {"topics":[]}.
 - state.activeTopicLabels에 이미 있는 기준과 의미가 같으면 같은 label을 그대로 재사용하라(새 표현 금지).
+  단 하나의 예외가 아래 revisesLabel 규칙이다 — 내용이 바뀌면 새 내용이 라벨이 된다.
+- **기준 수정(revision)**: 발화가 이미 세워진 기준(activeTopicLabels·userAuthoredLabels)의
+  **내용을 바꾸면**(값 변경·완화·강화·교체), 그 기준을 **바뀐 후의 내용**을 label로 추출하고
+  revisesLabel에 바꾸기 전의 기존 label을 글자 그대로 넣는다. 가격 값이 바뀌면
+  priceMin/priceMax도 새 값으로 채운다. 내용이 같은 단순 재언급은 revisesLabel=null.
+  예: activeTopicLabels에 "budget under $35"가 있고 입력이 "You may raise the budget to $50"이면
+  → {"label":"budget under $50","revisesLabel":"budget under $35","priceMax":67500,"kind":"constraint",...}
+  예: activeTopicLabels에 "white color"가 있고 입력이 "Actually, light blue would be better"이면
+  → {"label":"light blue color","revisesLabel":"white color",...}
+  예: activeTopicLabels에 "traditional collar"가 있고 입력이 "Any collar style is fine"이면
+  → {"label":"any collar style is fine","revisesLabel":"traditional collar","priority":"low",...}
+- 한 발화가 서로 독립적인 속성 여러 개를 담으면 **속성별로 분리해** 각각의 topic으로 추출하라 —
+  사용자가 하나씩 따로 확인·수정할 수 있는 단위가 기준 하나다.
+  예: "I need a machine-washable white business-casual shirt with a traditional collar"
+  → "machine-washable"(constraint) / "white color"(preference) / "business-casual style"(preference)
+  / "traditional collar"(preference)의 4개 topic. 하나로 뭉치지 말라.
 - state.userAuthoredLabels의 문구는 사용자가 직접 쓴 기준이다. 새 입력이 같은 대상을 다루면
   표현·언어가 달라도 그 문구를 label로 글자 그대로 재사용하라. 이 규칙은 '한국어 구절' 규칙보다
   우선한다 — 사용자 문구가 다른 언어라도 번역하거나 바꿔 쓰지 말고 그대로 쓴다.
@@ -652,6 +674,15 @@ coverageScore = 해당 pair 수 / 전체 pair 수.""",
   "boom microphone"인데 후보 텍스트 어디에도 마이크 언급이 없으면 그 후보의 cells에
   "c3":"unk"를 쓴다. 이걸 생략하면 시스템이 "마이크 확인됨"으로 사용자에게 전달해
   버린다. 생략이 허용되는 것은 데이터로 충족이 확인된 "ok"뿐이다.
+- 후보 텍스트에 **그 속성 자체가 등장하지 않으면 "unk"다** — 카테고리 통념이나 제품
+  유형으로 추측해 판정하지 마라. 예: 무게 표기가 없는 헤드폰에 "lightweight" 기준 →
+  "unk" (오버이어니까 가볍다/무겁다 추측 금지). 예: 색상 표기가 없는 셔츠에
+  "white color" 기준 → "unk" (드레스 셔츠니까 흰색이겠지 추측 금지). 같은 후보를
+  다음 턴에 다시 판정해도 데이터가 그대로면 판정도 그대로다.
+- 가격 경계는 발화 문구를 따른다: "under/less than $X"는 $X 미만 — 정확히 $X.00인
+  후보는 "vio". "up to/within/$X or less/이하"는 $X 포함이므로 "ok".
+- 단위가 다른 수치 기준은 환산해서 판정한다 (1 inch = 2.54cm). 예: "폭 90cm 이하"
+  기준에 42-inch(≈107cm) 책상 → "vio".
 - 판정은 문자열 일치가 아니라 **의미 범주**로 한다: 후보에 명시된 사실이 기준의 범주에
   속하면 충족이다 (기준 "black or blue"에 navy 후보 → blue 계열이므로 ok).
 - 의류 사이즈처럼 **구매 시 선택하는 옵션 속성**은 리스팅에 없어도 "unk"로 적지 않는다

@@ -365,6 +365,12 @@ async def build_recommendation_policy(
         price_max = fallback["priceMax"]
     if price_min is not None and price_max is not None and price_min > price_max:
         price_min, price_max = price_max, price_min
+    # 구조 가드: min=max는 "정확히 $X짜리만"이라는 스펙인데, 실제로는 상한 발화
+    # ("under $150")를 LLM이 양쪽에 채운 오기입이다 (2026-08-25 실측 — rerank가
+    # min을 읽고 "$499.99가 $500 예산 미달/초과" 같은 경계 오판을 낳는다). 상한만 남긴다.
+    if price_min is not None and price_min == price_max:
+        logging.warning("recommendation_spec price_min==price_max (%s) — dropping min", price_min)
+        price_min = None
 
     evidence_ids = [row["id"] for row in direct["userUtterances"]]
     evidence_ids.extend(row["id"] for row in direct["feedbackEvents"])

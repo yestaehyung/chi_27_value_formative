@@ -40,33 +40,49 @@ export function QuestionRow({
           className="mt-1.5 w-full resize-none rounded-lg border border-[#e4e8eb] px-3 py-2 text-xs leading-relaxed focus:border-[#4f46e5] focus:outline-none"
         />
       ) : q.type === "slider" ? (
-        /* Raw NASA-TLX — 0~100, 5 간격 21눈금, 기본값 미선택(응답 전엔 빈 상태). */
-        <>
-          <div className="mt-2 flex flex-wrap gap-1">
-            {Array.from({ length: 21 }, (_, i) => i * 5).map((n) => {
-              const on = value === String(n);
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => onChange(String(n))}
-                  aria-pressed={on}
-                  className={`h-8 w-[calc(100%/21-0.25rem)] min-w-[26px] flex-none rounded border text-[9px] font-semibold tabular-nums transition-[color,background-color,border-color] duration-100 ${
-                    on
-                      ? "border-[#4f46e5] bg-[#4f46e5] text-white"
-                      : "border-[#e4e8eb] text-slate-500 hover:border-[#4f46e5]"
+        /* Raw NASA-TLX — 0~100, 5 간격 슬라이더 (표준 제시 형태인 가로축).
+           21버튼 그리드는 좁은 폭에서 두 줄로 꺾여 축으로 읽히지 않아 교체 (2026-08-25).
+           기본값 없음 유지: 응답 전엔 트랙을 흐리게 + 값 표시 없음, 첫 클릭/드래그로 확정. */
+        (() => {
+          const answered = value !== undefined && value !== "";
+          const n = answered ? Number(value) : 50;
+          return (
+            <div className="mt-2 flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={n}
+                  onChange={(e) => onChange(e.target.value)}
+                  /* 트랙 클릭 없이 썸(50)만 눌러 확정하는 경우도 응답으로 기록 */
+                  onPointerUp={(e) => onChange((e.target as HTMLInputElement).value)}
+                  aria-label={q.label}
+                  className={`h-6 w-full cursor-pointer accent-[#4f46e5] transition-opacity duration-150 ${
+                    answered ? "" : "opacity-40"
                   }`}
-                >
-                  {n}
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-0.5 flex justify-between text-[9px] text-slate-400">
-            <span>0 = {min}</span>
-            <span>100 = {max}</span>
-          </div>
-        </>
+                />
+                <div className="flex justify-between px-0.5" aria-hidden>
+                  {Array.from({ length: 21 }, (_, i) => (
+                    <span key={i} className={`h-1 w-px ${i % 5 === 0 ? "bg-slate-400" : "bg-slate-200"}`} />
+                  ))}
+                </div>
+                <div className="mt-1 flex justify-between text-[9px] text-slate-400">
+                  <span>0 = {min}</span>
+                  <span>100 = {max}</span>
+                </div>
+              </div>
+              <span
+                className={`mt-0.5 w-9 shrink-0 rounded-md py-1 text-center text-sm font-bold tabular-nums ${
+                  answered ? "bg-[#eef2ff] text-[#4f46e5]" : "text-slate-300"
+                }`}
+              >
+                {answered ? n : "—"}
+              </span>
+            </div>
+          );
+        })()
       ) : q.type === "likert" ? (
         <>
           <div className="mt-1.5 flex gap-1">

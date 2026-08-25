@@ -222,6 +222,14 @@ async def generate_reply(
                 "sellerGrade": p.seller_grade,
                 "deliveryFee": usd(p.delivery_fee) if is_en() and p.delivery_fee else p.delivery_fee,
                 "cues": p.cue_summary or {},
+                # 카드 판정(rerank)이 보는 것과 같은 상품 사실 요약 — 이게 없으면
+                # 본문이 "배터리 정보가 없다"고 말하는 동안 카드는 "50시간"을 찍는
+                # 모순이 난다 (2026-08-24 QA). 카드와 본문은 같은 사실을 봐야 한다.
+                **(
+                    {"productType": prof.get("productType"),
+                     "keyAttributes": (prof.get("keyAttributes") or [])[:5]}
+                    if (prof := profiles.get(p.id)) else {}
+                ),
             }
             for p in products
         ],

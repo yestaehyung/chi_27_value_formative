@@ -209,8 +209,8 @@ export const STUDY_UI = {
       "Take your time browsing. When you find a product you'd actually buy, press Finish. You can finish after receiving at least 2 rounds of recommendations — compare before you decide.",
     ),
     catalogNote: tr(
-      "상품은 연구용 카탈로그(2023년 Amazon 데이터)에서 제공됩니다 — 가격은 현재 시세와 다를 수 있고, 실제 구매는 이루어지지 않습니다. 답변 생성에는 20–30초가 걸릴 수 있어요.",
-      "Products come from a research catalog (2023 Amazon data) — prices may differ from current listings, and no real purchase will be made. Replies may take 20–30 seconds.",
+      "상품은 연구용 카탈로그(2023년 Amazon 데이터)에서 제공됩니다 — 가격은 현재 시세와 다를 수 있고, 실제 구매는 이루어지지 않습니다. 답변 생성에는 20–45초가 걸릴 수 있어요.",
+      "Products come from a research catalog (2023 Amazon data) — prices may differ from current listings, and no real purchase will be made. Replies may take 20–45 seconds.",
     ),
     finishLocked: tr(
       "추천을 2회 이상 받은 뒤 마칠 수 있어요.",
@@ -233,7 +233,11 @@ export const STUDY_UI = {
     reloaded: tr("연결이 불안정해 대화를 다시 불러왔어요.", "The connection was unstable, so we reloaded the conversation."),
     sendFailed: tr("메시지 전송에 실패했어요.", "We could not send your message."),
     feedbackFailed: tr("피드백 전송에 실패했어요.", "We could not submit your feedback."),
-    selectedProduct: tr("이 상품을 선택했어요.", "You selected this product."),
+    selectedProduct: tr(
+      "이 상품을 선택으로 기록했어요 — 실제 구매는 이루어지지 않아요.",
+      "Recorded as your pick — no real purchase is made.",
+    ),
+    dislikeRecorded: tr("싫어요가 반영됐어요 — 다음 추천에 참고할게요.", "Dislike recorded — we'll factor it into the next recommendations."),
     conflictFailed: tr("충돌 해결에 실패했어요.", "We could not resolve the conflicting criteria."),
     criterionFailed: tr("기준 반영에 실패했어요.", "We could not update the criterion."),
     saveFailed: tr("저장에 실패했어요 — 다시 시도해 주세요.", "We could not save your response. Please try again."),
