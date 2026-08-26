@@ -34,6 +34,9 @@ function FinalSurveyInner() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // 실패는 alert가 아니라 페이지 안 배너로 — 자동화·브라우저 설정으로 alert가
+  // 억제되면 "조용히 원상복귀"로 보인다 (2026-08-25 QA #6).
+  const [submitError, setSubmitError] = useState(false);
   const [restored, setRestored] = useState(false);
 
   // 드래프트 복원 — 새로고침·재접속에도 쓰던 응답이 유지된다
@@ -78,6 +81,7 @@ function FinalSurveyInner() {
   const submit = async () => {
     if (missingHere.length > 0) { setShowErrors(true); return; }
     setSubmitting(true);
+    setSubmitError(false);
     try {
       if (pid) {
         await api.submitPostStudySurvey(
@@ -87,7 +91,7 @@ function FinalSurveyInner() {
       router.push("/study/done");
     } catch (e) {
       console.error(e);
-      alert(STUDY_UI.surveyModal.saveFailed);
+      setSubmitError(true);
       setSubmitting(false);
     }
   };
@@ -137,6 +141,11 @@ function FinalSurveyInner() {
               <span className="tabular-nums text-slate-400">{answeredTotal} / {allIds.length}</span>
             )}
           </div>
+          {submitError && (
+            <span className="text-xs font-semibold text-rose-600">
+              {STUDY_UI.surveyModal.saveFailed}
+            </span>
+          )}
           {showErrors && missingHere.length > 0 && (
             <span className="text-xs font-semibold text-rose-600">
               {tr(`${missingHere.length}개 문항이 남았어요.`, `${missingHere.length} ${missingHere.length === 1 ? "question remains" : "questions remain"}.`)}

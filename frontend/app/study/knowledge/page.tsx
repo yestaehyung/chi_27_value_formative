@@ -110,6 +110,9 @@ function KnowledgeInner() {
     [sections],
   );
 
+  // 오류 표시는 응답하는 즉시 걷혀야 한다 (2026-08-25 QA: 다 채워도 문구가 남음)
+  const missingNow = missing.filter((id) => !answers[id]);
+
   const submit = async () => {
     if (!target) return;
     const miss = requiredIds.filter((id) => !answers[id]);
@@ -172,7 +175,7 @@ function KnowledgeInner() {
           sections={sections}
           answers={answers}
           onChange={(id, v) => setAnswers((p) => ({ ...p, [id]: v }))}
-          missingIds={missing}
+          missingIds={missingNow}
         />
       </section>
 
@@ -180,8 +183,8 @@ function KnowledgeInner() {
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e9ecef] bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
           <div className="text-xs">
-            {missing.length > 0 ? (
-              <span className="font-semibold text-rose-600">{STUDY_UI.survey.requiredRemaining(missing.length)}</span>
+            {missingNow.length > 0 ? (
+              <span className="font-semibold text-rose-600">{tr(`${missingNow.length}개 문항이 남았어요.`, `${missingNow.length} ${missingNow.length === 1 ? "question remains" : "questions remain"}.`)}</span>
             ) : (
               <span className="tabular-nums text-slate-400">
                 {requiredIds.filter((id) => answers[id]).length} / {requiredIds.length}

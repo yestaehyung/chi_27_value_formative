@@ -986,6 +986,7 @@ export default function VariantSession({
           products={seenProducts}
           submitting={finalSubmitting}
           onConfirm={confirmFinalChoice}
+          onCancel={() => setFinalChoiceOpen(false)}
         />
       )}
 

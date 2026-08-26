@@ -8,7 +8,7 @@
 // 결정 상태 4범주: 최종 선택(상품 1개) / 후보만 남김(2개 이상) / 더 탐색하고
 // 싶음 / 적합한 상품 없음(이유). 후보 ID까지 기록해야 필수 조건 위반·선택-거절
 // 쌍 분석에서 shortlist 참가자가 빠지지 않는다.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatStudyPrice, tr } from "@/lib/studyI18n";
 
 export type SeenProduct = {
@@ -45,10 +45,13 @@ export default function FinalChoiceModal({
   products,
   submitting = false,
   onConfirm,
+  onCancel,
 }: {
   products: SeenProduct[];
   submitting?: boolean;
   onConfirm: (payload: FinalChoicePayload) => void;
+  /** 제출 전 취소 — 오클릭 시 대화로 복귀 (2026-08-25 QA: 이탈 불가로 갇힘) */
+  onCancel?: () => void;
 }) {
   const [status, setStatus] = useState<FinalStatus | null>(null);
   // 대화 중 '구매'를 누른 상품이 있으면 최종 선택의 기본값으로 — 가장 강한 선택 신호.
@@ -67,6 +70,13 @@ export default function FinalChoiceModal({
     status === "shortlist" ? shortlist.length >= 2 :
     status === "none_suitable" ? noneReason.trim().length > 0 :
     status === "explore_more";
+
+  useEffect(() => {
+    if (!onCancel) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
 
   const toggleShortlist = (id: string) =>
     setShortlist((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -197,13 +207,24 @@ export default function FinalChoiceModal({
           />
         )}
 
-        <button
-          onClick={submit}
-          disabled={!canSubmit || submitting}
-          className="btn btn-primary mt-3 w-full py-2.5 text-sm"
-        >
-          {submitting ? tr("저장하는 중…", "Saving…") : tr("이 상태로 확정", "Confirm")}
-        </button>
+        <div className="mt-3 flex items-center gap-2">
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              disabled={submitting}
+              className="btn shrink-0 px-4 py-2.5 text-sm"
+            >
+              {tr("돌아가기", "Back to Shopping")}
+            </button>
+          )}
+          <button
+            onClick={submit}
+            disabled={!canSubmit || submitting}
+            className="btn btn-primary w-full py-2.5 text-sm"
+          >
+            {submitting ? tr("저장하는 중…", "Saving…") : tr("이 상태로 확정", "Confirm")}
+          </button>
+        </div>
       </div>
     </div>
   );

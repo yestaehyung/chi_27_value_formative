@@ -21,6 +21,14 @@ export default function ProductCarousel({ children }: { children: ReactNode }) {
 
   const items = Children.toArray(children);
 
+  // 카드 셋이 바뀌면(새 추천 도착·재추천) 첫 카드로 복귀 — 이전 탐색 위치가
+  // 남아 새 추천이 마지막 카드부터 보이던 문제 (2026-08-25 QA). position bias
+  // 방지 장치인 이 컴포넌트가 시작 위치부터 어긋나면 안 된다.
+  const itemsKey = items.map((c) => (c as { key?: string | null }).key ?? "").join("|");
+  useEffect(() => {
+    scrollerRef.current?.scrollTo({ left: 0 });
+  }, [itemsKey]);
+
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
