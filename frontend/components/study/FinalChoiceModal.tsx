@@ -9,7 +9,7 @@
 // 싶음 / 적합한 상품 없음(이유). 후보 ID까지 기록해야 필수 조건 위반·선택-거절
 // 쌍 분석에서 shortlist 참가자가 빠지지 않는다.
 import { useEffect, useState } from "react";
-import { formatStudyPrice, tr } from "@/lib/studyI18n";
+import { formatStudyPrice, OURS_V2, tr } from "@/lib/studyI18n";
 
 export type SeenProduct = {
   productId: string;
@@ -206,8 +206,12 @@ export default function FinalChoiceModal({
         {needsFitReason && (
           <div className="mt-3">
             <p className="text-[11px] font-semibold text-[#9aa0a6]">
-              {tr("이 선택이 과제 상황에 맞는 이유를 한두 문장으로 알려주세요.",
-                  "In one or two sentences, why does this choice fit the situation in your task?")}
+              {/* ours-v2: 비교형 프레이밍 — 본 상품들과의 비교를 유도해 대충 고르기를 어렵게 */}
+              {OURS_V2 && status === "final"
+                ? tr("본 다른 상품들 대신 이 상품을 고른 이유를 간단히 알려주세요.",
+                     "Briefly explain why you chose this product over the others you saw.")
+                : tr("이 선택이 과제 상황에 맞는 이유를 한두 문장으로 알려주세요.",
+                     "In one or two sentences, why does this choice fit the situation in your task?")}
             </p>
             <textarea
               value={fitReason}

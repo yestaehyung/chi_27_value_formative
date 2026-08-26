@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DbSession
 
 from app.core.conditions import ensure_condition
+from app.core.config import settings
 from app.core.ids import new_id
 from app.db import models, serializers
 from app.db.database import get_db
@@ -73,6 +74,8 @@ def create_session(req: CreateSessionRequest, db: DbSession = Depends(get_db)):
             # 남아야 분석된다. 과제 직전 설문(TPRE_K1/K2)이 이 이분법의 조작 점검.
             **({"familiarity": req.familiarity} if req.familiarity else {}),
             **({"customScenario": scenario} if req.scenarioId == "custom" and not req.category else {}),
+            # 파일럿 변형 도장 — 분석에서 본실험과 구조적으로 갈리게 한다
+            **({"uiVariant": settings.ui_variant} if settings.ui_variant else {}),
         },
     )
     db.add(session)

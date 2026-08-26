@@ -46,7 +46,7 @@ import {
   type StudyCondition,
 } from "@/lib/localizedMainSurvey";
 import { completeTask, nextTask } from "@/lib/taskQueue";
-import { categoryLabel, productTitle, productUsd, STUDY_UI, tr } from "@/lib/studyI18n";
+import { categoryLabel, OURS_V2, productTitle, productUsd, STUDY_UI, tr } from "@/lib/studyI18n";
 import { STUDY_TASKS, taskForCategory } from "@/lib/studyTasks";
 import { finishStageOf } from "@/lib/finishStage";
 
@@ -113,6 +113,8 @@ export default function VariantSession({
   const compAttemptsRef = useRef(0);
   // 소프트 게이트 (2026-08-26): 조기 종료 확인 + 종료 시점 라운드 기록
   const [earlyConfirmOpen, setEarlyConfirmOpen] = useState(false);
+  // ours-v2 파일럿: 정규 라운드를 채우고 마칠 때도 확신을 한 번 묻는다 (탐색 재고 넛지)
+  const [confidenceOpen, setConfidenceOpen] = useState(false);
   const finishMetaRef = useRef<{ earlyFinish: boolean; roundsAtFinish: number } | null>(null);
   const answerComprehension = (taskId: string) => {
     compAttemptsRef.current += 1;
@@ -697,8 +699,12 @@ export default function VariantSession({
             <button
               onClick={() => {
                 if (canFinish) {
-                  finishMetaRef.current = { earlyFinish: false, roundsAtFinish: recommendRounds };
-                  openFinalChoice();
+                  if (OURS_V2 && condition === "ours") {
+                    setConfidenceOpen(true); // 확신 확인 후 openFinalChoice
+                  } else {
+                    finishMetaRef.current = { earlyFinish: false, roundsAtFinish: recommendRounds };
+                    openFinalChoice();
+                  }
                 } else {
                   setEarlyConfirmOpen(true);
                 }
@@ -792,6 +798,12 @@ export default function VariantSession({
                   <p className="msg-in mx-auto mt-5 max-w-sm text-[13px] leading-relaxed text-[#9aa0a6]"
                      style={{ animationDelay: "160ms", textWrap: "pretty" }}>
                     {STUDY_UI.chat.browseGuide}
+                    {OURS_V2 && condition === "ours" && (
+                      <>
+                        {" "}
+                        <span className="font-semibold text-[#4F46E5]">{STUDY_UI.chat.oursV2ChipGuide}</span>
+                      </>
+                    )}
                   </p>
                 )}
                 {/* 카탈로그 고지는 disclosure 성격 — 확인 통과 여부와 무관하게 항상 표시 */}
@@ -1081,6 +1093,43 @@ export default function VariantSession({
                 className="btn btn-primary w-full py-2 text-sm"
               >
                 {STUDY_UI.chat.earlyFinishStay}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ours-v2: 정규 종료 경로의 확신 확인 — 응답은 마커로 남겨 탐색 재고율을 잰다 */}
+      {study && confidenceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div role="dialog" aria-modal="true" aria-label={STUDY_UI.chat.confidenceTitle}
+               className="card w-full max-w-sm p-5">
+            <h2 className="text-base font-bold text-[#191919]">{STUDY_UI.chat.confidenceTitle}</h2>
+            <p className="mt-1.5 text-xs leading-relaxed text-[#5f6368]">
+              {STUDY_UI.chat.confidenceBody}
+            </p>
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setConfidenceOpen(false);
+                  api.addMarker(sessionId, "other",
+                    `ours_v2_confidence finish rounds=${recommendRounds}`).catch(() => {});
+                  finishMetaRef.current = { earlyFinish: false, roundsAtFinish: recommendRounds };
+                  openFinalChoice();
+                }}
+                className="btn shrink-0 px-4 py-2 text-sm"
+              >
+                {STUDY_UI.chat.confidenceFinish}
+              </button>
+              <button
+                onClick={() => {
+                  setConfidenceOpen(false);
+                  api.addMarker(sessionId, "other",
+                    `ours_v2_confidence explore_more rounds=${recommendRounds}`).catch(() => {});
+                }}
+                className="btn btn-primary w-full py-2 text-sm"
+              >
+                {STUDY_UI.chat.confidenceExplore}
               </button>
             </div>
           </div>

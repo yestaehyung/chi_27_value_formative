@@ -3,6 +3,11 @@ export type StudyLocale = "ko" | "en";
 export const STUDY_LOCALE: StudyLocale =
   process.env.NEXT_PUBLIC_STUDY_LOCALE === "en" ? "en" : "ko";
 
+// ours-v2 탐색 파일럿 플래그 (2026-08-27) — 칩 온보딩 안내·종료 전 확신 질문·
+// 비교형 선택 이유 문구를 켠다. 본실험 비교군과 절대 섞이지 않도록 백엔드
+// VC_UI_VARIANT(세션 meta.uiVariant 도장)와 반드시 함께 켜고 함께 끈다.
+export const OURS_V2 = process.env.NEXT_PUBLIC_OURS_V2 === "1";
+
 export const IS_ENGLISH_STUDY = STUDY_LOCALE === "en";
 
 /** Build-time locale selector for the separately deployed study frontend. */
@@ -228,6 +233,18 @@ export const STUDY_UI = {
     ),
     earlyFinishStay: tr("계속 쇼핑하기", "Keep Shopping"),
     earlyFinishLeave: tr("그래도 마치기", "Finish Anyway"),
+    // --- ours-v2 탐색 파일럿 전용 (OURS_V2 플래그) ---
+    oursV2ChipGuide: tr(
+      "대화하는 동안 시스템이 파악한 당신의 조건이 오른쪽에 표시됩니다. 맞게 파악했는지 확인하고, 어긋난 것은 바로잡아 주세요.",
+      "As you chat, the system will show what it thinks you're looking for on the right side. Please check if it got your preferences right and adjust anything that feels off.",
+    ),
+    confidenceTitle: tr("마치기 전에", "Before you finish"),
+    confidenceBody: tr(
+      "지금 선택에 얼마나 확신이 드시나요? 다른 선택지를 더 살펴보시겠어요?",
+      "How confident are you in your choice? Would you like to explore more options?",
+    ),
+    confidenceExplore: tr("더 살펴보기", "Explore More Options"),
+    confidenceFinish: tr("확신해요 — 마칠게요", "I'm Confident — Finish"),
     catalogNote: tr(
       "상품은 연구용 카탈로그(2023년 Amazon 데이터)에서 제공됩니다 — 가격은 현재 시세와 다를 수 있고, 실제 구매는 이루어지지 않습니다. 답변 생성에는 20–45초가 걸릴 수 있어요.",
       "Products come from a research catalog (2023 Amazon data) — prices may differ from current listings, and no real purchase will be made. Replies may take 20–45 seconds.",

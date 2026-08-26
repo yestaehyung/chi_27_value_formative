@@ -87,6 +87,10 @@ class Settings:
         self.offered_categories = [
             c.strip() for c in os.environ.get("VC_OFFERED_CATEGORIES", "").split(",") if c.strip()
         ]
+        # UI 변형 도장 (예: "ours-v2") — 설정 시 새 세션 meta.uiVariant에 찍혀
+        # 탐색 파일럿 데이터가 본실험과 구조적으로 구분된다. 프론트 NEXT_PUBLIC_OURS_V2와
+        # 반드시 함께 켜고 함께 끈다 (2026-08-27 ours-v2 파일럿).
+        self.ui_variant = os.environ.get("VC_UI_VARIANT", "").strip()
         # 자동 균형 배정에 참여하는 조건 (쉼표 구분). 미설정이면 세 조건 전체(기존 동작).
         # 물결(wave)별 순차 수집에서 이미 수집이 끝난 조건이 minimization 최소가 되는
         # 순간 다시 배정되는 누수를 막는다 — 2026-08-26 b2/ours 배치에서 b1이 8행 누수.
