@@ -249,6 +249,19 @@ async def run_basic_recommendation(
         pool_size=top_k * 3,
     )
     shown = pool[:top_k]
+    # 상품 일반 장단점 (2026-08-26 조작 정의 변경, 사용자 승인): 오프라인 프로필의
+    # keyAttributes 2개 + caveats 1개를 결정론 표시한다. 누가 검색해도 같은 상품이면
+    # 같은 문구 — "사용자 모델 없음"은 유지하면서, 조건 간 대비를 "설명 유무"가 아니라
+    # "일반 정보 vs 내 기준에 비춘 판정"으로 좁힌다. LLM 호출 없음(지연 +0).
+    from app.products import profiles
+
+    card_texts: dict[str, dict] = {}
+    for sp in shown:
+        prof = profiles.get(sp.product.id) or {}
+        matched = [str(a) for a in (prof.get("keyAttributes") or [])[:2] if str(a).strip()]
+        weak = [str(cv) for cv in (prof.get("caveats") or [])[:1] if str(cv).strip()]
+        if matched or weak:
+            card_texts[sp.product.id] = {"reason": "", "matched": matched, "weak": weak}
     diag = {
         "bucket": "basic",
         "searchText": policy.search_text,
@@ -256,7 +269,7 @@ async def run_basic_recommendation(
         "poolSize": len(pool),
         "shownIds": [sp.product.id for sp in shown],
     }
-    return shown, {}, diag
+    return shown, card_texts, diag
 
 
 async def run_recommendation(

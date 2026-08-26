@@ -36,15 +36,13 @@ export default function ProductListRow({
     <div className="msg-in py-5 first:pt-1" style={{ animationDelay: `${index * 80}ms` }}>
       {/* 상품명 헤더 */}
       <div
-        className="mb-3 cursor-pointer text-[15px] font-bold leading-snug text-[#191919]"
-        onClick={() => onFeedback(p.id, { type: "view_detail" })}
+        className="mb-3 text-[15px] font-bold leading-snug text-[#191919]"
       >{displayTitle}</div>
 
       <div className="flex gap-5">
-        {/* 큰 이미지 (없으면 레터마크 폴백) — 클릭 시 view_detail 기록 */}
+        {/* 큰 이미지 (없으면 레터마크 폴백) — 클릭 무동작 (상세 요청은 Ask AI 버튼만, 2026-08-26) */}
         <div
-          className="flex h-36 w-36 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-2xl bg-[#f5f6f8] sm:h-44 sm:w-44"
-          onClick={() => onFeedback(p.id, { type: "view_detail" })}
+          className="flex h-36 w-36 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#f5f6f8] sm:h-44 sm:w-44"
         >
           {p.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element

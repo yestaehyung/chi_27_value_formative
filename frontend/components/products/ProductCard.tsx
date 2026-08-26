@@ -35,8 +35,9 @@ export default function ProductCard({
     <div className="msg-in flex h-full flex-col gap-2" style={{ animationDelay: `${index * 80}ms` }}>
       {/* 상품 정보 박스 (테두리) — flex-1 로 카드 높이 맞춤 */}
       <div
-        className="card flex flex-1 cursor-pointer flex-col overflow-hidden transition-colors duration-150 hover:border-[#4f46e5]"
-        onClick={() => onFeedback(p.id, { type: "view_detail" })}
+        // 카드 본문 클릭의 암묵 view_detail 제거 (2026-08-26) — 상세 요청은 Ask AI
+        // 버튼만. 무심코 클릭이 30초 LLM 요청과 행동 신호(view_detail)를 오염시켰다.
+        className="card flex flex-1 flex-col overflow-hidden"
       >
         {/* 상품 이미지 (네이버 검색 API enrichment) — 없으면 헤더의 레터마크로 폴백 */}
         {p.imageUrl && (
