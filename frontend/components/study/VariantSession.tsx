@@ -48,6 +48,7 @@ import {
 import { completeTask, nextTask } from "@/lib/taskQueue";
 import { categoryLabel, productTitle, productUsd, STUDY_UI, tr } from "@/lib/studyI18n";
 import { STUDY_TASKS, taskForCategory } from "@/lib/studyTasks";
+import { finishStageOf } from "@/lib/finishStage";
 
 export type UiVariant = "a" | "b" | "c" | "d" | "e";
 
@@ -233,20 +234,20 @@ export default function VariantSession({
         const meta = d.session?.metadata ?? {};
         const cond = (meta.studyCondition as StudyCondition) ?? null;
         setCondition(cond);
-        // 종료 설문 중단 복구 (2026-08-25 QA): finalChoice는 저장됐는데 기준 감사
-        // 전에 새로고침·재접속하면 대화 화면으로 떨어져 설문이 사라졌다. 서버 완료
-        // 판정은 criterionAudit까지 요구하므로, 중단된 단계부터 다시 연다.
-        const fc = meta.finalChoice as { status?: string } | undefined;
-        if (fc && !meta.criterionAudit) {
-          if (fc.status === "final" && !meta.postSurvey) {
-            setPostSurveyOpen(true); // CC(확신 설문)부터 재개
-          } else {
-            const infers = !!(cond && INFERS_INTENTION[cond]);
-            proceedAfterPostSurvey(infers).catch(() => {});
-          }
-        } else if (fc && meta.criterionAudit) {
-          // 종료 절차를 이미 마친 세션 — 대화가 아니라 완료 화면(다음 과제/최종 설문)으로
-          setFinished(true);
+        // 종료 설문 중단 복구 — 단계 판정은 finishStageOf 단일 함수 (D3, 2026-08-26).
+        // 중단된 지점부터 다시 연다: cc(확신 설문) → audit(기준 감사) → done(완료 화면).
+        switch (finishStageOf(meta)) {
+          case "cc":
+            setPostSurveyOpen(true);
+            break;
+          case "audit":
+            proceedAfterPostSurvey(!!(cond && INFERS_INTENTION[cond])).catch(() => {});
+            break;
+          case "done":
+            setFinished(true);
+            break;
+          case "shopping":
+            break; // 재개할 것 없음
         }
         if (cond) try { sessionStorage.setItem("vc:studyCond", cond); } catch { /* noop */ }
       }
