@@ -116,3 +116,34 @@ def test_card_matched_quote_verification():
     assert "27-inch 4K display" in matched
     assert "legacy string item" in matched
     assert not any("White" in m for m in matched), matched
+
+
+def test_channel_merge_in_rerank_context():
+    """D1 (2026-08-26): 칩과 스펙이 같은 요구를 내면 criteria에 한 항목으로 합쳐지고
+    집행은 hard로 승격된다. 다른 요구는 그대로 추가, 가격은 칩에 구조 필드가 있으면 스킵."""
+    from types import SimpleNamespace
+    from app.agents.recommender import build_rerank_context
+    from app.db import models
+
+    policy = SimpleNamespace(
+        criteria=[
+            {"label": "lightweight over-ear headphones", "kind": "preference",
+             "enforcement": "soft"},
+            {"label": "budget under $150", "kind": "constraint",
+             "enforcement": "hard", "priceMax": 202500},
+        ],
+        hard_constraints=["lightweight", "IP67 waterproof"],
+        price_min=None, price_max=202500,
+        constraints_note="",
+    )
+    session = models.Session(id="s_test", mode="manual", meta={})
+    ctx = build_rerank_context(None, session, recent_turns=[], policy=policy)
+    labels = [c["label"] for c in ctx["criteria"]]
+
+    assert labels.count("lightweight over-ear headphones") == 1
+    assert "lightweight" not in labels, "포함 관계 요구는 칩 항목에 병합돼야 한다"
+    merged = next(c for c in ctx["criteria"] if c["label"] == "lightweight over-ear headphones")
+    assert merged["enforcement"] == "hard", "스펙이 필수로 본 요구는 hard로 승격"
+    assert "IP67 waterproof" in labels, "다른 요구는 그대로 추가"
+    assert not any(str(c.get("label", "")).startswith("price ") for c in ctx["criteria"]), \
+        "칩에 priceMax가 있으면 스펙 가격 항목을 안 만든다"

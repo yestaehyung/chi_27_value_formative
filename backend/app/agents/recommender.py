@@ -197,7 +197,29 @@ def build_rerank_context(
         # recommendation_spec이 원문 발화에서 뽑은 명시적 필수조건도 행렬에 독립
         # 기준으로 넣는다. constraintsNote 전체를 hard로 취급하지 않아 일반 선호까지
         # 배제 조건으로 승격되는 것을 막는다.
+        #
+        # D1 통로 병합 (2026-08-26): 같은 요구가 칩과 스펙 두 통로로 별도 cid를 받아
+        # 행렬을 부풀리고 'lightweight, lightweight' 류 중복 표시의 뿌리가 됐다.
+        # 정규화 동치 또는 포함 관계(같은 요구의 축약/확장)면 기존 칩 항목에 합치되,
+        # 스펙이 필수로 본 요구이므로 집행은 강한 쪽(hard)으로 승격한다.
+        # 의미 유사도 매칭은 쓰지 않는다 — 다른 기준을 오병합하면 배제가 실집행이라
+        # 위험이 표시 중복보다 크다.
+        from app.agents.response_generator import _norm_label
+
+        def _same_requirement(a: str, b: str) -> bool:
+            na, nb = _norm_label(a), _norm_label(b)
+            if not na or not nb:
+                return False
+            if na == nb:
+                return True
+            return len(min(na, nb, key=len)) >= 4 and (na in nb or nb in na)
+
         for hard in policy.hard_constraints:
+            existing = next(
+                (c for c in criteria if _same_requirement(c.get("label") or "", hard)), None)
+            if existing is not None:
+                existing["enforcement"] = "hard"
+                continue
             criteria.append({
                 "label": hard,
                 "kind": "constraint",
@@ -205,7 +227,10 @@ def build_rerank_context(
                 "enforcement": "hard",
                 "source": "direct_recommendation_spec",
             })
-        if policy.price_min is not None or policy.price_max is not None:
+        # 가격도 칩에 구조 필드(priceMin/priceMax)가 이미 있으면 별도 항목을 안 만든다
+        has_price_criterion = any(
+            c.get("priceMin") is not None or c.get("priceMax") is not None for c in criteria)
+        if not has_price_criterion and (policy.price_min is not None or policy.price_max is not None):
             if policy.price_min is not None and policy.price_max is not None:
                 price_label = f"price {policy.price_min}–{policy.price_max}"
             elif policy.price_max is not None:
