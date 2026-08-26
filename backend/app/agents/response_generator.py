@@ -292,7 +292,7 @@ async def rerank_by_intent(
     mock/실패 시 입력 순서 그대로 + 빈 제외 셋 + 사실기반 폴백 카드 (재현성).
     """
     matrix: dict = {"nearMissRequested": False, "vioCounts": {}, "verdicts": {},
-                    "hardUnk": {}, "hardUnkCounts": {}}
+                    "hardUnk": {}, "hardUnkCounts": {}, "hardUnkLabels": {}}
     if not scored:
         return scored, {}, {}, matrix
 
@@ -419,6 +419,9 @@ async def rerank_by_intent(
                                           else f" and {more} more" if more > 0 else "")
                         matrix["hardUnk"][pid] = L(f"'{labels}' 확인 불가",
                                                    f"'{labels}' not confirmed in the listing")
+                        # 카드 병합 단계의 겹침 제거 재료 — 같은 기준을 LLM weak가
+                        # 자기 말로 또 쓰는 이중 경고를 떨구는 데 쓴다 (2026-08-26 QA)
+                        matrix.setdefault("hardUnkLabels", {})[pid] = list(uniq)
                         for lab in uniq:
                             matrix["hardUnkCounts"][lab] = matrix["hardUnkCounts"].get(lab, 0) + 1
             for idx in raw.get("order") or []:
@@ -442,7 +445,7 @@ async def rerank_by_intent(
         order = []
         excluded = {}
         matrix = {"nearMissRequested": False, "vioCounts": {}, "verdicts": {},
-                  "hardUnk": {}, "hardUnkCounts": {}, "failed": True}
+                  "hardUnk": {}, "hardUnkCounts": {}, "hardUnkLabels": {}, "failed": True}
     if not matrix.get("verdicts") and not order:
         # 응답이 왔지만 행렬도 순서도 없음(잘림·형식 붕괴) — 판정 실패로 표기.
         # 필수 기준이 있는 대화에서 무필터 노출을 막는 근거가 된다 (recommender).

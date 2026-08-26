@@ -127,16 +127,49 @@ def unverified_criteria(matrix: dict, shown_ids: list[str]) -> dict[str, int]:
     return out
 
 
-def merge_near_miss_into_cards(card_texts: dict[str, dict], near_miss: dict[str, str]) -> None:
+def _label_words(label: str) -> set[str]:
+    """겹침 판정용 내용 단어 (3자 이상, 소문자)."""
+    return {w for w in "".join(
+        ch if ch.isalnum() else " " for ch in label.lower()).split() if len(w) >= 3}
+
+
+def merge_near_miss_into_cards(
+    card_texts: dict[str, dict],
+    near_miss: dict[str, str],
+    unk_labels: dict[str, list[str]] | None = None,
+) -> None:
     """근접 대안의 '요청과 다른 점'을 해당 카드 weak 맨 앞에 병합 — 고지가 챗 버블만이
-    아니라 카드 단위에도 남게 한다(impression으로 영속 → FS1 분석 가능). in-place."""
+    아니라 카드 단위에도 남게 한다(impression으로 영속 → FS1 분석 가능). in-place.
+
+    이중 경고 제거 (2026-08-26 QA): 코드 경고가 이미 명시한 확인 불가 기준을 LLM weak가
+    자기 말로 또 쓰면(예: 라벨 'solid wood construction' vs "Material not specified —
+    cannot confirm solid wood") 카드마다 같은 말이 2~3줄 반복된다. 코드가 라벨을 아니까
+    결정론으로 떨군다 — 라벨 전체 포함 또는 내용 단어 2개 이상 겹침. LLM이 weak를
+    아예 빠뜨린 경우엔 코드 경고가 그대로 남아 보증은 유지된다."""
+    from app.agents.response_generator import _norm_label
+
     for pid, reason in near_miss.items():
         if not reason:
             continue
         card = card_texts.get(pid)
         if card is None:
             continue
-        rest = [w for w in card.get("weak") or [] if w != reason]
+        labels = (unk_labels or {}).get(pid) or []
+        norm_labels = [_norm_label(l) for l in labels]
+        word_sets = [_label_words(l) for l in labels]
+
+        def _dupes_code_warning(weak: str) -> bool:
+            nw = _norm_label(weak)
+            ww = _label_words(weak)
+            for nl, ws in zip(norm_labels, word_sets):
+                if nl and nl in nw:
+                    return True
+                if len(ws & ww) >= 2:
+                    return True
+            return False
+
+        rest = [w for w in card.get("weak") or []
+                if w != reason and not _dupes_code_warning(w)]
         card["weak"] = ([reason] + rest)[:3]
 
 
@@ -338,7 +371,7 @@ async def run_recommendation(
         near_miss_requested=matrix.get("nearMissRequested", False),
         hard_unk=matrix.get("hardUnk"),
     )
-    merge_near_miss_into_cards(card_texts, near_miss)
+    merge_near_miss_into_cards(card_texts, near_miss, matrix.get("hardUnkLabels"))
     # 빈손 = 후보는 있었는데 행렬상 전부 위반/확인불가 & 근접 표시 미요청 (풀이 빈 것과 구분)
     killer = [k for k, _ in sorted(
         (matrix.get("vioCounts") or {}).items(), key=lambda kv: -kv[1])]

@@ -74,3 +74,24 @@ def test_distinct_labels_are_kept_and_capped():
     assert ("외 1건" in note) or ("and 1 more" in note), note
     # 집계는 절단 없이 전 기준을 센다 (본문 안내·빈손 사유의 재료)
     assert len(matrix["hardUnkCounts"]) == 3
+
+
+def test_llm_weak_duplicating_code_warning_is_dropped():
+    """코드 경고가 명시한 기준을 LLM weak가 자기 말로 반복하면 떨군다 (2026-08-26 QA).
+    무관한 caveat(단어 1개 겹침)는 남는다."""
+    from app.agents.recommender import merge_near_miss_into_cards
+
+    cards = {"p0": {"reason": "r", "matched": [], "weak": [
+        "Material not specified — cannot confirm solid wood",   # 라벨과 단어 2개 겹침 → 드롭
+        "Cable management not mentioned — check needed",        # 라벨 포함 → 드롭
+        "Wood veneer may scratch easily",                       # 단어 1개(wood)만 → 유지
+    ]}}
+    near_miss = {"p0": "'solid wood construction, cable management' not confirmed in the listing"}
+    unk_labels = {"p0": ["solid wood construction", "cable management"]}
+    merge_near_miss_into_cards(cards, near_miss, unk_labels)
+
+    weak = cards["p0"]["weak"]
+    assert weak[0].startswith("'solid wood construction")
+    assert "Wood veneer may scratch easily" in weak
+    assert not any("cannot confirm solid wood" in w for w in weak)
+    assert not any("Cable management not mentioned" in w for w in weak)
