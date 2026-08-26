@@ -496,6 +496,10 @@ purchaseOption 기준: 기준이 가리키는 속성이 의류 사이즈처럼 *
   예: activeTopicLabels에 "no drawers"가 있고 입력이 "Actually, include drawers"이면
   → {"label":"desk with drawers","revisesLabel":"no drawers","kind":"constraint",
      "impliedHardConstraint":"includes drawers","impliedAvoidance":null,...}
+  수치의 **방향 반전**(최대↔최소)도 revision이다. 한 발화에 수정이 여러 개면
+  각각 revisesLabel을 단 topic으로 **빠짐없이** 낸다:
+  예: activeTopicLabels에 "max 100 cm wide"가 있고 입력이 "make the width at least 120 cm"이면
+  → {"label":"width at least 120 cm","revisesLabel":"max 100 cm wide","kind":"constraint",...}
 - label에는 기준의 내용만 쓴다 — "avoid:", "must:" 같은 분류 접두를 붙이지 말라
   (분류는 kind 필드가 담당한다; 접두를 붙이면 화면에 "Avoid: avoid: ..."로 이중 표시된다).
 - 한 발화가 서로 독립적인 속성 여러 개를 담으면 **속성별로 분리해** 각각의 topic으로 추출하라 —

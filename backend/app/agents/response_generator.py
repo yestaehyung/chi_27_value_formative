@@ -331,8 +331,11 @@ async def rerank_by_intent(
             str(v) for v in [
                 cand.get("title"), cand.get("category"), cand.get("productType"),
                 cand.get("audience"), cand.get("description"),
+                # 가격·평점도 정당한 인용 대상 — 빼면 "Within budget"의 근거로
+                # 가격($184.00)을 인용한 정상 ✓까지 드롭된다 (2026-08-26 재현 실측)
+                cand.get("price"), cand.get("rating"), cand.get("reviewCount"),
                 *(cand.get("keyAttributes") or []), *(cand.get("caveats") or []),
-            ] if v)
+            ] if v is not None)
         candidates.append(cand)
 
     # 행렬 셀의 키(cid) 부여 — hard cid의 "vio"만 배제로 이어진다 (기준 내용은 코드 무관)
