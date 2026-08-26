@@ -17,18 +17,34 @@ def _norm_label(s: str) -> str:
     return "".join(ch for ch in s.lower() if ch.isalnum())
 
 
-def _mentions(text: str, label: str) -> bool:
-    """본문이 이 라벨(미확인 기준)을 언급했는가 — 표현 자유, 언급만 검사 (D2 절충안).
+_UNCERTAIN_SIGNALS = (
+    # EN — 불확실·확인 필요 방향의 어휘 (라벨과 같은 문장에 있어야 '고지'로 인정)
+    "not ", "n't", "no ", "none", "unconfirm", "confirm", "check", "verify",
+    "listed", "specify", "specified", "stated", "unstated", "unknown", "sure",
+    # KO
+    "확인", "표기", "명시", "없", "몰라", "않",
+)
 
-    라벨의 내용 단어(3자+)가 본문에 등장하는지로 판정한다. 2단어 이상 라벨은
-    2개 이상 등장을 요구해 우연 일치("life" 한 단어)로 통과하지 않게 한다."""
+
+def _mentions(text: str, label: str) -> bool:
+    """본문이 이 라벨(미확인 기준)을 '미확인 방향으로' 언급했는가 (D2 절충안 v2).
+
+    v1은 라벨 단어 등장만 봐서 "five white shirts"(반대 방향 주장)도 언급으로
+    통과시켰다 — 이제 라벨 단어가 등장한 **그 문장 안에** 불확실 신호어가 함께
+    있어야 고지로 인정한다. 표현은 여전히 자유(문장 안에서 어떻게 쓰든),
+    방향만 강제. 오판 방향은 안전하다: 신호어를 못 찾으면 고지 한 줄이
+    중복으로 붙을 뿐, 틀린 정보가 생기지 않는다."""
     words = {w for w in "".join(
         ch if ch.isalnum() else " " for ch in label.lower()).split() if len(w) >= 3}
     if not words:
         return True
-    tl = text.lower()
-    hit = sum(1 for w in words if w in tl)
-    return hit >= min(2, len(words))
+    import re as _re
+    for sentence in _re.split(r"(?<=[.!?\n])", text):
+        sl = sentence.lower()
+        hit = sum(1 for w in words if w in sl)
+        if hit >= min(2, len(words)) and any(sig in sl for sig in _UNCERTAIN_SIGNALS):
+            return True
+    return False
 
 
 def _ensure_unverified_mentions(text: str, recommendation_note: dict | None) -> str:

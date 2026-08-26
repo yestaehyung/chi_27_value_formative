@@ -22,6 +22,13 @@ def test_mention_check_requires_content_words():
     assert _mentions("battery life isn't stated", "battery life")
 
 
+def test_mention_requires_uncertainty_direction():
+    """v2: 반대 방향 주장("white shirts입니다")은 언급으로 인정하지 않는다."""
+    assert not _mentions("I found white color shirts for you.", "white color")
+    assert not _mentions("These are white color business shirts. Great value!", "white color")
+    assert _mentions("Color isn't stated, so white color needs a check on the page.", "white color")
+
+
 def test_supplement_added_only_when_missing():
     note = {"unverifiedCriteria": {"white color": 5}}
     said = "None of these listings specify the color — confirm white on the product page."

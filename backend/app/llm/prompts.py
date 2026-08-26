@@ -391,7 +391,11 @@ FORMAT_BY_TASK = {
 - 이 세 입력에 없는 선호·필수조건·예산·속성을 추론하거나 보충하지 말라.
 - searchText에는 상품 종류와 긍정 속성만 넣고, 예산·회피·부정·수령자·행사 맥락은 넣지 말라.
 - constraintsNote에는 직접 말한 예산·필수·회피·맥락과 eligibleCriteria를 빠짐없이 요약하라.
-- hardConstraints에는 명시적인 필수 속성만 넣는다. 선호나 맥락을 필수조건으로 승격하지 말라.
+- hardConstraints에는 명시적인 필수 속성만 넣되, **사용자가 직접 명시한 구체 속성은
+  빠짐없이** 넣는다 — 색상·소재·기능·관리법·형태 요구가 여기 해당한다.
+  예: "a white machine-washable business-casual shirt" → ["white color","machine-washable"]
+  (business-casual은 스타일 맥락 → searchText로). 취향·분위기 표현("elegant",
+  "something nice")과 선호("prefer", "would be nice")는 승격하지 말라.
 - priceMin/priceMax는 입력에 직접 제시됐거나 eligibleCriteria에 구조화된 가격만 쓴다.
   priceMin은 사용자가 **하한**을 말했을 때만 채운다 ("at least $100"→priceMin만).
   "under/below $150" 같은 상한 발화는 priceMax만 채우고 priceMin은 null이다 —
