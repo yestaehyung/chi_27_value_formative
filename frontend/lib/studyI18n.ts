@@ -245,6 +245,10 @@ export const STUDY_UI = {
     ),
     confidenceExplore: tr("더 살펴보기", "Explore More Options"),
     confidenceFinish: tr("확신해요 — 마칠게요", "I'm Confident — Finish"),
+    oursV2NeedRounds: (n: number) => tr(
+      `마치기 전에 추천을 2번 이상 받아 비교해 주세요. 지금까지 ${n}번 받으셨어요.`,
+      `Please compare at least 2 rounds of recommendations before finishing. You've seen ${n} so far.`,
+    ),
     catalogNote: tr(
       "상품은 연구용 카탈로그(2023년 Amazon 데이터)에서 제공됩니다 — 가격은 현재 시세와 다를 수 있고, 실제 구매는 이루어지지 않습니다. 답변 생성에는 20–45초가 걸릴 수 있어요.",
       "Products come from a research catalog (2023 Amazon data) — prices may differ from current listings, and no real purchase will be made. Replies may take 20–45 seconds.",

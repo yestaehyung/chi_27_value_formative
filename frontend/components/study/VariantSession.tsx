@@ -1075,19 +1075,24 @@ export default function VariantSession({
                className="card w-full max-w-sm p-5">
             <h2 className="text-base font-bold text-[#191919]">{STUDY_UI.chat.earlyFinishTitle}</h2>
             <p className="mt-1.5 text-xs leading-relaxed text-[#5f6368]">
-              {STUDY_UI.chat.earlyFinishBody(recommendRounds)}
+              {/* ours-v2: 2라운드는 하드 게이트 — 조기 탈출구 없이 비교를 보장한다 */}
+              {OURS_V2 && condition === "ours"
+                ? STUDY_UI.chat.oursV2NeedRounds(recommendRounds)
+                : STUDY_UI.chat.earlyFinishBody(recommendRounds)}
             </p>
             <div className="mt-4 flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setEarlyConfirmOpen(false);
-                  finishMetaRef.current = { earlyFinish: true, roundsAtFinish: recommendRounds };
-                  openFinalChoice();
-                }}
-                className="btn shrink-0 px-4 py-2 text-sm"
-              >
-                {STUDY_UI.chat.earlyFinishLeave}
-              </button>
+              {!(OURS_V2 && condition === "ours") && (
+                <button
+                  onClick={() => {
+                    setEarlyConfirmOpen(false);
+                    finishMetaRef.current = { earlyFinish: true, roundsAtFinish: recommendRounds };
+                    openFinalChoice();
+                  }}
+                  className="btn shrink-0 px-4 py-2 text-sm"
+                >
+                  {STUDY_UI.chat.earlyFinishLeave}
+                </button>
+              )}
               <button
                 onClick={() => setEarlyConfirmOpen(false)}
                 className="btn btn-primary w-full py-2 text-sm"
