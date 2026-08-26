@@ -12,6 +12,11 @@ engine = create_engine(
     f"sqlite:///{settings.db_path}",
     # write transactions stay open across LLM awaits (~10s) — wait instead of failing
     connect_args={"check_same_thread": False, "timeout": 30},
+    # 60명 동시 배치에서 기본 풀(5+10)이 고갈돼 모든 API가 30초 대기 후 실패했다
+    # (2026-08-26 b2/ours 배치 장애). SQLite 커넥션은 로컬 파일 핸들이라 늘려도
+    # 비용이 없고, 다중 읽기는 WAL이, 쓰기 직렬화는 busy_timeout이 그대로 담당한다.
+    pool_size=30,
+    max_overflow=70,
 )
 
 
