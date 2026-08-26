@@ -109,14 +109,24 @@ def set_forced_condition(db: DbSession, condition: str | None) -> str | None:
     return condition
 
 
+def balance_pool() -> tuple[str, ...]:
+    """자동 균형 배정에 참여하는 조건들. `VC_BALANCE_CONDITIONS`로 물결별 제한 —
+    수집이 끝난 조건이 카운트 최소가 되는 순간 다시 배정되는 누수를 막는다."""
+    from app.core.config import settings
+
+    pool = tuple(c for c in settings.balance_conditions if c in STUDY_CONDITIONS)
+    return pool or STUDY_CONDITIONS
+
+
 def assign_condition(db: DbSession) -> str:
-    """관리자 고정 조건이 있으면 그 조건, 없으면 가장 적게 배정된 조건(minimization).
-    동률이면 STUDY_CONDITIONS 순서."""
+    """관리자 고정 조건이 있으면 그 조건, 없으면 배정 풀에서 가장 적게 배정된
+    조건(minimization). 동률이면 STUDY_CONDITIONS 순서."""
     forced = get_forced_condition(db)
     if forced is not None:
         return forced
     counts = assigned_counts(db)
-    return min(STUDY_CONDITIONS, key=lambda c: (counts[c], STUDY_CONDITIONS.index(c)))
+    pool = balance_pool()
+    return min(pool, key=lambda c: (counts[c], STUDY_CONDITIONS.index(c)))
 
 
 def ensure_condition(db: DbSession, participant: models.Participant) -> str:

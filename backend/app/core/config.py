@@ -87,6 +87,12 @@ class Settings:
         self.offered_categories = [
             c.strip() for c in os.environ.get("VC_OFFERED_CATEGORIES", "").split(",") if c.strip()
         ]
+        # 자동 균형 배정에 참여하는 조건 (쉼표 구분). 미설정이면 세 조건 전체(기존 동작).
+        # 물결(wave)별 순차 수집에서 이미 수집이 끝난 조건이 minimization 최소가 되는
+        # 순간 다시 배정되는 누수를 막는다 — 2026-08-26 b2/ours 배치에서 b1이 8행 누수.
+        self.balance_conditions = [
+            c.strip() for c in os.environ.get("VC_BALANCE_CONDITIONS", "").split(",") if c.strip()
+        ]
         # 연구자 API(research/exports) 보호 키 — 참가자 설문·대화 전체를 읽는 표면.
         # 설정되면 X-Research-Key 헤더(또는 ?key=)가 일치해야 통과. 미설정이면
         # study 모드에선 잠금(fail-closed), 그 외(로컬)는 기존처럼 개방.
