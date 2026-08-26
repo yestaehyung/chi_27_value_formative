@@ -16,6 +16,43 @@ def _norm_label(s: str) -> str:
     의미 유사도는 쓰지 않는다 (다른 기준을 합치면 미확인 경고가 숨는다)."""
     return "".join(ch for ch in s.lower() if ch.isalnum())
 
+
+def _mentions(text: str, label: str) -> bool:
+    """본문이 이 라벨(미확인 기준)을 언급했는가 — 표현 자유, 언급만 검사 (D2 절충안).
+
+    라벨의 내용 단어(3자+)가 본문에 등장하는지로 판정한다. 2단어 이상 라벨은
+    2개 이상 등장을 요구해 우연 일치("life" 한 단어)로 통과하지 않게 한다."""
+    words = {w for w in "".join(
+        ch if ch.isalnum() else " " for ch in label.lower()).split() if len(w) >= 3}
+    if not words:
+        return True
+    tl = text.lower()
+    hit = sum(1 for w in words if w in tl)
+    return hit >= min(2, len(words))
+
+
+def _ensure_unverified_mentions(text: str, recommendation_note: dict | None) -> str:
+    """미확인 기준 언급 보장 (D2 절충안, 2026-08-26 승인).
+
+    프롬프트(룰 3)가 "확인 불가 기준은 밝혀라"라고 이미 지시한다 — 여기는 그 지시가
+    지켜졌는지의 안전망이다: LLM이 자기 말로 언급했으면 그대로 두고(문체 무손실),
+    빠뜨린 라벨이 있을 때만 고지 한 줄을 끝에 덧붙인다. verbatim 강제·전체 폴백을
+    쓰지 않는 이유: 문장 통째 대조는 사소한 표현 차이로 턴 전체를 템플릿화시켜
+    평균 품질을 깎는다 (설계 논의 2026-08-26)."""
+    unv = (recommendation_note or {}).get("unverifiedCriteria") or {}
+    if not unv:
+        return text
+    top = [k for k, _ in sorted(unv.items(), key=lambda kv: -kv[1])][:2]
+    missing = [lab for lab in top if not _mentions(text, lab)]
+    if not missing:
+        return text
+    labels = "'" + "', '".join(missing) + "'"
+    note = L(
+        f"참고: {labels}은(는) 이 상품들의 정보에 표기가 없어요 — 결정 전에 상세 페이지를 확인해 주세요.",
+        f"One note: {labels} {'is' if len(missing) == 1 else 'are'} not listed in the product info for these items — please check the product page before deciding.",
+    )
+    return text.rstrip() + "\n\n" + note
+
 def clarify_text(category: str | None) -> str:
     if category is None:
         return L(
@@ -268,7 +305,10 @@ async def generate_reply(
         # 질문 자체가 통째로 빠지면 템플릿으로 폴백한다. (verbatim 강제 X — 어색함 방지)
         if must_ask_question and "?" not in text:
             return template_text
-        return text or template_text
+        if not text:
+            return template_text
+        # 미확인 기준 언급 보장 (D2 절충안) — 언급했으면 무변경, 빠뜨렸으면 한 줄 보완
+        return _ensure_unverified_mentions(text, recommendation_note)
     except Exception:  # noqa: BLE001 — degrade gracefully to the template
         return template_text
 
