@@ -28,6 +28,8 @@ export type FinalChoicePayload = {
   productId?: string | null;
   shortlistIds?: string[];
   noneReason?: string;
+  /** 선택이 과제 상황에 맞는 이유 (final/shortlist 필수, 2026-08-26 종료 절차 개편) */
+  fitReason?: string;
 };
 
 /** 처음부터 펼쳐 보여줄 상품 수 — 긴 세션(노출 수십 개)에서 목록이 압도하지 않게.
@@ -60,14 +62,18 @@ export default function FinalChoiceModal({
   );
   const [shortlist, setShortlist] = useState<string[]>([]);
   const [noneReason, setNoneReason] = useState("");
+  const [fitReason, setFitReason] = useState("");
   const [showAll, setShowAll] = useState(false);
 
   const visible = showAll ? products : products.slice(0, VISIBLE_CAP);
   const hidden = products.length - VISIBLE_CAP;
   const needsList = status === "final" || status === "shortlist";
+  // fitReason: 선택을 상황에 비추어 설명 — 사전 고지된 책임성 장치이자 과제 수행의
+  // 직접 측정 (2026-08-26). explore_more는 선택이 없고, none_suitable은 noneReason이 담당.
+  const needsFitReason = status === "final" || status === "shortlist";
   const canSubmit =
-    status === "final" ? picked !== null :
-    status === "shortlist" ? shortlist.length >= 2 :
+    status === "final" ? picked !== null && fitReason.trim().length > 0 :
+    status === "shortlist" ? shortlist.length >= 2 && fitReason.trim().length > 0 :
     status === "none_suitable" ? noneReason.trim().length > 0 :
     status === "explore_more";
 
@@ -88,6 +94,7 @@ export default function FinalChoiceModal({
       productId: status === "final" ? picked : null,
       shortlistIds: status === "shortlist" ? shortlist : [],
       noneReason: status === "none_suitable" ? noneReason.trim() : undefined,
+      fitReason: needsFitReason ? fitReason.trim() : undefined,
     });
   };
 
@@ -193,6 +200,23 @@ export default function FinalChoiceModal({
                 {tr(`이전에 본 상품 ${hidden}개 더 보기`, `Show ${hidden} more previously viewed ${hidden === 1 ? "product" : "products"}`)}
               </button>
             )}
+          </div>
+        )}
+
+        {needsFitReason && (
+          <div className="mt-3">
+            <p className="text-[11px] font-semibold text-[#9aa0a6]">
+              {tr("이 선택이 과제 상황에 맞는 이유를 한두 문장으로 알려주세요.",
+                  "In one or two sentences, why does this choice fit the situation in your task?")}
+            </p>
+            <textarea
+              value={fitReason}
+              onChange={(e) => setFitReason(e.target.value)}
+              rows={2}
+              placeholder={tr("예: 방이 좁아서 폭이 좁고 수납이 있는 게 맞아요",
+                              "e.g., My room is small, so a narrow desk with storage fits best")}
+              className="mt-1.5 w-full resize-none rounded-lg border border-[#e4e8eb] px-3 py-2 text-xs leading-relaxed focus:border-[#4f46e5] focus:outline-none"
+            />
           </div>
         )}
 

@@ -131,3 +131,17 @@ def test_knowledge_survey_lands_on_participant(client, shopped_session):
         "answers": {"k:티셔츠:SPK_1": "6"}, "scores": {"티셔츠": 5.4}, "categories": ["티셔츠"],
     })
     assert r.status_code == 200, r.text
+
+
+def test_fit_reason_and_soft_gate_fields_saved(client, shopped_session):
+    """2026-08-26 종료 절차 개편 — fitReason·earlyFinish·roundsAtFinish가 meta에 남는다."""
+    sid, products = shopped_session
+    r = client.put(f"/api/study/sessions/{sid}/final-choice", json={
+        "status": "final", "productId": products[0],
+        "fitReason": "fits my small room", "earlyFinish": True, "roundsAtFinish": 1,
+    })
+    assert r.status_code == 200, r.text
+    meta = client.get(f"/api/sessions/{sid}").json()["session"]["metadata"]
+    fc = meta["finalChoice"]
+    assert fc["fitReason"] == "fits my small room"
+    assert fc["earlyFinish"] is True and fc["roundsAtFinish"] == 1

@@ -203,6 +203,11 @@ class FinalChoiceRequest(BaseModel):
     productId: Optional[str] = None       # status=final일 때 필수
     shortlistIds: list[str] = []          # status=shortlist일 때 2개 이상
     noneReason: Optional[str] = None      # status=none_suitable 사유 / "no_products"
+    # 2026-08-26 종료 절차 개편: 선택이 과제 상황에 맞는 이유(final/shortlist 필수는
+    # 프론트가 강제) + 소프트 게이트 기록(2라운드 미만 종료 여부·시점 라운드 수)
+    fitReason: Optional[str] = None
+    earlyFinish: Optional[bool] = None
+    roundsAtFinish: Optional[int] = None
 
 
 @router.put("/sessions/{session_id}/final-choice")
@@ -252,6 +257,9 @@ def submit_final_choice(session_id: str, req: FinalChoiceRequest, db: DbSession 
         "productId": req.productId,
         "shortlistIds": req.shortlistIds,
         "noneReason": req.noneReason,
+        "fitReason": req.fitReason,
+        "earlyFinish": bool(req.earlyFinish),
+        "roundsAtFinish": req.roundsAtFinish,
         "decidedAt": datetime.now(timezone.utc).isoformat(),
         "criteriaAtDecision": [
             {

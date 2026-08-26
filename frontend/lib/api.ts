@@ -177,6 +177,9 @@ export const api = {
     productId?: string | null;
     shortlistIds?: string[];
     noneReason?: string;
+    fitReason?: string;          // 선택이 과제 상황에 맞는 이유 (2026-08-26)
+    earlyFinish?: boolean;       // 추천 2라운드 전 종료 (소프트 게이트 기록)
+    roundsAtFinish?: number;
   }) =>
     request<{ ok: boolean }>(`/api/study/sessions/${sessionId}/final-choice`, {
       method: "PUT",

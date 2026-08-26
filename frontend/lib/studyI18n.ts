@@ -132,6 +132,12 @@ export const STUDY_UI = {
       "From the four shopping tasks below, choose the one whose product category you currently feel you know best.",
     ),
     lTitle: tr("가장 잘 모른다고 느끼는 제품군을 골라 주세요", "Choose the product category you feel you know least"),
+    comprehensionQ: tr("시작 전에 확인할게요 — 이번 과제의 상황은 무엇인가요?", "Before you start — what is the situation in this task?"),
+    comprehensionWrong: tr("과제 설명을 다시 읽고 골라 주세요.", "Please re-read the task description above and try again."),
+    fitNotice: tr(
+      "쇼핑을 마칠 때, 선택이 이 상황에 왜 맞는지 짧게 설명하게 됩니다.",
+      "When you finish, you'll briefly explain why your choice fits this situation.",
+    ),
     lDescription: tr(
       "나머지 세 과제 중, 현재 본인이 그 제품군에 대해 가장 잘 모른다고 느끼는 과제 하나를 선택해 주세요. 선택한 두 과제의 진행 순서는 무작위로 정해져요.",
       "From the remaining three tasks, choose the one whose product category you currently feel you know least. The order of your two tasks will be randomized.",
@@ -208,9 +214,20 @@ export const STUDY_UI = {
     finishShort: tr("마치기", "Finish"),
     finish: tr("이 쇼핑 마치기", "Finish This Shopping Task"),
     browseGuide: tr(
-      "추천을 충분히 받아보시고, 마음에 드는 상품을 찾으면 '마치기'를 눌러주세요. 마치기는 추천을 2회 이상 받은 뒤부터 누를 수 있어요 — 비교해 보고 결정해 주세요.",
-      "Take your time browsing. When you find a product you'd actually buy, press Finish. You can finish after receiving at least 2 rounds of recommendations — compare before you decide.",
+      "추천을 여러 번 받아 비교해 보시고, 결정이 서면 '마치기'를 눌러 주세요.",
+      "Compare a few rounds of recommendations, and press Finish when you've made up your mind.",
     ),
+    earlyFinishTitle: tr("지금 마칠까요?", "Finish now?"),
+    earlyFinishBody: (n: number) => tr(
+      n === 0
+        ? "아직 추천을 받아보지 않으셨어요. 더 비교하지 않고 마칠까요?"
+        : `아직 추천을 ${n}번만 보셨어요. 더 비교하지 않고 마칠까요?`,
+      n === 0
+        ? "You haven't seen any recommendations yet. Finish without comparing?"
+        : `You've only seen ${n} round${n === 1 ? "" : "s"} of recommendations. Finish without comparing more?`,
+    ),
+    earlyFinishStay: tr("계속 쇼핑하기", "Keep Shopping"),
+    earlyFinishLeave: tr("그래도 마치기", "Finish Anyway"),
     catalogNote: tr(
       "상품은 연구용 카탈로그(2023년 Amazon 데이터)에서 제공됩니다 — 가격은 현재 시세와 다를 수 있고, 실제 구매는 이루어지지 않습니다. 답변 생성에는 20–45초가 걸릴 수 있어요.",
       "Products come from a research catalog (2023 Amazon data) — prices may differ from current listings, and no real purchase will be made. Replies may take 20–45 seconds.",

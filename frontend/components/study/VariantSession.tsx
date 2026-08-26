@@ -47,7 +47,7 @@ import {
 } from "@/lib/localizedMainSurvey";
 import { completeTask, nextTask } from "@/lib/taskQueue";
 import { categoryLabel, productTitle, productUsd, STUDY_UI, tr } from "@/lib/studyI18n";
-import { taskForCategory } from "@/lib/studyTasks";
+import { STUDY_TASKS, taskForCategory } from "@/lib/studyTasks";
 
 export type UiVariant = "a" | "b" | "c" | "d" | "e";
 
@@ -79,6 +79,15 @@ export default function VariantSession({
   const [toast, setToast] = useState<string | null>(null);
   const [scenarioTitle, setScenarioTitle] = useState("");
   const sessionTask = taskForCategory(scenarioTitle); // T과제 설명 (카테고리 매핑, 비과제 카테고리는 null)
+  // 이해 확인 선택지 — 네 과제의 상황 요약, 세션 생애 동안 순서 고정 셔플
+  const compOptions = useMemo(() => {
+    const arr = STUDY_TASKS.map((t) => ({ id: t.id, label: t.situation }));
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, []);
   const [initialNeed, setInitialNeed] = useState<string | null>(null);
   const [chipSuggestions, setChipSuggestions] = useState<string[] | null>(null);
   const [chatInput, setChatInput] = useState("");
@@ -95,6 +104,28 @@ export default function VariantSession({
   const [pendingFirst, setPendingFirst] = useState<string | null>(null);
   // ③ 최종 선택 확정 (2026-08-11) — 마치기 → 최종 선택 → 사후설문 → 기준검증 순.
   const [finalChoiceOpen, setFinalChoiceOpen] = useState(false);
+  // 과제 이해 확인 (2026-08-26): 통과 전엔 첫 발화 입력이 비활성. 새로고침 재질문 방지.
+  const [compPassed, setCompPassed] = useState(
+    () => typeof window !== "undefined" && sessionStorage.getItem(`vc:comp:${sessionId}`) === "1",
+  );
+  const [compWrong, setCompWrong] = useState(false);
+  const compAttemptsRef = useRef(0);
+  // 소프트 게이트 (2026-08-26): 조기 종료 확인 + 종료 시점 라운드 기록
+  const [earlyConfirmOpen, setEarlyConfirmOpen] = useState(false);
+  const finishMetaRef = useRef<{ earlyFinish: boolean; roundsAtFinish: number } | null>(null);
+  const answerComprehension = (taskId: string) => {
+    compAttemptsRef.current += 1;
+    if (sessionTask && taskId === sessionTask.id) {
+      setCompPassed(true);
+      setCompWrong(false);
+      try { sessionStorage.setItem(`vc:comp:${sessionId}`, "1"); } catch { /* noop */ }
+      api.addMarker(sessionId, "other",
+        `comprehension_check passed attempts=${compAttemptsRef.current}`).catch(() => {});
+    } else {
+      setCompWrong(true);
+    }
+  };
+  const compPending = study && !!sessionTask && turns.length === 0 && !compPassed;
   const [finalSubmitting, setFinalSubmitting] = useState(false);
   const [postSurveyOpen, setPostSurveyOpen] = useState(false);
   const [postSubmitting, setPostSubmitting] = useState(false);
@@ -524,8 +555,10 @@ export default function VariantSession({
       // 본 상품이 없으면 고를 것도 없다 — 기록만 남기고 다음 단계로.
       // CC는 "하나의 상품을 최종 선택했다" 과제에만 제시한다 (2026-08-24 동결 문서
       // 4.7 — shortlist·탐색 계속·적합 없음은 강제 응답 없이 NA).
-      api.submitFinalChoice(sessionId, { status: "none_suitable", noneReason: "no_products" })
-        .catch(console.error);
+      api.submitFinalChoice(sessionId, {
+        status: "none_suitable", noneReason: "no_products",
+        earlyFinish: recommendRounds < MIN_RECOMMEND_ROUNDS, roundsAtFinish: recommendRounds,
+      }).catch(console.error);
       proceedAfterPostSurvey().catch(() => setFinished(true));
       return;
     }
@@ -535,7 +568,8 @@ export default function VariantSession({
   const confirmFinalChoice = async (payload: FinalChoicePayload) => {
     setFinalSubmitting(true);
     try {
-      await api.submitFinalChoice(sessionId, payload);
+      const gate = finishMetaRef.current ?? { earlyFinish: false, roundsAtFinish: recommendRounds };
+      await api.submitFinalChoice(sessionId, { ...payload, ...gate });
       setFinalChoiceOpen(false);
       if (payload.status === "final") {
         setPostSurveyOpen(true); // CC 3문항 — 최종 선택 과제에만
@@ -657,19 +691,20 @@ export default function VariantSession({
           // 잠금 사유를 클릭/인라인으로 알린다 — title 툴팁은 모바일에서 안 보여
           // 참가자가 비활성 버튼 앞에 갇혔다 (2026-08-20 실측: 64턴 "Ready to finish" 루프).
           <div className="flex shrink-0 items-center gap-2">
-            {!canFinish && (
-              <span className="hidden max-w-[220px] text-right text-[10px] leading-tight text-[#9ca3af] sm:block">
-                {STUDY_UI.chat.finishLocked}
-              </span>
-            )}
+            {/* 소프트 게이트 (2026-08-26): 버튼은 항상 활성. 2라운드 전에는 확인
+                대화상자를 한 번 거치고, 진행 시 earlyFinish로 기록된다. */}
             <button
-              onClick={() => (canFinish ? openFinalChoice() : showToast(STUDY_UI.chat.finishLocked))}
-              aria-disabled={!canFinish}
-              title={canFinish ? undefined : STUDY_UI.chat.finishLocked}
-              className={`btn btn-primary shrink-0 whitespace-nowrap px-2.5 py-1 text-xs ${canFinish ? "" : "cursor-not-allowed opacity-40"}`}
+              onClick={() => {
+                if (canFinish) {
+                  finishMetaRef.current = { earlyFinish: false, roundsAtFinish: recommendRounds };
+                  openFinalChoice();
+                } else {
+                  setEarlyConfirmOpen(true);
+                }
+              }}
+              className="btn btn-primary shrink-0 whitespace-nowrap px-2.5 py-1 text-xs"
             >
-              {/* 잠긴 동안 버튼이 진행도(1/2)를 스스로 말한다 — 호버 툴팁·토스트를
-                  못 보는 참가자도 "2까지 채워야 열린다"를 상시로 본다 (2026-08-20). */}
+              {/* 권장 기준선(추천 2라운드)까지의 진행 넛지 — 잠금이 아니라 표시다. */}
               <span className="sm:hidden">
                 {STUDY_UI.chat.finishShort}
                 {!canFinish && (
@@ -709,24 +744,64 @@ export default function VariantSession({
                 {/* T과제 설명 (2026-08-23) — 참가자가 이번 과제의 상황을 세션 안에서
                     다시 읽을 수 있어야 한다 (선택 화면에서 한 번 본 것으론 잊힌다). */}
                 {sessionTask && (
-                  <div className="mx-auto mt-4 max-w-md rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 text-left">
+                  <div
+                    className="msg-in mx-auto mt-6 max-w-md rounded-2xl border border-indigo-100 bg-indigo-50/60 px-5 py-4 text-left"
+                    style={{ animationDelay: "80ms" }}
+                  >
                     <div className="text-[11px] font-bold uppercase tracking-wide text-[#4f46e5]">
                       {STUDY_UI.tasks.inSession} · {sessionTask.title}
                     </div>
-                    <p className="mt-1 text-[12px] leading-relaxed text-[#4b5563]">
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-[#4b5563]" style={{ textWrap: "pretty" }}>
                       {sessionTask.description}
+                    </p>
+                    {/* 사전 고지 (2026-08-26): 마칠 때 선택 이유를 설명한다 — 책임성 장치 */}
+                    <p className="mt-3 border-t border-indigo-100 pt-2.5 text-[11px] leading-relaxed text-[#6b7280]">
+                      {STUDY_UI.tasks.fitNotice}
                     </p>
                   </div>
                 )}
-                <p className="mx-auto mt-3 max-w-sm text-[13px] leading-relaxed text-[#9aa0a6]">
-                  {STUDY_UI.chat.browseGuide}
-                </p>
-                <p className="mx-auto mt-2 max-w-md text-[11px] leading-relaxed text-[#b0b8c1]">
+                {/* 과제 이해 확인 (2026-08-26) — 통과 전엔 입력 비활성. 통과 전에는
+                    이 카드까지만 보여 화면의 글 양을 줄인다(안내문은 통과 후 등장). */}
+                {compPending ? (
+                  <div
+                    className="msg-in mx-auto mt-4 max-w-md rounded-2xl border border-[#e4e8eb] bg-white px-5 py-4 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_12px_-4px_rgba(0,0,0,0.06)]"
+                    style={{ animationDelay: "180ms" }}
+                  >
+                    <div className="text-[13px] font-bold text-[#191919]">{STUDY_UI.tasks.comprehensionQ}</div>
+                    <div className="mt-3 space-y-2">
+                      {compOptions.map((o, i) => (
+                        <button
+                          key={o.id}
+                          onClick={() => answerComprehension(o.id)}
+                          className="msg-in block min-h-11 w-full rounded-xl border border-[#e4e8eb] px-3.5 py-2.5 text-left text-xs leading-snug text-[#404040] transition-[border-color,background-color,transform] duration-150 hover:border-[#4f46e5] hover:bg-[#fafbff] active:scale-[0.96]"
+                          style={{ animationDelay: `${260 + i * 60}ms` }}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                    {compWrong && (
+                      <p className="mt-2.5 text-[11px] font-semibold text-rose-600">
+                        {STUDY_UI.tasks.comprehensionWrong}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  /* 탐색·종료 안내는 통과 후에만 — 시작 시점 글 양 절감 */
+                  <p className="msg-in mx-auto mt-5 max-w-sm text-[13px] leading-relaxed text-[#9aa0a6]"
+                     style={{ animationDelay: "160ms", textWrap: "pretty" }}>
+                    {STUDY_UI.chat.browseGuide}
+                  </p>
+                )}
+                {/* 카탈로그 고지는 disclosure 성격 — 확인 통과 여부와 무관하게 항상 표시 */}
+                <p className="msg-in mx-auto mt-3 max-w-md text-[12px] leading-relaxed text-[#9aa0a6]"
+                   style={{ animationDelay: "320ms", textWrap: "pretty" }}>
                   {STUDY_UI.chat.catalogNote}
                 </p>
               </>
             )}
-            {scenarioTitle && (
+            {/* 일반 "구매 상황 상상" 안내는 T과제 설명과 같은 말의 중복 — 과제가 없을 때만 */}
+            {scenarioTitle && !sessionTask && (
               <div className="mt-2 rounded-lg bg-indigo-50/60 px-3 py-2 text-xs leading-relaxed text-[#4b5563]">
                 {tr(
                   `'${categoryLabel(scenarioTitle)}'을(를) 구매하는 상황이라고 생각하고, 에이전트와 대화하며 실제로 살 만한 상품을 찾아보세요.`,
@@ -905,7 +980,7 @@ export default function VariantSession({
           value={chatInput}
           onChange={setChatInput}
           onSend={(msg, src) => { setChatInput(""); sendMessage(msg, src); }}
-          disabled={busy}
+          disabled={busy || compPending}
           loading={busy}
           placeholder={STUDY_UI.chat.inputPlaceholder}
           suggestions={
@@ -981,6 +1056,36 @@ export default function VariantSession({
       )}
 
       {/* 스터디 생명주기 — 마치기 → ③최종 선택 확정 → 사후설문 → ④기준검증 → 완료 화면 */}
+      {study && earlyConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div role="dialog" aria-modal="true" aria-label={STUDY_UI.chat.earlyFinishTitle}
+               className="card w-full max-w-sm p-5">
+            <h2 className="text-base font-bold text-[#191919]">{STUDY_UI.chat.earlyFinishTitle}</h2>
+            <p className="mt-1.5 text-xs leading-relaxed text-[#5f6368]">
+              {STUDY_UI.chat.earlyFinishBody(recommendRounds)}
+            </p>
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setEarlyConfirmOpen(false);
+                  finishMetaRef.current = { earlyFinish: true, roundsAtFinish: recommendRounds };
+                  openFinalChoice();
+                }}
+                className="btn shrink-0 px-4 py-2 text-sm"
+              >
+                {STUDY_UI.chat.earlyFinishLeave}
+              </button>
+              <button
+                onClick={() => setEarlyConfirmOpen(false)}
+                className="btn btn-primary w-full py-2 text-sm"
+              >
+                {STUDY_UI.chat.earlyFinishStay}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {study && finalChoiceOpen && (
         <FinalChoiceModal
           products={seenProducts}

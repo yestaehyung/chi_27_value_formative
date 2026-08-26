@@ -159,8 +159,11 @@ def _task_ui_state(db: DbSession, session: models.Session, *, showing_cards: boo
         .count()
     ) + (1 if showing_cards else 0)
     ui = {
+        # 소프트 게이트 (2026-08-26): 버튼은 항상 눌린다. False = 아직 권장 기준선
+        # (추천 2라운드) 미달 — 일찍 마치면 확인 대화상자를 한 번 거친다.
         "finishUnlocked": card_turns >= 2,
-        "unlockRule": "the Finish button unlocks after two rounds of recommendations",
+        "unlockRule": ("the Finish button is always available; before two rounds of "
+                       "recommendations, finishing shows one confirmation dialog"),
     }
     if not infers_intention(session):
         # baseline1: 상품 검색은 매턴 현재 요청만 반영한다 — 응답이 이전 턴 조건을
