@@ -53,9 +53,7 @@ def test_system_for_appends_directive_only_for_participant_tasks(en_locale):
     assert "in English" in system_for("rerank")
     # Participant-facing rationale and decision-layer prose must not leak Korean in EN mode.
     assert "Write rationale in English" in system_for("anchor_mapping")
-    assert "Keep quote verbatim" in system_for("motivation_detection")
     assert "natural English" in system_for("criterion_value_interpretation")
-    assert "participant-facing English" in system_for("clarification_motivation")
 
 
 def test_system_for_korean_mode_is_passthrough():

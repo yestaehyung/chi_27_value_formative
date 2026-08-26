@@ -321,83 +321,6 @@ def criterion_value_interpretation(ctx: dict) -> dict:
             "values": values, "analysisStatus": "ok"}
 
 
-def clarification_motivation(ctx: dict) -> dict:
-    candidate = ctx.get("candidate") or {}
-    label = str(candidate.get("criterionLabel") or "")
-    low = " ".join([label, *(candidate.get("quotes") or [])]).lower()
-    motivation = None
-    rationale = None
-    question = None
-    if _has(low, "gift", "recipient", "for my friend", "for my partner"):
-        motivation = "Role"
-        rationale = "The purchase is being made for another person."
-        question = "Is choosing something that feels right for the recipient the main reason this matters?"
-    elif _has(low, "deal", "bargain", "save money", "best price"):
-        motivation = "BargainValue"
-        rationale = "The evidence emphasizes getting a satisfying deal."
-        question = "Is the sense of getting a good deal what matters most here?"
-    status = "ok" if motivation else "insufficient_evidence"
-    return {"criterionLabel": label, "motivation": motivation, "rationale": rationale,
-            "questionHint": question, "analysisStatus": status}
-
-
-# ---------------------------------------------------------------------------
-# Stage 2 — 6-anchor mapping (spec §15.2)
-# ---------------------------------------------------------------------------
-ANCHOR_TABLE: dict[str, list[tuple[str, float, str, str]]] = {
-    T_GIFT_SPORT: [
-        ("Conditional", 0.85, "confirmed", "수령자와 선물이라는 사용 맥락이 분명히 드러났다."),
-        ("Social", 0.7, "inferred", "타인에게 주는 선물이라는 관계 맥락이 있다."),
-        ("Functional", 0.65, "inferred", "운동 기능 적합성이 필요하다."),
-    ],
-    T_GIFT_GENERIC: [
-        ("Conditional", 0.8, "confirmed", "선물이라는 사용 맥락이 판단 기준을 바꾼다."),
-        ("Social", 0.65, "inferred", "수령자와의 관계 적절성이 작동한다."),
-    ],
-    T_BRAND_UNKNOWN: [
-        ("Epistemic", 0.7, "confirmed", "브랜드 정보가 부족해 비교·학습이 필요하다."),
-        ("Emotional", 0.6, "inferred", "실패에 대한 불안을 줄이려는 신호가 있다."),
-    ],
-    T_LOW_PRICE: [
-        ("Functional", 0.8, "confirmed", "가격 대비 효용을 직접 언급했다."),
-    ],
-    T_VALUE_FOR_MONEY: [
-        ("Functional", 0.85, "confirmed", "가성비를 직접 언급했다."),
-    ],
-    T_NOT_TOO_CHEAP: [
-        ("Social", 0.9, "confirmed", "선물의 인상과 관계적 적절성을 중요하게 보고 있다."),
-        ("Conditional", 0.75, "confirmed", "선물이라는 사용 맥락이 가격 판단 기준을 바꾸고 있다."),
-        ("Emotional", 0.45, "inferred", "수령자가 부정적으로 느낄 가능성을 피하려는 신호가 있다."),
-    ],
-    T_LONG_TERM_TRUST: [
-        ("Emotional", 0.75, "inferred", "오래 써도 문제없다는 안심이 필요하다."),
-        ("Functional", 0.6, "inferred", "내구성과 품질 지속성이 관련된다."),
-    ],
-    T_DISTINCTIVE: [
-        ("Social", 0.7, "inferred", "흔한 선물은 관계적 인상이 약하다고 본다."),
-        ("Emotional", 0.5, "inferred", "특별한 선물이 주는 긍정적 감정을 원한다."),
-        ("Epistemic", 0.4, "weak", "남다른 것을 탐색하려는 신호."),
-    ],
-    T_SELLER_TRUST: [
-        ("Emotional", 0.75, "inferred", "셀러 신뢰로 실패 불안을 줄이려 한다."),
-        ("Epistemic", 0.45, "weak", "신뢰 단서를 탐색하고 있다."),
-    ],
-    T_SAFE_CHOICE: [
-        ("Emotional", 0.8, "confirmed", "실패 회피와 안심을 직접 언급했다."),
-        ("Epistemic", 0.4, "inferred", "불확실성 해소가 필요하다."),
-    ],
-    T_BATTERY: [("Functional", 0.8, "confirmed", "배터리 스펙을 직접 언급했다.")],
-    T_WATERPROOF: [("Functional", 0.8, "confirmed", "방수 기능을 직접 언급했다.")],
-    T_DESIGN: [
-        ("Emotional", 0.55, "inferred", "디자인이 주는 긍정적 감정을 원한다."),
-        ("Social", 0.45, "weak", "타인에게 보이는 인상이 일부 작동한다."),
-    ],
-    T_PRICE_BURDEN: [
-        ("Functional", 0.6, "confirmed", "지출 부담을 직접 언급했다."),
-        ("Conditional", 0.4, "inferred", "예산이라는 맥락 제약이 있다."),
-    ],
-}
-
 
 def anchor_mapping(ctx: dict) -> dict:
     mappings = []
@@ -812,21 +735,6 @@ def sme_translation(ctx: dict) -> dict:
         out.append({"conceptLabel": label, "actions": match[0], "positioning": match[1]})
     return {"translations": out}
 
-
-def motivation_detection(ctx: dict) -> dict:
-    """설문 문항 rubric 기반 동기 신호 (M8) — mock은 cue 매칭 + 극성 검사로 결정론 재현."""
-    from app.agents.motivation import MOTIVATION_SPEC
-
-    text = ctx.get("content", "")
-    signals = []
-    for dim, spec in MOTIVATION_SPEC.items():
-        hit = next((c for c in spec["cues"] if c in text), None)
-        if not hit:
-            continue
-        if dim == "BargainValue" and _is_negative_cheap_remark(text):
-            continue  # 극성 검사: 저렴함 *회피*는 득템 동기의 증거가 아니다
-        signals.append({"dim": dim, "level": "suggests", "quote": hit})
-    return {"signals": signals}
 
 
 def judge_causal_relation(ctx: dict) -> dict:
@@ -1306,9 +1214,7 @@ TASK_HANDLERS = {
     "relation_classification": relation_classification,
     "conflict_detection": conflict_detection,
     "intent_classification": intent_classification,
-    "motivation_detection": motivation_detection,
     "criterion_value_interpretation": criterion_value_interpretation,
-    "clarification_motivation": clarification_motivation,
     "judge_causal_relation": judge_causal_relation,
     "persona_profile": persona_profile,
     "scenario_match": scenario_match,

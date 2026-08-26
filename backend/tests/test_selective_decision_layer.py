@@ -73,7 +73,8 @@ def _mark_product_shown(db, session, index: int = 1):
 
 
 def test_new_llm_tasks_have_all_three_registry_contracts():
-    for task in ("criterion_value_interpretation", "clarification_motivation"):
+    # clarification_motivation은 2026-08-26 D5로 삭제 — 남은 결정층 태스크만 검사
+    for task in ("criterion_value_interpretation",):
         assert task in TASK_HANDLERS
         assert task in SYSTEM_BY_TASK
         assert task in FORMAT_BY_TASK
@@ -159,7 +160,7 @@ def test_decision_analysis_failure_is_visible_and_falls_back_to_direct_criteria(
         name = "stub"
 
         async def generate_json(self, _messages, task=None, context=None, **_kwargs):
-            if task in {"criterion_value_interpretation", "clarification_motivation"}:
+            if task in {"criterion_value_interpretation"}:
                 raise RuntimeError("intentional decision-layer failure")
             return TASK_HANDLERS[task](context or {})
 

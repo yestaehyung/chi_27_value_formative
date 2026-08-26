@@ -266,30 +266,6 @@ USER_AGENT_REACTION_SYSTEM = """너는 쇼핑 시뮬레이션의 가상 사용�
 JSON으로만 응답하라."""
 
 # 설문 문항은 agents/motivation.py의 MOTIVATION_SPEC과 동일 (동기화 유지 — 순환 import로 직접 참조 불가)
-MOTIVATION_DETECTION_SYSTEM = """너는 쇼핑 동기 측정 engine이다. 검증된 쇼핑 동기 설문(Arnold & Reynolds 2003 헤도닉 6 + Babin Utilitarian)의
-각 문항에 대해, 사용자의 *이번 발화 하나*가 "이 사람은 이 문항에 동의할 것이다"의 증거가 되는지 판단한다.
-
-문항 (차원: 문항 취지):
-- Adventure: 쇼핑하면서 새로운 세계를 탐험하는 기분이 든다
-- Gratification: 기분 전환이나 나에게 주는 보상으로 쇼핑한다
-- Role: 다른 사람을 위해 골라주는 데서 즐거움을 느낀다
-- BargainValue: 할인·득템에서 즐거움을 느낀다
-- SocialShopping: 다른 사람과 함께 고르거나 의견을 나누며 쇼핑한다
-- Idea: 트렌드나 신제품 정보를 얻으려 쇼핑한다
-- Utilitarian: 필요한 걸 효율적으로 사서 과업을 끝내려 한다
-
-증거 수준 — 그 동기(문항 내용)가 발화에 *어떻게 드러나는가*(텍스트의 속성)로 판정한다. 읽는 쪽이 추론을 몇 번 하느냐가 아니다. 차원마다 해당될 때만:
-- asserts: 발화가 그 동기를 직접 말한다. 사실상 그 해석 외에는 없다.
-- suggests: 직접 말하진 않지만 분명히 함의된다 — 그 동의가 누가 봐도 가장 자연스러운 읽기다.
-- hints: 그 동기는 여러 가능한 해석 중 하나일 뿐이다. 양립하지만, 동의하지 않는 해석도 무리 없이 가능하다.
-경계: asserts↔suggests = 텍스트에 *말했나 vs 함의했나* / suggests↔hints = *분명히 그 해석인가 vs 여러 해석 중 하나인가*.
-
-규칙:
-1. 이번 발화 하나만 보고 판단하라. 이 사람 전체에 대한 종합 추정을 내지 말라 (누적은 시스템이 한다).
-2. 차원마다 반드시 발화에서 quote를 따라. 따올 구절이 없으면 그 차원은 출력하지 말라.
-3. 부정·거절 맥락에 주의하라: "저렴해 보이면 싫어요"는 BargainValue의 증거가 아니다 (저렴함 회피).
-4. JSON으로만 응답하라."""
-
 JUDGE_CAUSAL_SYSTEM = """너는 쇼핑 대화에서 추론된 의도 간 인과 주장(A 때문에 B가 중요해졌다)을 검증하는 judge다.
 너는 주장을 만들지 않는다 — 주어진 주장과 인용된 근거만 보고 평결한다.
 
@@ -525,16 +501,6 @@ purchaseOption 기준: 기준이 가리키는 속성이 의류 사이즈처럼 *
 - actionableCriterion은 추천에서 대조할 수 있는 구체적 구매 판단 기준이어야 한다.
 - 단순 속성 질문 하나뿐이면 analysisStatus="insufficient_evidence", values=[]로 낸다.
 - 사용자의 성격이나 고정 가치관을 단정하지 말라.""",
-    "clarification_motivation": """
-출력 JSON 스키마:
-{"criterionLabel":string,
-"motivation":"Adventure"|"Gratification"|"Role"|"BargainValue"|"SocialShopping"|"Idea"|"Utilitarian"|null,
-"rationale":string|null,"questionHint":string|null,
-"analysisStatus":"ok"|"insufficient_evidence"}
-
-- 동기는 상품 순위가 아니라 확인 질문의 표현을 고르는 데만 쓴다.
-- candidate evidence로 분명하지 않으면 motivation=null, analysisStatus="insufficient_evidence".
-- questionHint는 한 번에 한 가지만 묻는 짧고 추측을 드러내는 확인 질문이다.""",
     "anchor_mapping": """
 출력 JSON 스키마:
 {"mappings":[{"topicLabel":string,"anchors":[
@@ -594,16 +560,6 @@ topicLabels 목록에 없는 label은 사용하지 말라. 명확하지 않으�
 - 충돌이 없으면 {"conflicts":[]}.""",
     "intent_classification": """
 출력 JSON 형식: {"intents":["reveal|interpret|revise|inquire|accept|reject|chitchat"]} (1개 이상)""",
-    "motivation_detection": """
-출력 JSON 형식:
-{"signals":[{"dim":"Adventure|Gratification|Role|BargainValue|SocialShopping|Idea|Utilitarian",
-"level":"asserts|suggests|hints","quote":"발화에서 그대로 따온 구절"}]}
-quote가 없는 차원은 출력하지 말라. 신호가 전혀 없으면 {"signals":[]}.
-
-예시 — 발화 "친구 생일 선물 찾고 있어요. 요즘 뭐가 인기인지 잘 몰라서요.":
-{"signals":[
-{"dim":"Role","level":"asserts","quote":"친구 생일 선물 찾고 있어요"},
-{"dim":"Idea","level":"suggests","quote":"요즘 뭐가 인기인지"}]}""",
     "judge_causal_relation": """
 출력 JSON 형식:
 {"verdict":"supported|downgrade|rejected","supportedLevel":"stated_cause|strong_inference|weak"|null,
@@ -1043,12 +999,6 @@ CRITERION_VALUE_INTERPRETATION_SYSTEM = """너는 대화형 쇼핑 연구의 결
 근거가 부족하면 insufficient_evidence로 강등한다. JSON으로만 응답한다."""
 
 
-CLARIFICATION_MOTIVATION_SYSTEM = """너는 대화형 쇼핑 연구의 확인 질문 설계기다.
-구매 기준 후보 하나의 증거에서 Arnold & Reynolds 쇼핑 동기 중 질문 표현에 도움이 되는 동기를
-최대 하나 고른다. 이 출력은 측정용 motivationScores와 분리된 결정층 가설이며 상품 순위에 쓰지 않는다.
-근거가 약하면 동기를 고르지 않는다. 질문은 짧고 자연스러우며 추측임을 드러내야 한다.
-JSON으로만 응답한다."""
-
 
 ACTION_DECISION_SYSTEM = """너는 쇼핑 대화의 플래너다 — 대화를 읽고 다음 행동과 그 인자를 정한다.
 
@@ -1147,17 +1097,9 @@ EN_DIRECTIVES = {
         "Write rationale in English. Keep quoted evidence in the participant's original"
         " language and use only the five TCV anchor names defined below."
     ),
-    "motivation_detection": (
-        "Keep quote verbatim in the participant's language. Do not emit participant-facing"
-        " prose; motivation dimension names remain the fixed schema labels."
-    ),
     "criterion_value_interpretation": (
         "Write actionableCriterion and every rationale in natural English. Keep the"
         " fixed TCV anchor labels unchanged."
-    ),
-    "clarification_motivation": (
-        "Write rationale and questionHint in natural participant-facing English. Keep"
-        " the fixed motivation label unchanged."
     ),
     "state_summary": (
         "Write `summary` in English — hedged tone (\"It seems … matter to you\"),"
@@ -1232,9 +1174,7 @@ SYSTEM_BY_TASK = {
     "relation_classification": RELATION_SYSTEM,
     "conflict_detection": CONFLICT_SYSTEM,
     "intent_classification": INTENT_SYSTEM,
-    "motivation_detection": MOTIVATION_DETECTION_SYSTEM,
     "criterion_value_interpretation": CRITERION_VALUE_INTERPRETATION_SYSTEM,
-    "clarification_motivation": CLARIFICATION_MOTIVATION_SYSTEM,
     "judge_causal_relation": JUDGE_CAUSAL_SYSTEM,
     "persona_profile": PERSONA_PROFILE_SYSTEM,
     "scenario_match": SCENARIO_MATCH_SYSTEM,

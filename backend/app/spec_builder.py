@@ -1,6 +1,6 @@
 """참가자 자연어 명세 파일 (= AI memory / intent specification).
 
-KG의 사람용 렌더링. 참가자의 여러 세션에 누적된 trait(TCV) 가치 + 동기(motivation)
+KG의 사람용 렌더링. 참가자의 여러 세션에 누적된 trait(TCV) 가치
 + 현재 기준/회피 + 사용자 수정 이력을 하나의 마크다운 문서로 합성한다.
 매 턴(혹은 세션 종료) 호출되어 점점 보완된다. 수정은 칩에서 하고, 이 파일은
 그 결과를 비추는 읽기 전용 거울 (추적성 위해 편집은 구조화된 KG 쪽에서).
@@ -9,18 +9,12 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session as DbSession
 
-from app.agents.motivation import MOTIVATION_SPEC
 from app.db import models
 from app.ontology.anchor_mapper import TRAIT_ANCHORS
 
 ANCHOR_KO = {
     "Functional": "실용·성능", "Social": "사회적 이미지·관계", "Emotional": "정서·안심",
     "Epistemic": "탐색·학습", "Conditional": "상황 적합",
-}
-MOTIV_KO = {
-    "Adventure": "탐험·발견의 재미", "Gratification": "자기보상", "Role": "남을 위한 쇼핑의 즐거움",
-    "BargainValue": "득템·가성비의 즐거움", "SocialShopping": "함께 고르기", "Idea": "트렌드 탐색",
-    "Utilitarian": "효율·과업 완료",
 }
 
 
@@ -52,20 +46,6 @@ def _aggregate_traits(db: DbSession, session_ids: list[str]) -> dict[str, float]
     return {a: round(sum(v) / len(v), 2) for a, v in agg.items()}
 
 
-def _latest_motivation(db: DbSession, session_ids: list[str]) -> dict[str, float]:
-    """가장 최근 세션의 motivation 점수 (동기는 상황적이라 최신을 대표값으로)."""
-    for sid in reversed(session_ids):
-        snap = (
-            db.query(models.PreferenceStateSnapshot)
-            .filter(models.PreferenceStateSnapshot.session_id == sid)
-            .order_by(models.PreferenceStateSnapshot.created_at.desc())
-            .first()
-        )
-        if snap and (snap.motivation_scores or {}):
-            return snap.motivation_scores
-    return {}
-
-
 def build_participant_spec(db: DbSession, participant_id: str) -> str:
     """참가자 명세 마크다운 합성 (결정적 — LLM 없이 KG에서 직접 렌더)."""
     p = db.get(models.Participant, participant_id)
@@ -73,7 +53,6 @@ def build_participant_spec(db: DbSession, participant_id: str) -> str:
     sids = [s.id for s in sessions]
 
     traits = _aggregate_traits(db, sids)
-    motivation = _latest_motivation(db, sids)
 
     # 최신 세션의 현재 기준/회피
     latest_snap = None
@@ -108,14 +87,7 @@ def build_participant_spec(db: DbSession, participant_id: str) -> str:
     else:
         lines.append("- _아직 파악된 가치가 없습니다._")
 
-    # 쇼핑 동기 (motivation)
-    lines.append("\n## 쇼핑 동기 (Hedonic/Utilitarian · 상황적)")
-    strong = [(d, v) for d, v in sorted(motivation.items(), key=lambda x: -x[1]) if v >= 0.4]
-    if strong:
-        for d, v in strong:
-            lines.append(f"- **{MOTIV_KO.get(d, d)}** ({d}): {v:.2f} — {MOTIVATION_SPEC.get(d, {}).get('survey', '')}")
-    else:
-        lines.append("- _아직 드러난 쇼핑 동기가 없습니다._")
+    # (쇼핑 동기 섹션 제거 — 2026-08-26 TCV 단일 축, D5)
 
     # 현재 기준 / 회피
     lines.append("\n## 현재 기준 / 회피")
