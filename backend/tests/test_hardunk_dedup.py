@@ -95,3 +95,24 @@ def test_llm_weak_duplicating_code_warning_is_dropped():
     assert "Wood veneer may scratch easily" in weak
     assert not any("cannot confirm solid wood" in w for w in weak)
     assert not any("Cable management not mentioned" in w for w in weak)
+
+
+def test_card_matched_quote_verification():
+    """D4 (2026-08-26): matched의 {"text","quote"}는 quote가 후보 원문에 실재해야
+    살아남는다 — 지어낸 근거는 드롭, 문자열 항목은 관용 유지(구형·mock)."""
+    criteria = [{"label": "white color", "kind": "constraint", "purchaseOption": False}]
+    raw = {"verdicts": [{"index": 0, "cells": {}}], "order": [0],
+           "cards": [{"index": 0, "reason": "r", "weak": [], "matched": [
+               {"text": "27-inch 4K display", "quote": "27-Inch 4K UHD"},     # 원문 존재 → 유지
+               {"text": "White color", "quote": "white fabric shade"},        # 원문에 없음 → 드롭
+               "legacy string item",                                          # 관용 유지
+           ]}]}
+    # _run의 상품 제목은 "상품 p0" — 검증 원문에 4K 문구가 있도록 keyAttributes를 주입
+    from unittest.mock import patch
+    with patch("app.products.profiles.get",
+               return_value={"keyAttributes": ["27-Inch 4K UHD IPS panel"], "caveats": []}):
+        _reranked, cards, _excluded, _matrix = _run(raw, criteria)
+    matched = cards["p0"]["matched"]
+    assert "27-inch 4K display" in matched
+    assert "legacy string item" in matched
+    assert not any("White" in m for m in matched), matched

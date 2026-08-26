@@ -162,3 +162,100 @@ def test_plan_new_topics_treats_revision_as_existing(client):
     assert plan_new_topics(existing, [ext]) == []
     # revisesLabel 없이 안 닮은 라벨이면 종전대로 새 토픽
     assert plan_new_topics(existing, [_ext("light blue color")]) != []
+
+
+def test_polarity_reversal_updates_kind_and_implied(client):
+    """반전 revision(원함→회피)은 라벨만이 아니라 kind·implied 파생까지 갱신한다
+    (2026-08-26 전체 갱신 승인) — 옛 impliedHardConstraint가 남으면 화면과 정반대
+    집행이 된다 (5차 QA: no drawers인데 서랍 책상 1위)."""
+    sid = _new_session(client)
+    _merge(sid, [_ext("desk with drawers", kind="constraint",
+                      impliedHardConstraint="includes drawers")])
+    _merge(sid, [_ext("no drawers", revisesLabel="desk with drawers",
+                      kind="avoidance", impliedAvoidance="desks with drawers",
+                      impliedHardConstraint=None, ev="tn_2")])
+
+    from app.db import models
+    from app.db.database import SessionLocal
+    db = SessionLocal()
+    try:
+        t = db.query(models.IntentionTopic).filter(
+            models.IntentionTopic.session_id == sid).one()
+        assert t.label == "no drawers"
+        h = t.hints or {}
+        assert h.get("kind") == "avoidance"
+        assert h.get("impliedHardConstraint") is None, "옛 하드 제약 함의가 남으면 안 된다"
+        assert h.get("impliedAvoidance") == "desks with drawers"
+    finally:
+        db.close()
+    corr = _corrections(sid)
+    assert ("revised_by_utterance", "desk with drawers", "no drawers") in corr
+
+
+def test_revision_only_commit_regenerates_summary(client):
+    """revision-only 턴(새 칩 0)에서도 요약이 새 라벨로 다시 생성된다 (2026-08-26).
+
+    이전에는 요약 재생성이 '새 칩이 생긴 커밋'에만 걸려, 칩은 $50인데 요약은
+    $35에 머물렀다 (5·6차 QA). 스크립트된 provider로 추출 출력을 고정하고,
+    state_summary 호출 여부와 그 재료(criteria 라벨)를 검사한다.
+    """
+    import asyncio as _asyncio
+
+    from app.core.ids import new_id
+    from app.db import models
+    from app.db.database import SessionLocal
+    from app.llm.mock_rules import TASK_HANDLERS
+    from app.preference_commit.commit_engine import run_preference_commit
+
+    db = SessionLocal()
+    try:
+        session = db.get(models.Session, _new_session(client))
+
+        calls: list[tuple[str, dict]] = []
+
+        class Scripted:
+            name = "stub"
+            def __init__(self):
+                self.step = 0
+            async def generate_json(self, _messages, task=None, context=None, **_kw):
+                calls.append((task, context or {}))
+                if task == "topic_extraction":
+                    if self.step == 0:
+                        self.step = 1
+                        return {"topics": [{
+                            "label": "budget under $35", "kind": "constraint",
+                            "confidence": 0.9, "confidenceLevel": "directly_stated",
+                            "priceMax": 47250,
+                            "sourceEvidence": [{"type": "turn", "id": self.tid1,
+                                                "quoteOrSummary": "under $35"}],
+                        }], "questionSignals": [], "interpretationCandidate": None}
+                    return {"topics": [{
+                        "label": "budget under $50", "kind": "constraint",
+                        "confidence": 0.9, "confidenceLevel": "directly_stated",
+                        "revisesLabel": "budget under $35", "priceMax": 67500,
+                        "sourceEvidence": [{"type": "turn", "id": self.tid2,
+                                            "quoteOrSummary": "raise to $50"}],
+                    }], "questionSignals": [], "interpretationCandidate": None}
+                return TASK_HANDLERS[task](context or {})
+
+        prov = Scripted()
+        t1 = models.Turn(id=new_id("turn"), session_id=session.id, turn_index=0,
+                         role="user", content="Keep it under $35.")
+        db.add(t1); db.commit(); prov.tid1 = t1.id
+        _asyncio.run(run_preference_commit(db, prov, session, [t1.id], [], "user_utterance"))
+
+        calls.clear()
+        t2 = models.Turn(id=new_id("turn"), session_id=session.id, turn_index=2,
+                         role="user", content="You may raise it to $50.")
+        db.add(t2); db.commit(); prov.tid2 = t2.id
+        _asyncio.run(run_preference_commit(db, prov, session, [t2.id], [], "user_utterance"))
+
+        summary_calls = [(t, c) for t, c in calls if t == "state_summary"]
+        assert summary_calls, "revision-only 턴에서 요약이 재생성돼야 한다"
+        labels = [c.get("criteria") or c for _, c in summary_calls]
+        assert "budget under $50" in str(labels), f"요약 재료가 새 라벨이어야 한다: {labels}"
+        assert "budget under $35" not in str(labels), "옛 라벨이 요약 재료에 남으면 안 된다"
+        # revision-only 턴에서는 충돌 감지를 돌리지 않는다
+        assert not any(t == "conflict_detection" for t, _ in calls)
+    finally:
+        db.rollback(); db.close()

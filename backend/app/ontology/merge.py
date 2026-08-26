@@ -183,10 +183,21 @@ def _apply_label_revision(
     if match.status == "corrected_by_user" or label == match.label:
         return
     before = {"label": match.label, "status": match.status,
-              "priority": match.priority, "confidence": match.confidence}
+              "priority": match.priority, "confidence": match.confidence,
+              "kind": (match.hints or {}).get("kind")}
     match.label = label
     if ext.get("description"):
         match.description = ext["description"]
+    # 전체 갱신 (2026-08-26 승인): 반전 revision("서랍 필수"→"서랍 회피")은 라벨만
+    # 바꾸면 안 된다 — 검색 스펙 컴파일러는 화면 라벨이 아니라 kind·implied 파생을
+    # 읽으므로, 옛 impliedHardConstraint가 남으면 화면("no drawers")과 정반대 집행
+    # ("서랍 포함" 하드 제약)이 된다 (5차 QA: no drawers인데 서랍 3개 책상 1위).
+    hints = dict(match.hints or {})
+    if ext.get("kind") in ("preference", "constraint", "avoidance", "context"):
+        hints["kind"] = ext["kind"]
+    hints["impliedHardConstraint"] = ext.get("impliedHardConstraint")
+    hints["impliedAvoidance"] = ext.get("impliedAvoidance")
+    match.hints = hints
     last_turn = (
         db.query(models.Turn)
         .filter(models.Turn.session_id == session.id)
@@ -201,7 +212,8 @@ def _apply_label_revision(
         turn_index=last_turn.turn_index if last_turn else 0,
         before=before,
         after={"label": match.label, "status": match.status,
-               "priority": match.priority, "confidence": match.confidence},
+               "priority": match.priority, "confidence": match.confidence,
+               "kind": (match.hints or {}).get("kind")},
     ))
 
 

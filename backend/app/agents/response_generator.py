@@ -300,6 +300,9 @@ async def rerank_by_intent(
 
     by_index = {i: sp for i, sp in enumerate(scored)}
     candidates = []
+    # 카드 matched 인용 검증용 — 각 후보에서 LLM에게 실제로 보여준 문자열 전체.
+    # 카드의 ✓는 이 텍스트에서 그대로 복사한 인용(quote)이 있어야 살아남는다 (D4).
+    verify_texts: dict[int, str] = {}
     for i, sp in enumerate(scored):
         p = sp.product
         cand = {
@@ -324,6 +327,12 @@ async def rerank_by_intent(
             })
         else:  # 프로필 없는 풀(seed/, seed_naver/) — 기존 산문 유지
             cand["description"] = p.description
+        verify_texts[i] = " ".join(
+            str(v) for v in [
+                cand.get("title"), cand.get("category"), cand.get("productType"),
+                cand.get("audience"), cand.get("description"),
+                *(cand.get("keyAttributes") or []), *(cand.get("caveats") or []),
+            ] if v)
         candidates.append(cand)
 
     # 행렬 셀의 키(cid) 부여 — hard cid의 "vio"만 배제로 이어진다 (기준 내용은 코드 무관)
@@ -349,10 +358,30 @@ async def rerank_by_intent(
     matrix["criterionLabels"] = label_by_cid  # 노출 셋의 unk 집계(확인 불가 고지)에 쓰인다
     context = {**intent_context, "criteria": criteria, "candidates": candidates}
 
-    def _parse_card(item: dict) -> dict:
+    def _parse_card(item: dict, verify_text: str = "") -> dict:
+        """카드 텍스트 파싱 + matched 인용 검증 (D4, 2026-08-26).
+
+        matched 항목이 {"text","quote"} 형태면 quote가 그 후보의 원문(verify_text)에
+        실제로 존재하는지 정규화 포함 검사로 대조한다 — 지어낸 근거("드레스 셔츠니까
+        흰색이겠지")는 원문 대조를 통과할 수 없으므로 그 ✓는 코드가 버린다.
+        문자열 항목은 관용 유지(구형 출력·mock) — 롤아웃 안전장치. 실패 방향은
+        '표시 하나 줄어듦'이지 '틀린 정보 생성'이 아니다."""
+        norm_full = _norm_label(verify_text)
+        matched: list[str] = []
+        for m in (item.get("matched") or []):
+            if isinstance(m, str):
+                matched.append(m)
+            elif isinstance(m, dict) and isinstance(m.get("text"), str):
+                quote = str(m.get("quote") or "").strip()
+                if quote and _norm_label(quote) and _norm_label(quote) in norm_full:
+                    matched.append(m["text"])
+                else:
+                    import logging
+                    logging.info("card matched dropped — quote not in candidate text: %r / %r",
+                                 m.get("text"), quote[:60])
         return {
             "reason": (item.get("reason") or "").strip(),
-            "matched": [m for m in (item.get("matched") or []) if isinstance(m, str)][:2],
+            "matched": matched[:2],
             "weak": [w for w in (item.get("weak") or []) if isinstance(w, str)][:2],
         }
 
@@ -430,7 +459,7 @@ async def rerank_by_intent(
             for item in raw.get("cards") or []:
                 idx = item.get("index") if isinstance(item, dict) else None
                 if idx in by_index:
-                    card_texts[by_index[idx].product.id] = _parse_card(item)
+                    card_texts[by_index[idx].product.id] = _parse_card(item, verify_texts.get(idx, ""))
         else:
             # 구 스키마 폴백 — 명시 exclude:true만 제외로 인정 (2026-07-07 계약)
             for item in raw.get("ranking", []):
@@ -438,7 +467,7 @@ async def rerank_by_intent(
                 if idx in by_index and idx not in order:
                     order.append(idx)
                     pid = by_index[idx].product.id
-                    card_texts[pid] = _parse_card(item)
+                    card_texts[pid] = _parse_card(item, verify_texts.get(item.get("index"), "") if isinstance(item, dict) else "")
                     if item.get("exclude") is True:
                         excluded[pid] = (item.get("excludeReason") or "").strip()
     except Exception:  # noqa: BLE001 — 폴백: 입력 순서 유지, 제외 없음

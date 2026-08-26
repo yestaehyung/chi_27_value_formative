@@ -101,6 +101,18 @@ async def run_preference_commit(
 
     pending_new = plan_new_topics(pre_existing, extracted)
 
+    # revision 감지 (2026-08-26): 기존 기준의 내용을 바꾸는 턴은 새 칩이 없어도
+    # 요약을 다시 써야 한다 — 안 그러면 칩은 $220인데 요약은 $150에 머문다
+    # (5·6차 QA 재현 3회). {topic_id: 새 라벨}로 요약 재료의 라벨 치환에도 쓴다.
+    from app.ontology.merge import _find_revision_target
+
+    revised_labels: dict[str, str] = {}
+    for _ext in extracted:
+        if isinstance(_ext, dict):
+            _t = _find_revision_target(pre_existing, _ext)
+            if _t is not None and (_ext.get("label") or "").strip():
+                revised_labels[_t.id] = _ext["label"].strip()
+
     from app.agents.decision_interpreter import candidate_is_activated
 
     decision_candidate_active = candidate_is_activated(
@@ -113,7 +125,7 @@ async def run_preference_commit(
     # 한 줄 요약은 칩이 바뀐 commit(pending_new 있음)에서만 새로 생성한다. 안 바뀌면
     # None → build_snapshot이 직전 문장을 이어받는다(깜빡임 방지).
     state_summary_text: str | None = None
-    if pending_new:
+    if pending_new or revised_labels:
         from app.agents.decision_interpreter import fetch_value_interpretation
         from app.preference_commit.summary_builder import fetch_state_summary
 
@@ -125,7 +137,8 @@ async def run_preference_commit(
         # 요약 근거: 라벨 + 사용자 우선순위/확인 상태 — 비교("A보다 B")는 이 근거가
         # 있을 때만 쓰도록 프롬프트가 제한한다 (라벨만 주면 비교가 전부 날조).
         prov_criteria = (
-            [{"label": t.label, "priority": t.priority, "status": t.status}
+            # revision 대상은 새 라벨로 치환 — 병합 전이라 pre_existing 라벨은 옛것이다
+            [{"label": revised_labels.get(t.id, t.label), "priority": t.priority, "status": t.status}
              for t in pre_existing if (t.hints or {}).get("kind") != "context"]
             + [{"label": p["label"], "priority": p.get("priority"), "status": "new"}
                for p in pending_new if p.get("kind") != "context"]
@@ -144,10 +157,15 @@ async def run_preference_commit(
                   "criterion_value_interpretation", analysis_failures)
             if decision_candidate_active else asyncio.sleep(0, result=None)
         )
+        # 충돌 감지는 새 칩이 있을 때만 — revision은 이미 해소된 변경이라 충돌 후보가 아니다
+        conflict_coro = (
+            _safe(fetch_conflicts(provider, existing_ctx, [p["label"] for p in pending_new]),
+                  [], "conflict_detection", analysis_failures)
+            if pending_new else asyncio.sleep(0, result=[])
+        )
         (raw_conflicts, state_summary_text,
          value_interpretation) = await asyncio.gather(
-            _safe(fetch_conflicts(provider, existing_ctx, [p["label"] for p in pending_new]),
-                  [], "conflict_detection", analysis_failures),
+            conflict_coro,
             _safe(fetch_state_summary(provider, prov_criteria, scenario, user_contents),
                   None, "state_summary", analysis_failures),
             value_coro,

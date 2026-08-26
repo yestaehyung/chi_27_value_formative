@@ -488,6 +488,16 @@ purchaseOption 기준: 기준이 가리키는 속성이 의류 사이즈처럼 *
   → {"label":"light blue color","revisesLabel":"white color",...}
   예: activeTopicLabels에 "traditional collar"가 있고 입력이 "Any collar style is fine"이면
   → {"label":"any collar style is fine","revisesLabel":"traditional collar","priority":"low",...}
+  **반전도 revision이다** — 원하던 것을 원하지 않게(또는 그 반대로) 뒤집는 발화면
+  kind와 implied 필드도 새 방향으로 낸다:
+  예: activeTopicLabels에 "desk with drawers"가 있고 입력이 "I do not want drawers"이면
+  → {"label":"no drawers","revisesLabel":"desk with drawers","kind":"avoidance",
+     "impliedAvoidance":"desks with drawers","impliedHardConstraint":null,...}
+  예: activeTopicLabels에 "no drawers"가 있고 입력이 "Actually, include drawers"이면
+  → {"label":"desk with drawers","revisesLabel":"no drawers","kind":"constraint",
+     "impliedHardConstraint":"includes drawers","impliedAvoidance":null,...}
+- label에는 기준의 내용만 쓴다 — "avoid:", "must:" 같은 분류 접두를 붙이지 말라
+  (분류는 kind 필드가 담당한다; 접두를 붙이면 화면에 "Avoid: avoid: ..."로 이중 표시된다).
 - 한 발화가 서로 독립적인 속성 여러 개를 담으면 **속성별로 분리해** 각각의 topic으로 추출하라 —
   사용자가 하나씩 따로 확인·수정할 수 있는 단위가 기준 하나다.
   예: "I need a machine-washable white business-casual shirt with a traditional collar"
@@ -658,7 +668,8 @@ coverageScore = 해당 pair 수 / 전체 pair 수.""",
 출력 JSON 스키마:
 {"verdicts":[{"index":int,"cells":{"<cid>":"ok"|"vio"|"unk", ...},"vioNote":string?}],
 "order":[int, ...],
-"cards":[{"index":int,"reason":string,"matched":[string],"weak":[string]}],
+"cards":[{"index":int,"reason":string,
+"matched":[{"text":string,"quote":string}],"weak":[string]}],
 "nearMissRequested":bool}
 
 - verdicts: **모든 후보**에 대해 판단하되, cells에는 **"vio"와 "unk"만** 기록한다 —
@@ -925,6 +936,11 @@ RERANK_SYSTEM = """너는 쇼핑 추천 후보를 재정렬하는 reranker다.
    matched(부합점 1~2), weak(미흡·트레이드오프 0~2). **reason과 matched는 행렬의 "ok" 셀에서만,
    weak는 "vio"·"unk" 셀과 후보의 caveats에서만 유도한다** — 행렬에 없는 주장을 카드에
    쓰지 마라. "unk"인 기준을 만족한다고 쓰는 것도 금지다.
+   **matched 항목마다 quote를 붙인다** — 그 후보의 데이터(title·keyAttributes·caveats·
+   description)에서 **글자 그대로 복사한** 근거 문구다. 시스템이 quote를 원문과 대조해
+   불일치하면 그 항목을 버린다. 복사할 근거 문구가 없으면 그 부합점은 쓰지 말라 —
+   "카테고리상 아마 그럴 것"은 matched가 아니라 확인 불가(unk)다.
+   예: {"text":"27-inch 4K display","quote":"27-Inch 4K UHD"} — quote는 원문 표기 그대로.
    "모든/전부 충족(fully meets all ...)" 계열 표현은 그 후보의 **하드 기준 셀이 전부 ok일
    때만** 쓸 수 있다. unk가 하나라도 있으면 확인된 기준만 짚어 말하고, 미기재 기준은
    "확인 필요"로 분리한다 — "미기재지만 위반은 아니니 전부 충족" 식으로 unk를 충족에
