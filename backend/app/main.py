@@ -12,6 +12,10 @@ from app.products.seed_loader import load_seed_concepts, load_seed_products, val
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    # sync 엔드포인트는 AnyIO 스레드풀에서 돌고 기본 상한이 40이다 — 60명 동시
+    # 배치에서 DB 풀(30+70)에 맞춰 올려두지 않으면 다음 병목이 된다 (2026-08-26 장애).
+    import anyio
+    anyio.to_thread.current_default_thread_limiter().total_tokens = 120
     validate_seed_bundle()
     init_db()
     db = SessionLocal()
