@@ -27,6 +27,22 @@ def create_session(req: CreateSessionRequest, db: DbSession = Depends(get_db)):
         }
         if req.category not in available:
             raise HTTPException(404, f"unknown category: {req.category}")
+        # 미완주 세션 재개 (2026-08-27, v4 파일럿 관찰): 같은 참가자가 같은 과제를
+        # 다시 열면(빈손 후 이탈→재진입·새로고침) 새 세션 대신 진행 중이던 세션을
+        # 돌려준다. 감사(criterionAudit)까지 끝난 세션은 제외 — 완료 과제 불가침.
+        # req.category가 있는 스터디 과제 경로에서만 발동 (데모·시뮬레이션 무영향).
+        if req.participantId:
+            existing = (
+                db.query(models.Session)
+                .filter(models.Session.participant_id == req.participantId,
+                        models.Session.scenario_id == f"cat:{req.category}",
+                        models.Session.status == "active")
+                .order_by(models.Session.started_at.desc())
+                .all()
+            )
+            for s in existing:
+                if "criterionAudit" not in (s.meta or {}):
+                    return {"sessionId": s.id, "resumed": True}
         # 모양은 get_scenario가 정의한다 — 조회(get_session·연구자 뷰)와 같은 복원 경로.
         scenario = get_scenario(f"cat:{req.category}")
     elif req.scenarioId == "custom":
