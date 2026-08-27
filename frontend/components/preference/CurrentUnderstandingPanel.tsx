@@ -5,7 +5,36 @@ import { PreferenceChip, PreferenceState } from "@/lib/types";
 import AnchorRadar from "./AnchorRadar";
 import MotivationRadar from "./MotivationRadar";
 import AgentAvatar from "../chat/AgentAvatar";
-import { OURS_V3, STUDY_UI, tr } from "@/lib/studyI18n";
+import { formatStudyPrice, OURS_V3, OURS_V4, STUDY_UI, tr } from "@/lib/studyI18n";
+
+// ours-v4: 칩의 "적용 방식" 한 줄 — 라벨(뭘 잡았나)이 아니라 해석(어떻게 쓰나)을
+// 보여준다. 원천은 리랭크가 실제로 쓰는 구조 필드(type·priceMax/Min)라 표시와
+// 적용이 어긋날 수 없다. 해석이 틀렸을 때("가격 $150까지 괜찮은데") 교정이 생긴다.
+function chipApplyText(chip: PreferenceChip): string {
+  const parts: string[] = [];
+  if (chip.type === "must_have") {
+    parts.push(tr("필수로 적용해요 — 충족하지 않는 상품은 제외돼요.",
+                  "Applied as a must — products that don't meet this are excluded."));
+  } else if (chip.type === "avoid") {
+    parts.push(tr("제외 조건으로 적용해요 — 해당 상품은 걸러내요.",
+                  "Applied as an exclusion — matching products are filtered out."));
+  } else if (chip.type === "uncertain") {
+    parts.push(tr("아직 확실치 않아 가볍게만 참고해요.",
+                  "Not certain yet — treated as a light signal only."));
+  } else {
+    parts.push(tr("선호로 적용해요 — 순위에 반영하지만 제외하진 않아요.",
+                  "Applied as a preference — it affects ranking but doesn't exclude."));
+  }
+  if (chip.priceMax) {
+    parts.push(tr(`가격은 ${formatStudyPrice(chip.priceMax)} 이하로 해석했어요.`,
+                  `I read the price limit as ${formatStudyPrice(chip.priceMax)} or less.`));
+  }
+  if (chip.priceMin) {
+    parts.push(tr(`하한은 ${formatStudyPrice(chip.priceMin)} 이상으로 해석했어요.`,
+                  `I read the minimum as ${formatStudyPrice(chip.priceMin)} or more.`));
+  }
+  return parts.join(" ");
+}
 
 // 타입별 색 — 타입 배지에 사용
 const CHIP_STYLE: Record<string, string> = {
@@ -82,6 +111,13 @@ export default function CurrentUnderstandingPanel({
           </div>
           <span className="shrink-0 text-[10px] tabular-nums text-[#b0b8c1]" title={tr("근거 개수", "Evidence count")}>({chip.evidenceCount})</span>
         </div>
+
+        {/* ours-v4: 적용 방식 해석 — 틀리면 고칠 수 있게 "어떻게 쓰는지"를 밝힌다 */}
+        {OURS_V4 && (
+          <p className="mt-1 text-[11px] font-medium leading-snug text-[#4f46e5]">
+            {chipApplyText(chip)}
+          </p>
+        )}
 
         {!editable ? null : isEditing ? (
           <div className="mt-2">

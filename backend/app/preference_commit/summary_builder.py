@@ -43,6 +43,10 @@ def build_user_visible_summary(
             "displayRationale": short_rationale(t),
             "status": t.status,
             "priority": t.priority,
+            # ours-v4 해석 표시용 — 리랭크가 실제로 쓰는 구조 필드를 그대로 노출해
+            # "보여주는 해석 = 실제 적용"이 원천에서 일치한다 (2026-08-27).
+            "priceMax": (t.hints or {}).get("priceMax"),
+            "priceMin": (t.hints or {}).get("priceMin"),
             "confidence": round(t.confidence, 2),
             "explicitness": t.explicitness,
             "theoryBasis": (t.hints or {}).get("theoryBasis"),

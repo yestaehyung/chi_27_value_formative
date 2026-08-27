@@ -13,54 +13,49 @@ export type StudyTask = {
   situation: string;
 };
 
-// 2026-08-27 저구체화 개정 (ours-v3.1 파일럿): 이전 문구는 고려할 기준을 과제가
-// 체크리스트로 불러줬다("하는 작업·둘 물건·쓸 공간을 고려하여") — 참가자가 그대로
-// 발화해 칩이 받아쓰기가 되고 시스템이 추론할 것이 안 남는다 (v3 파일럿 실측: 칩
-// 상호작용 저조의 주원인). 상황 앵커(자기 방·이동·첫 출근)는 남기고 기준 코칭 문장만
-// 제거한다 — "추론 대상인 기준을 지시문이 프라이밍하지 않게" 하는 방법론적 교정.
 export const STUDY_TASKS: StudyTask[] = [
   {
     id: "T1",
     category: "Monitors",
-    title: tr("집에서 쓸 모니터", "A monitor for your home"),
-    situation: tr("집에서 쓸 모니터 고르기", "Choosing a monitor to use at home"),
+    title: tr("홈 워크스페이스용 모니터", "A monitor for your home workspace"),
+    situation: tr("집 작업 공간에서 쓸 모니터 고르기", "Choosing a monitor for the work I do at home"),
     description: tr(
-      "집에서 쓸 모니터 한 대를 골라 주세요. 자신의 생활에 잘 맞는 것이어야 합니다.",
-      "Choose one monitor to use at home. It should fit well with how you actually live and work.",
+      "현재 집에서 주로 하는 작업과 실제 책상 환경에 맞는 모니터 한 대를 찾아보세요. 자신의 작업 방식과 사용 환경을 반영하여 추천 상품을 검토하고, 가장 적합한 제품을 선택하세요.",
+      "Find one monitor that fits the work you mainly do at home and your actual desk setup. Review the recommended products in light of how you work and where you will use it, and choose the product that fits you best.",
     ),
   },
   {
     id: "T2",
     category: "Headphones",
-    title: tr("이동할 때 쓸 헤드폰", "Headphones for getting around"),
-    situation: tr("평소 이동할 때 쓸 헤드폰 고르기", "Choosing headphones for my everyday travel"),
+    title: tr("매일의 이동 시간을 위한 헤드폰", "Headphones for your daily commute"),
+    situation: tr("매일 왕복 두 시간 대중교통 통근에 쓸 헤드폰 고르기", "Choosing headphones for a daily two-hour commute on public transport"),
     description: tr(
-      "평소 이동할 때 쓸 헤드폰 하나를 골라 주세요. 자신의 이동 생활에 잘 맞는 것이어야 합니다.",
-      "Choose one pair of headphones to use while getting around. It should fit well with how you actually travel day to day.",
+      "매일 왕복 두 시간 정도 대중교통으로 이동하면서 쓸 헤드폰 하나를 찾아보세요. 실제로 다니는 경로의 환경과 이동 중 주로 듣는 것을 반영하여 추천 상품을 검토하고, 가장 적합한 제품을 선택하세요.",
+      "Find one pair of headphones to use during a daily commute of about two hours round trip on public transport. Review the recommended products in light of your actual route and what you mostly listen to on the way, and choose the product that fits you best.",
     ),
   },
   {
     id: "T3",
     category: "Desks",
-    title: tr("내 방에 둘 작업 책상", "A desk for your room"),
-    situation: tr("내 방에 둘 작업 책상 고르기", "Choosing a desk for my room"),
+    title: tr("좁은 방에 맞는 작업 책상", "A desk for a small room"),
+    situation: tr("좁은 방에 작업 공간을 만들 책상 고르기", "Choosing a desk to set up a workspace in a small room"),
     description: tr(
-      "자신의 방에 둘 작업 책상 하나를 골라 주세요. 그 방에 잘 맞는 것이어야 합니다.",
-      "Choose one desk for your room. It should fit that room well.",
+      "현재 생활하거나 익숙하게 알고 있는 좁은 방에서 작업 공간을 확보하고 싶습니다. 실제로 그 방에서 하는 작업과 책상 위에 두어야 할 물건, 방 안에서 쓸 수 있는 공간을 고려하여 이 상황에 가장 적합한 책상 하나를 찾아보세요.",
+      "You want to set up a workspace in a small room you live in or know well. Considering the work you actually do there, the items that need to stay on the desk, and the space available in the room, find the one desk that best fits this situation.",
     ),
   },
   {
     // 2026-08-23 교체: 원래 "여름 야외 결혼식"이었으나 참가자 발화의 "outdoor/summer"가
-    // 임베딩 검색에서 아웃도어·트로피컬 셔츠를 끌어와 1턴 품질이 무너졌다. 사무실 어휘는
-    // 카탈로그의 드레스 셔츠 공급과 정렬된다. 저구체화 개정에서 "비즈니스 캐주얼" 명시를
-    // 제거 — 격식 수위 해석이 참가자 몫이 되며 규범형 압력은 유지된다.
+    // 임베딩 검색에서 아웃도어·트로피컬 셔츠를 끌어와 1턴 품질이 무너졌다 (하와이안·
+    // 플란넬 혼입, 3회 검증 재현). 사무실 어휘는 카탈로그의 드레스 셔츠 공급과 정렬돼
+    // 1턴부터 적합 — 행사 규범형 압력(격식 수위 해석·첫인상·옷장 조화)은 유지된다.
     id: "T4",
     category: "Shirts & Blouses",
     title: tr("새 직장 첫 출근을 위한 셔츠", "A shirt for your first week at a new job"),
     situation: tr("새 직장 첫 출근 주간에 입을 셔츠 고르기", "Choosing a shirt for my first week at a new job"),
     description: tr(
-      "다음 주부터 새 직장으로 첫 출근을 합니다. 첫 주에 입을 셔츠/블라우스 하나를 골라 주세요.",
-      "You are starting a new job next week. Choose one shirt or blouse to wear during your first week.",
+      "다음 주부터 새 직장으로 첫 출근을 합니다. 사무실은 비즈니스 캐주얼 분위기입니다. 자신이 실제로 가지고 있는 옷과 평소 스타일을 고려하여, 첫 주에 입을 셔츠/블라우스 하나를 찾아보세요.",
+      "You are starting a new job next week, and the office has a business-casual dress code. Considering the clothes you actually own and your usual style, find one shirt or blouse to wear during your first week.",
     ),
   },
 ];

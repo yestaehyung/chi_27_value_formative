@@ -145,3 +145,16 @@ def test_recommendation_delivery_consumes_gate(client):
         assert client.post(f"/api/sessions/{sid}/proceed-recommend").status_code == 409
     finally:
         settings.ui_variant = ""
+
+
+def test_v4_keeps_gate_without_hypotheses(client):
+    """ours-v4(해석 칩판)도 게이트는 유지한다 — v4 = 구과제 + 게이트 + 해석 표시.
+    가설 칩 프롬프트(ours-v3 전용)는 v4에서 꺼진 채로 남는다."""
+    settings.ui_variant = "ours-v4"
+    try:
+        sid = _new_ours_session(client)
+        r = client.post(f"/api/sessions/{sid}/turns", json={"role": "user", "content": UTTER})
+        assert r.json()["agentResponse"]["agentAction"] == "confirm_chips"
+        assert client.post(f"/api/sessions/{sid}/proceed-recommend").status_code == 200
+    finally:
+        settings.ui_variant = ""

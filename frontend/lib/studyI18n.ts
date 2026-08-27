@@ -13,6 +13,11 @@ export const OURS_V2 = process.env.NEXT_PUBLIC_OURS_V2 === "1";
 // 백엔드가 만들고, 프론트는 '추천 보기' 버튼과 가설 배지만 담당한다.
 export const OURS_V3 = process.env.NEXT_PUBLIC_OURS_V3 === "1";
 
+// ours-v4 (2026-08-27): v1의 저마찰 흐름 + 칩 "해석" 표시 — 라벨(뭘 잡았나)이 아니라
+// 적용 방식(어떻게 쓰나: 필수 제외/선호 반영/가격 임계값)을 보여줘 해석 오류가
+// 교정 대상이 되게 한다. 게이트·가설·강제 장치는 전부 끈 상태에서 이것만 켠다.
+export const OURS_V4 = process.env.NEXT_PUBLIC_OURS_V4 === "1";
+
 export const IS_ENGLISH_STUDY = STUDY_LOCALE === "en";
 
 /** Build-time locale selector for the separately deployed study frontend. */
@@ -178,18 +183,17 @@ export const STUDY_UI = {
     // 실제 과제 화면(/study/categories)과 반드시 같은 목록이어야 한다 — 구 카탈로그
     // 더미(블루투스 스피커 등)가 남아 튜토리얼과 실제 선택지가 달랐다 (2026-08-25 QA).
     // H/L 1단계 재현이므로 선택 표시는 1개만.
-    // 2026-08-27 저구체화 과제판(ours-v3.1)과 동기화 — studyTasks.ts의 title과 1:1.
     demoCategories: tr(
       [
-        { name: "집에서 쓸 모니터", blurb: "자신의 생활에 맞는 모니터", on: true },
-        { name: "이동할 때 쓸 헤드폰", blurb: "평소 이동 생활에 맞는 헤드폰", on: false },
-        { name: "내 방에 둘 작업 책상", blurb: "내 방에 잘 맞는 책상", on: false },
+        { name: "홈 워크스페이스용 모니터", blurb: "집에서 주로 하는 작업에 맞는 모니터", on: true },
+        { name: "매일의 이동 시간을 위한 헤드폰", blurb: "왕복 두 시간 대중교통 이동에 쓸 헤드폰", on: false },
+        { name: "좁은 방에 맞는 작업 책상", blurb: "좁은 방에 작업 공간을 만들 책상", on: false },
         { name: "새 직장 첫 출근을 위한 셔츠", blurb: "첫 주에 입을 셔츠·블라우스", on: false },
       ],
       [
-        { name: "A monitor for your home", blurb: "One that fits how you live and work", on: true },
-        { name: "Headphones for getting around", blurb: "For your everyday travel", on: false },
-        { name: "A desk for your room", blurb: "One that fits your room well", on: false },
+        { name: "A monitor for your home workspace", blurb: "For the work you mainly do at home", on: true },
+        { name: "Headphones for your daily commute", blurb: "For about two hours a day on public transport", on: false },
+        { name: "A desk for a small room", blurb: "To set up a workspace in a small room", on: false },
         { name: "A shirt for your first week at a new job", blurb: "A shirt or blouse for your first week", on: false },
       ],
     ),

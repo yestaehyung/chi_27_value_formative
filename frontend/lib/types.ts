@@ -89,6 +89,9 @@ export type PreferenceChip = {
   askable?: boolean;
   askScore?: number;
   theoryBasis?: Record<string, unknown> | null;
+  /** ours-v4 해석 표시 — 리랭크가 실제로 쓰는 구조화 가격 (KRW 정수, 없으면 null) */
+  priceMax?: number | null;
+  priceMin?: number | null;
 };
 
 export type UserVisibleSummary = {
