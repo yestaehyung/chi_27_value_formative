@@ -1225,5 +1225,5 @@ look" after repeated picks of plain designs), so the user can confirm or correct
 
 from app.core.config import settings as _settings  # noqa: E402
 
-if _settings.ui_variant == "ours-v3":
+if _settings.ui_variant.startswith("ours-v3"):  # v3.1(저구체화 과제판) 포함
     SYSTEM_BY_TASK["topic_extraction"] = SYSTEM_BY_TASK["topic_extraction"] + _V3_HYPOTHESIS_RULE

@@ -399,7 +399,7 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     # 실제로 흐르게 하는 구조 변경. 확인/수정 후 프론트가 /proceed-recommend로 추천 요청.
     # 게이트 빈도는 "칩 셋이 바뀐 추천 턴"으로 제한 — 매 턴 걸면 스팸 확인이 된다.
     from app.core.config import settings as _settings
-    if (decision.action == "recommend" and _settings.ui_variant == "ours-v3"
+    if (decision.action == "recommend" and _settings.ui_variant.startswith("ours-v3")
             and (session.meta or {}).get("studyCondition") == "ours"
             and commit.snapshot is not None
             and (commit.new_topics or not has_recommendations)):
