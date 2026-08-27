@@ -111,3 +111,37 @@ def test_v3_gate_blocks_debounced_refresh_bypass(client):
         assert len(rp.json()["recommendedProducts"]) > 0
     finally:
         settings.ui_variant = ""
+
+
+def test_recommendation_delivery_consumes_gate(client):
+    """어떤 경로로든 추천이 나가면 게이트 플래그가 소모된다 — 충돌 해소 경로가
+    추천을 내보낸 뒤 proceed가 이중 추천을 쏘는 엣지 차단 (2026-08-27)."""
+    import asyncio as _asyncio
+
+    from app.agents.service_agent import recommend_after_resolution
+    from app.db import models
+    from app.db.database import SessionLocal
+    from app.ontology.state_builder import build_snapshot
+
+    settings.ui_variant = "ours-v3"
+    try:
+        sid = _new_ours_session(client)
+        r = client.post(f"/api/sessions/{sid}/turns", json={"role": "user", "content": UTTER})
+        assert r.json()["agentResponse"]["agentAction"] == "confirm_chips"
+
+        db = SessionLocal()
+        try:
+            session = db.get(models.Session, sid)
+            assert (session.meta or {}).get("pendingRecommend") is True
+            snapshot = build_snapshot(db, session)
+            db.commit()
+            # 충돌 해소 경로가 호출하는 함수 — 추천을 내보내며 게이트를 소모해야 한다
+            _asyncio.run(recommend_after_resolution(db, session, snapshot))
+            db.refresh(session)
+            assert not (session.meta or {}).get("pendingRecommend")
+        finally:
+            db.close()
+        # 소모된 게이트에 대한 proceed는 409 — 이중 추천 없음
+        assert client.post(f"/api/sessions/{sid}/proceed-recommend").status_code == 409
+    finally:
+        settings.ui_variant = ""

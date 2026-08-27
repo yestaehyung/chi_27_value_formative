@@ -181,6 +181,11 @@ async def recommend_after_resolution(
     되지 않게). resolve_conflict가 이미 commit한 뒤(락 해제) 호출되므로 LLM-first-write-last
     유지 — LLM(추천·렌더)을 먼저 돌리고 마지막에 짧은 트랜잭션으로 turn·impression을 쓴다."""
     provider = get_provider()
+    if (session.meta or {}).get("pendingRecommend"):
+        # ours-v3: 어떤 경로로든(충돌 해소·proceed) 추천이 나가면 게이트는 소모된다 —
+        # 남겨두면 뒤늦은 proceed가 이중 추천을 쏜다.
+        session.meta = {k: v for k, v in session.meta.items() if k != "pendingRecommend"}
+        db.commit()
     category = (session.meta or {}).get("category")
     prev_shown = _last_recommended_products(db, session.id)
     recent_turns = (
