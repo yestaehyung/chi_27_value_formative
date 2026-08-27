@@ -198,7 +198,10 @@ async def chip_action(topic_id: str, req: ChipActionRequest, db: DbSession = Dep
         .filter(models.PreferenceConflict.status.in_(("open", "shown_to_user")))
         .count() > 0
     )
-    if req.action in correction_actions and req.deferRecommend:
+    if req.action in correction_actions and (session.meta or {}).get("pendingRecommend"):
+        # ours-v3 게이트 대기 중 — 어떤 경로로도 게이트를 우회해 추천이 나가면 안 된다
+        response["recommendationDeferred"] = "gate"
+    elif req.action in correction_actions and req.deferRecommend:
         # 프론트가 디바운스 중 — 수정은 저장·반영됐고 재추천은 refresh 1회로 모인다
         response["recommendationDeferred"] = "debounced"
     elif req.action in correction_actions and not direct_open:
@@ -246,6 +249,13 @@ async def refresh_recommendation(
     )
     if direct_open:
         return {"recommendationDeferred": "open_direct_conflict"}
+    if (session.meta or {}).get("pendingRecommend"):
+        # ours-v3 게이트 대기 중 — 디바운스 재추천이 게이트를 우회하면 안 된다.
+        # 수정은 이미 저장됐으므로, 곧 올 /proceed-recommend가 수정 반영분까지 실어 나른다.
+        snapshot = build_snapshot(db, session)
+        db.commit()
+        return {"recommendationDeferred": "gate",
+                "newPreferenceState": serializers.snapshot_to_dict(snapshot)}
     snapshot = build_snapshot(db, session)
     db.commit()  # LLM-first-write-last: 재추천의 LLM 구간 전에 락을 풀어 둔다
     corrections = [

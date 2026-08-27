@@ -80,3 +80,34 @@ def test_v3_does_not_gate_baseline2(client):
         assert len(r.json()["recommendedProducts"]) > 0
     finally:
         settings.ui_variant = ""
+
+
+def test_v3_gate_blocks_debounced_refresh_bypass(client):
+    """게이트 대기 중 칩 수정→디바운스 재추천이 게이트를 우회하면 안 된다 (2026-08-27).
+
+    수정 자체는 저장되고, 재추천은 'gate'로 보류 — /proceed-recommend가 수정
+    반영분까지 실어 나른다."""
+    settings.ui_variant = "ours-v3"
+    try:
+        sid = _new_ours_session(client)
+        r = client.post(f"/api/sessions/{sid}/turns", json={"role": "user", "content": UTTER})
+        assert r.json()["agentResponse"]["agentAction"] == "confirm_chips"
+        chips = (r.json()["preferenceState"].get("userVisibleSummary") or {}).get("chips") or []
+        assert chips
+        # 게이트 중 칩 수정 (deferRecommend=True — 프론트 기본)
+        ra = client.post(f"/api/preferences/chips/{chips[0]['id']}/action",
+                         json={"action": "increase_priority", "deferRecommend": True})
+        assert ra.status_code == 200, ra.text
+        assert ra.json().get("recommendationDeferred") == "gate"
+        # 디바운스 플러시 시뮬레이션 — 역시 게이트로 보류
+        rf = client.post(f"/api/preferences/sessions/{sid}/refresh-recommendation",
+                         json={"corrections": [{"action": "increase_priority"}]})
+        assert rf.status_code == 200
+        assert rf.json().get("recommendationDeferred") == "gate"
+        assert "recommendTurn" not in rf.json()
+        # proceed가 수정 반영 추천을 수행
+        rp = client.post(f"/api/sessions/{sid}/proceed-recommend")
+        assert rp.status_code == 200
+        assert len(rp.json()["recommendedProducts"]) > 0
+    finally:
+        settings.ui_variant = ""
