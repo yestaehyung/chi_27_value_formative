@@ -635,6 +635,27 @@ export default function VariantSession({
     }
   };
 
+  // 마치기 진입 — 헤더 버튼·하단 CTA 공용 (분기 이원화 방지)
+  const onFinishClick = () => {
+    if (canFinish) {
+      if (OURS_V2 && condition === "ours") {
+        setConfidenceOpen(true); // 확신 확인 후 openFinalChoice
+      } else {
+        finishMetaRef.current = { earlyFinish: false, roundsAtFinish: recommendRounds };
+        openFinalChoice();
+      }
+    } else {
+      setEarlyConfirmOpen(true);
+    }
+  };
+  // 에이전트가 "마치라"고 말한 턴(close) 직후엔 하단에 큰 Finish CTA를 함께 보여준다 —
+  // v4 파일럿 실측: "press the Finish button" 안내에 참가자가 채팅으로 "I'm ready to
+  // finish"를 3회 반복 (우상단 헤더 버튼을 못 찾음, Frustration 75). 게이트 버튼(하단
+  // CTA)은 전원이 잘 눌렀으므로 같은 위치·같은 패턴을 쓴다.
+  const closeCtaActive =
+    study && !finished &&
+    lastTurnForGate?.role === "service_agent" && lastTurnForGate.agentAction === "close";
+
   // 첫 발화 자동 전송 (시작 화면에서 넘어온 것) — dev StrictMode 이중 실행 가드
   const sentFirstRef = useRef(false);
   useEffect(() => {
@@ -732,18 +753,7 @@ export default function VariantSession({
             {/* 소프트 게이트 (2026-08-26): 버튼은 항상 활성. 2라운드 전에는 확인
                 대화상자를 한 번 거치고, 진행 시 earlyFinish로 기록된다. */}
             <button
-              onClick={() => {
-                if (canFinish) {
-                  if (OURS_V2 && condition === "ours") {
-                    setConfidenceOpen(true); // 확신 확인 후 openFinalChoice
-                  } else {
-                    finishMetaRef.current = { earlyFinish: false, roundsAtFinish: recommendRounds };
-                    openFinalChoice();
-                  }
-                } else {
-                  setEarlyConfirmOpen(true);
-                }
-              }}
+              onClick={onFinishClick}
               className="btn btn-primary shrink-0 whitespace-nowrap px-2.5 py-1 text-xs"
             >
               {/* 권장 기준선(추천 2라운드)까지의 진행 넛지 — 잠금이 아니라 표시다. */}
@@ -1023,6 +1033,17 @@ export default function VariantSession({
         </div>
       )}
 
+      {closeCtaActive && (
+        <div className="border-t border-[#f0f2f4] px-3 pt-3">
+          <button
+            onClick={onFinishClick}
+            disabled={busy}
+            className="btn btn-primary w-full py-2.5 text-sm"
+          >
+            {STUDY_UI.chat.finish}
+          </button>
+        </div>
+      )}
       {gateActive && (
         // ours-v3 게이트 CTA — 칩 확인 후 추천으로. 채팅으로 수정하는 길도 열려 있다.
         <div className="border-t border-[#f0f2f4] px-3 pt-3">
