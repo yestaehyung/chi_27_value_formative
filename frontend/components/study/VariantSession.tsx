@@ -115,6 +115,10 @@ export default function VariantSession({
   const [earlyConfirmOpen, setEarlyConfirmOpen] = useState(false);
   // ours-v2 파일럿: 정규 라운드를 채우고 마칠 때도 확신을 한 번 묻는다 (탐색 재고 넛지)
   const [confidenceOpen, setConfidenceOpen] = useState(false);
+  // ours-v3 게이트: 백엔드가 추천 대신 confirm_chips 턴을 보내면 '추천 보기' 버튼이 뜬다.
+  // 데이터 주도라 프론트 플래그와 무관 — 게이트 턴은 백엔드 env가 켜졌을 때만 생성된다.
+  const [proceeding, setProceeding] = useState(false);
+  const gateShownAtRef = useRef<number | null>(null);
   const finishMetaRef = useRef<{ earlyFinish: boolean; roundsAtFinish: number } | null>(null);
   const answerComprehension = (taskId: string) => {
     compAttemptsRef.current += 1;
@@ -600,6 +604,37 @@ export default function VariantSession({
     setCriterionOpen(true);
   };
 
+  // ours-v3 게이트 — 마지막 턴이 confirm_chips면 활성. 체류 시간은 마커로 남긴다.
+  const lastTurnForGate = turns[turns.length - 1];
+  const gateActive =
+    study && lastTurnForGate?.role === "service_agent" &&
+    lastTurnForGate.agentAction === "confirm_chips";
+  useEffect(() => {
+    if (gateActive && gateShownAtRef.current === null) gateShownAtRef.current = Date.now();
+    if (!gateActive) gateShownAtRef.current = null;
+  }, [gateActive]);
+  const proceedFromGate = async () => {
+    if (proceeding || busy) return;
+    setProceeding(true);
+    setBusy(true);
+    const dwell = gateShownAtRef.current
+      ? Math.round((Date.now() - gateShownAtRef.current) / 1000) : 0;
+    api.addMarker(sessionId, "other", `ours_v3_gate_proceed dwell=${dwell}s`).catch(() => {});
+    try {
+      const res = await api.proceedRecommend(sessionId);
+      setTurns((prev) => [...prev, res.agentResponse]);
+      if (res.recommendedProducts?.length) {
+        setImpressionsByTurn((prev) => ({ ...prev, [res.agentResponse.id]: res.recommendedProducts }));
+      }
+    } catch (e) {
+      console.error(e);
+      showToast(STUDY_UI.chat.saveFailed);
+    } finally {
+      setProceeding(false);
+      setBusy(false);
+    }
+  };
+
   // 첫 발화 자동 전송 (시작 화면에서 넘어온 것) — dev StrictMode 이중 실행 가드
   const sentFirstRef = useRef(false);
   useEffect(() => {
@@ -988,6 +1023,19 @@ export default function VariantSession({
         </div>
       )}
 
+      {gateActive && (
+        // ours-v3 게이트 CTA — 칩 확인 후 추천으로. 채팅으로 수정하는 길도 열려 있다.
+        <div className="border-t border-[#f0f2f4] px-3 pt-3">
+          <button
+            onClick={proceedFromGate}
+            disabled={proceeding || busy}
+            className="btn btn-primary w-full py-2.5 text-sm"
+          >
+            {proceeding ? "…" : STUDY_UI.chat.v3ShowRecs}
+          </button>
+          <p className="mt-1.5 text-center text-[11px] text-[#9aa0a6]">{STUDY_UI.chat.v3GateHint}</p>
+        </div>
+      )}
       <div className="border-t border-[#f0f2f4] p-3">
         <ChatComposer
           value={chatInput}

@@ -52,6 +52,10 @@ export const api = {
 
   getSession: (sessionId: string) => request<any>(`/api/sessions/${sessionId}`),
 
+  // ours-v3: 칩 확인 게이트 통과 — 확인된 기준으로 추천을 수행한다
+  proceedRecommend: (sessionId: string) =>
+    request<any>(`/api/sessions/${sessionId}/proceed-recommend`, { method: "POST" }),
+
   postTurn: (sessionId: string, content: string, clientRequestId?: string, inputSource?: "suggestion" | "typed") =>
     request<any>(`/api/sessions/${sessionId}/turns`, {
       method: "POST",

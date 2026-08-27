@@ -8,6 +8,11 @@ export const STUDY_LOCALE: StudyLocale =
 // VC_UI_VARIANT(세션 meta.uiVariant 도장)와 반드시 함께 켜고 함께 끈다.
 export const OURS_V2 = process.env.NEXT_PUBLIC_OURS_V2 === "1";
 
+// ours-v3 (2026-08-27): 추천 전 칩 확인 게이트 + 추론 가설 칩 시각 구분. 백엔드
+// VC_UI_VARIANT=ours-v3와 반드시 짝으로 — 게이트 턴(agentAction=confirm_chips)은
+// 백엔드가 만들고, 프론트는 '추천 보기' 버튼과 가설 배지만 담당한다.
+export const OURS_V3 = process.env.NEXT_PUBLIC_OURS_V3 === "1";
+
 export const IS_ENGLISH_STUDY = STUDY_LOCALE === "en";
 
 /** Build-time locale selector for the separately deployed study frontend. */
@@ -245,6 +250,13 @@ export const STUDY_UI = {
     ),
     confidenceExplore: tr("더 살펴보기", "Explore More Options"),
     confidenceFinish: tr("확신해요 — 마칠게요", "I'm Confident — Finish"),
+    // --- ours-v3 ---
+    v3ShowRecs: tr("확인했어요 — 추천 보기", "Looks Right — Show Recommendations"),
+    v3GateHint: tr(
+      "오른쪽 기준을 확인·수정한 뒤 버튼을 눌러 주세요. 채팅으로 바로잡으셔도 됩니다.",
+      "Check and fix the criteria on the right, then press the button. You can also correct them by typing.",
+    ),
+    v3Hypothesis: tr("가설", "Hypothesis"),
     oursV2NeedRounds: (n: number) => tr(
       `마치기 전에 추천을 2번 이상 받아 비교해 주세요. 지금까지 ${n}번 받으셨어요.`,
       `Please compare at least 2 rounds of recommendations before finishing. You've seen ${n} so far.`,

@@ -5,7 +5,7 @@ import { PreferenceChip, PreferenceState } from "@/lib/types";
 import AnchorRadar from "./AnchorRadar";
 import MotivationRadar from "./MotivationRadar";
 import AgentAvatar from "../chat/AgentAvatar";
-import { tr } from "@/lib/studyI18n";
+import { OURS_V3, STUDY_UI, tr } from "@/lib/studyI18n";
 
 // 타입별 색 — 타입 배지에 사용
 const CHIP_STYLE: Record<string, string> = {
@@ -72,6 +72,12 @@ export default function CurrentUnderstandingPanel({
             >
               {CHIP_TYPE_LABEL[chip.type]}
             </span>
+            {/* ours-v3: 시스템 추론 가설 칩 구분 — 확인·수정 대상임을 시각화 */}
+            {OURS_V3 && chip.status === "inferred" && (
+              <span className="mr-1.5 inline-block rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                {STUDY_UI.chat.v3Hypothesis}
+              </span>
+            )}
             <span className="font-medium text-[#191919]" title={chip.displayRationale}>{chip.label}</span>
           </div>
           <span className="shrink-0 text-[10px] tabular-nums text-[#b0b8c1]" title={tr("근거 개수", "Evidence count")}>({chip.evidenceCount})</span>

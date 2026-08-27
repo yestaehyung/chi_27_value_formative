@@ -122,6 +122,19 @@ def empty_handed_text(blocking_criteria: list[str]) -> str:
     )
 
 
+def chip_gate_text() -> str:
+    """ours-v3 칩 확인 게이트 (2026-08-27 파일럿) — 추천 전에 칩 확인을 청하는 턴.
+    결정론 템플릿 그대로 내보낸다: 게이트는 커밋 파이프라인 직후의 즉답이어야 하고
+    (LLM 왕복 없음), 문구가 흔들리면 참가자 간 처치가 달라진다."""
+    return L(
+        "보여드리기 전에 — 지금까지 파악한 기준을 오른쪽 패널에 정리했어요. 맞는지 확인하시고 "
+        "어긋난 것은 바로잡아 주세요. 확인이 끝나면 '추천 보기'를 눌러 주시면 바로 보여드릴게요.",
+        "Before I show products — I've put together what I understood so far in the panel on "
+        "the right. Please check the criteria and fix anything that's off. When it looks right, "
+        "press \"Show recommendations\" and I'll bring up the products.",
+    )
+
+
 def correction_applied_text() -> str:
     """수정을 반영해 재추천했는데 노출 셋이 직전과 동일할 때의 초안 — 같은 카드 5장을
     다시 나열하는 대신("These are the same five desks…", v4 관찰) 반영 사실과 후보

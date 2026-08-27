@@ -389,6 +389,21 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
                 commit.snapshot, session,
             )
 
+    # ours-v3 파일럿 게이트 (2026-08-27): 새 칩이 생긴 추천 턴(또는 첫 추천)은 상품 대신
+    # 칩 확인을 먼저 청한다 — evidence purity(확인된 기준만 리랭크 투입)의 확인 통로를
+    # 실제로 흐르게 하는 구조 변경. 확인/수정 후 프론트가 /proceed-recommend로 추천 요청.
+    # 게이트 빈도는 "칩 셋이 바뀐 추천 턴"으로 제한 — 매 턴 걸면 스팸 확인이 된다.
+    from app.core.config import settings as _settings
+    if (decision.action == "recommend" and _settings.ui_variant == "ours-v3"
+            and (session.meta or {}).get("studyCondition") == "ours"
+            and commit.snapshot is not None
+            and (commit.new_topics or not has_recommendations)):
+        _chips_now = (commit.snapshot.user_visible_summary or {}).get("chips") or []
+        if _chips_now:
+            decision.action = "confirm_chips"
+            session.meta = {**(session.meta or {}), "pendingRecommend": True}
+            db.commit()
+
     impressions: list[models.ProductImpression] = []
     products: list[models.Product] = []
     related_ids: list[str] = []
@@ -404,6 +419,10 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
         conflict_explanation = commit.new_conflicts[0].explanation_for_user
         for c in commit.new_conflicts:
             c.status = "shown_to_user"
+    elif decision.action == "confirm_chips":
+        # ours-v3 게이트 턴 — 결정론 템플릿 즉답 (아래 렌더러 경로도 건너뛴다)
+        text = rg.chip_gate_text()
+        session.current_stage = "clarification"
     elif decision.action == "answer":
         # 노출된 상품·상품 지식에 대한 질문에 답한다 (MG-ShopDial Answer+Explain 병합) —
         # 새 검색 없이 마지막 노출 셋 + 대화를 근거로. 렌더러(generate_reply)가 최종 저작.
@@ -448,6 +467,10 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
     scored: list[ScoredProduct] = []
     rec_diag: dict | None = None
     if decision.action == "recommend":
+        if (session.meta or {}).get("pendingRecommend"):
+            # 게이트 대기 중 사용자가 버튼 대신 발화로 진행 — 이 턴이 추천을 수행하므로 해제
+            session.meta = {k: v for k, v in session.meta.items() if k != "pendingRecommend"}
+            db.commit()
         if not infers_intention(session):
             # baseline1 '완전 basic' (2026-08-21): 판정행렬 리랭크 없이 관련도순 top-5.
             # 결정론 필터(가격·카테고리·뮤텍스 태그)는 search_products 안에 남아 있다.
@@ -503,6 +526,8 @@ async def handle_user_turn(db: DbSession, session: models.Session, content: str,
             previously_shown=prev_shown, recommendation_note=rec_note,
             task_ui=_task_ui_state(db, session, showing_cards=bool(products)),
         )
+    elif decision.action == "confirm_chips":
+        pass  # 게이트는 결정론 템플릿 그대로 — LLM 왕복 없이 즉답 (일관 처치 + 지연 0)
     else:
         text = await rg.generate_reply(
             provider, action=decision.action, template_text=text, recent_turns=recent_turns,

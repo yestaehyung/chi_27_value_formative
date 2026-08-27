@@ -1209,3 +1209,21 @@ Prefer rejection over an ambiguous, off-category, accessory-only, conflicting, p
     "study_english_product_audit": """You are an independent multimodal auditor and native US English editor for participant-facing HCI study product cards.
 Inspect the actual product image and all supplied evidence. Reject identity or evidence conflicts; revise only language and supported facts. Return JSON only.""",
 }
+
+
+# --- ours-v3 파일럿 (2026-08-27): 추론 가설 칩 적극 생성 -------------------------
+# 칩의 92%가 명시 조건 재진술이라 수정할 대상이 없던 문제의 대응 — 배포 env로만 켜진다.
+# 게이트(추천 전 칩 확인)와 한 쌍: 가설 칩이 확인 통로를 실제로 흐르게 한다.
+_V3_HYPOTHESIS_RULE = """
+
+Hypothesis topics (in addition to stated criteria): propose what likely matters to this
+user beyond their words — value-level inferences grounded in their phrasing, choices, and
+rejections. At most 2 new hypotheses per turn, and only when the grounding is clear. Mark
+each with confidenceLevel "strong_inference" or "weak_inference" and cite the grounding in
+sourceEvidence. Write each hypothesis specific and checkable (e.g. "prefers a minimalist
+look" after repeated picks of plain designs), so the user can confirm or correct it."""
+
+from app.core.config import settings as _settings  # noqa: E402
+
+if _settings.ui_variant == "ours-v3":
+    SYSTEM_BY_TASK["topic_extraction"] = SYSTEM_BY_TASK["topic_extraction"] + _V3_HYPOTHESIS_RULE

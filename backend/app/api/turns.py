@@ -147,6 +147,44 @@ async def post_turn(session_id: str, req: TurnRequest, background_tasks: Backgro
     return payload
 
 
+@router.post("/{session_id}/proceed-recommend")
+async def proceed_recommend(session_id: str):
+    """ours-v3 칩 확인 게이트의 2단계 — 사용자가 칩을 확인/수정한 뒤 '추천 보기'를 누르면
+    호출된다. recommend_after_resolution을 재사용해 **확인된 최신 기준으로** 재플래닝→
+    리랭크→추천 턴을 만든다 (evidence purity 경로 그대로)."""
+    from app.agents.service_agent import recommend_after_resolution
+
+    if session_id in _inflight_sessions:
+        raise HTTPException(409, "reply generation in progress")
+    db = SessionLocal()
+    _inflight_sessions.add(session_id)
+    try:
+        session = db.get(models.Session, session_id)
+        if session is None:
+            raise HTTPException(404, "session not found")
+        if not (session.meta or {}).get("pendingRecommend"):
+            raise HTTPException(409, "no pending recommendation")
+        session.meta = {k: v for k, v in session.meta.items() if k != "pendingRecommend"}
+        db.commit()
+        snapshot = (
+            db.query(models.PreferenceStateSnapshot)
+            .filter(models.PreferenceStateSnapshot.session_id == session_id)
+            .order_by(models.PreferenceStateSnapshot.turn_index.desc())
+            .first()
+        )
+        turn, impressions, _products = await recommend_after_resolution(db, session, snapshot)
+        return {
+            "agentResponse": serializers.turn_to_dict(turn),
+            "recommendedProducts": [
+                serializers.impression_to_dict(i, db.get(models.Product, i.product_id))
+                for i in impressions
+            ],
+        }
+    finally:
+        _inflight_sessions.discard(session_id)
+        db.close()
+
+
 @router.post("/{session_id}/turns/{turn_id}/retry")
 async def retry_turn(session_id: str, turn_id: str, background_tasks: BackgroundTasks,
                      db: DbSession = Depends(get_db)):

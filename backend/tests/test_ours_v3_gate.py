@@ -1,0 +1,82 @@
+"""ours-v3 칩 확인 게이트 (2026-08-27 파일럿) — 추천 전 칩 확인 흐름.
+
+새 칩이 생긴 추천 턴은 상품 대신 confirm_chips 턴(결정론 템플릿, 노출 0)을 반환하고
+meta.pendingRecommend를 세운다. /proceed-recommend가 확인된 기준으로 추천을 수행한다.
+플래그(ui_variant) 미설정이면 기존 동작 그대로 — 본실험 경로 보존이 계약이다.
+"""
+import os
+import tempfile
+
+os.environ.setdefault("VC_DB_PATH", os.path.join(tempfile.mkdtemp(prefix="vc_test_"), "test.db"))
+os.environ.setdefault("VC_LLM_PROVIDER", "mock")
+
+import pytest
+from fastapi.testclient import TestClient
+
+from app.core.config import settings
+from app.main import app
+
+
+@pytest.fixture(scope="module")
+def client():
+    with TestClient(app) as c:
+        yield c
+
+
+def _new_ours_session(client):
+    r = client.post("/api/sessions", json={"mode": "manual", "scenarioId": "gift_for_other",
+                                           "studyCondition": "ours"})
+    assert r.status_code == 200, r.text
+    return r.json()["sessionId"]
+
+
+UTTER = "동생 생일 선물로 스마트워치 알아보고 있어요. 예산은 20만원 정도예요."
+
+
+def test_flag_off_recommends_directly(client):
+    sid = _new_ours_session(client)
+    r = client.post(f"/api/sessions/{sid}/turns", json={"role": "user", "content": UTTER})
+    assert r.status_code == 200
+    assert r.json()["agentResponse"]["agentAction"] == "recommend"
+    assert len(r.json()["recommendedProducts"]) > 0
+
+
+def test_v3_gates_then_proceeds(client):
+    settings.ui_variant = "ours-v3"
+    try:
+        sid = _new_ours_session(client)
+        r = client.post(f"/api/sessions/{sid}/turns", json={"role": "user", "content": UTTER})
+        assert r.status_code == 200
+        body = r.json()
+        # 게이트 턴: 상품 없이 칩 확인 요청
+        assert body["agentResponse"]["agentAction"] == "confirm_chips"
+        assert body["recommendedProducts"] == []
+        assert "right" in body["agentResponse"]["content"] or "오른쪽" in body["agentResponse"]["content"]
+        # 칩은 이미 생겨 있어야 확인할 대상이 있다
+        assert len((body["preferenceState"].get("userVisibleSummary") or {}).get("chips") or []) > 0
+
+        # 2단계: 확인 후 추천 수행
+        r2 = client.post(f"/api/sessions/{sid}/proceed-recommend")
+        assert r2.status_code == 200, r2.text
+        b2 = r2.json()
+        assert b2["agentResponse"]["agentAction"] == "recommend"
+        assert len(b2["recommendedProducts"]) > 0
+
+        # 플래그 소모 — 재호출은 409
+        r3 = client.post(f"/api/sessions/{sid}/proceed-recommend")
+        assert r3.status_code == 409
+    finally:
+        settings.ui_variant = ""
+
+
+def test_v3_does_not_gate_baseline2(client):
+    settings.ui_variant = "ours-v3"
+    try:
+        r = client.post("/api/sessions", json={"mode": "manual", "scenarioId": "gift_for_other",
+                                               "studyCondition": "baseline2"})
+        sid = r.json()["sessionId"]
+        r = client.post(f"/api/sessions/{sid}/turns", json={"role": "user", "content": UTTER})
+        assert r.json()["agentResponse"]["agentAction"] == "recommend"
+        assert len(r.json()["recommendedProducts"]) > 0
+    finally:
+        settings.ui_variant = ""
